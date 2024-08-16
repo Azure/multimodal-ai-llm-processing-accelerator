@@ -1,0 +1,17 @@
+{
+    "IsEncrypted": false,
+    "Values": {
+        "FUNCTIONS_WORKER_RUNTIME": "python",
+        "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+        "DOC_INTEL_ENDPOINT": "",
+        "DOC_INTEL_API_KEY": "",
+        "AOAI_ENDPOINT": "",
+        "AOAI_DEPLOYMENT": "",
+        "AOAI_API_KEY": ""
+    },
+    "Host": {
+        "LocalHttpPort": 7071,
+        "CORS": "*",
+        "CORSCredentials": false
+    }
+}

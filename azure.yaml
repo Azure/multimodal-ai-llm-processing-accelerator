@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: multimodal-llm-ai-processing-accelerator
+metadata:
+  template: multimodal-llm-ai-processing-accelerator@0.0.1
+services:
+  api:
+    project: ./function_app/
+    language: python
+    host: function
+  webapp:
+    project: ./demo_app/
+    language: py
+    host: appservice
+    hooks:
+      postdeploy:
+        windows:
+          shell: pwsh
+          run:  python3.11 -m pip install -r requirements.txt
+          interactive: false
+          continueOnError: false
+        posix:
+          shell: sh
+          run:  python3.11 -m pip install -r requirements.txt
+          interactive: false
+          continueOnError: false

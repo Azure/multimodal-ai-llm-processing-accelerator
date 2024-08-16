@@ -1,0 +1,2 @@
+echo "Request 1 result:"
+curl -X POST -H "Content-Type: application/json" -d '{"text": "This is a sentence to summarise. Please summarize this for me!", "summary_style": "Australian Slang", "num_sentences": 1}' http://localhost:7071/api/summarize_text

@@ -1,0 +1,454 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.23.1.45101",
+      "templateHash": "15151087653209603928"
+    }
+  },
+  "parameters": {
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Function App. This will become part of the URL (e.g. https://{functionAppName}.azurewebsites.net) and must be unique across Azure."
+      }
+    },
+    "webAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Web App. This will become part of the URL (e.g. https://{webAppName}.azurewebsites.net) and must be unique across Azure."
+      }
+    },
+    "appendUniqueUrlSuffix": {
+      "type": "bool",
+      "metadata": {
+        "description": "Whether to use a unique URL suffix for the Function and Web Apps (preventing name clashes with other applications). If set to true, the URL will be https://{functionAppName}-{randomToken}.azurewebsites.net"
+      }
+    },
+    "webAppUsePasswordAuth": {
+      "type": "bool",
+      "metadata": {
+        "description": "Whether to require a username and passworde when accessing the Web App"
+      }
+    },
+    "webAppUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The username to use when accessing the Web App if webAppUsername is true"
+      }
+    },
+    "webAppPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password to use when accessing the Web App if webAppPassword is true"
+      }
+    },
+    "resourcePrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "The prefix to use for all resources except the function and web apps"
+      }
+    },
+    "openAILocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of the OpenAI model deployment"
+      }
+    },
+    "blobStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Blob Storage account. This should be only lowercase letters and numbers"
+      }
+    },
+    "openAImodel": {
+      "type": "string",
+      "metadata": {
+        "description": "The OpenAI model to be deployed"
+      }
+    },
+    "openAImodelVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "The OpenAI model version to be deployed"
+      }
+    },
+    "openAIDeploymentSku": {
+      "type": "string",
+      "metadata": {
+        "description": "The OpenAI model deployment SKU"
+      }
+    },
+    "oaiDeploymentCapacity": {
+      "type": "int",
+      "metadata": {
+        "description": "The max TPM of the deployed OpenAI model, in thousands"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "resourceToken": {
+      "type": "string",
+      "defaultValue": "[take(toLower(uniqueString(subscription().id, resourceGroup().id, parameters('location'))), 5)]"
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    },
+    "apiServiceName": {
+      "type": "string",
+      "defaultValue": "api"
+    },
+    "webAppServiceName": {
+      "type": "string",
+      "defaultValue": "webapp"
+    },
+    "aoaiKeyKvSecretName": {
+      "type": "string",
+      "defaultValue": "aoai-api-key"
+    },
+    "docIntelKeyKvSecretName": {
+      "type": "string",
+      "defaultValue": "doc-intel-api-key"
+    },
+    "funcKeyKvSecretName": {
+      "type": "string",
+      "defaultValue": "func-api-key"
+    }
+  },
+  "variables": {
+    "functionAppTokenName": "[if(parameters('appendUniqueUrlSuffix'), toLower(format('{0}-{1}', parameters('functionAppName'), parameters('resourceToken'))), toLower(parameters('functionAppName')))]",
+    "webAppTokenName": "[if(parameters('appendUniqueUrlSuffix'), toLower(format('{0}-{1}', parameters('webAppName'), parameters('resourceToken'))), toLower(parameters('webAppName')))]",
+    "blobStorageAccountTokenName": "[toLower(format('{0}{1}', parameters('blobStorageAccountName'), parameters('resourceToken')))]",
+    "functionAppPlanTokenName": "[toLower(format('{0}-plan-{1}', parameters('functionAppName'), parameters('resourceToken')))]",
+    "webAppPlanTokenName": "[toLower(format('{0}-plan-{1}', parameters('webAppName'), parameters('resourceToken')))]",
+    "openAITokenName": "[toLower(format('{0}-aoai-{1}-{2}', parameters('resourcePrefix'), parameters('location'), parameters('resourceToken')))]",
+    "oaiDeploymentName": "[toLower(format('{0}-{1}-{2}', parameters('openAImodel'), parameters('openAImodelVersion'), parameters('openAIDeploymentSku')))]",
+    "docIntelTokenName": "[toLower(format('{0}-doc-intel-{1}', parameters('resourcePrefix'), parameters('resourceToken')))]",
+    "logAnalyticsTokenName": "[toLower(format('{0}-func-la-{1}', parameters('resourcePrefix'), parameters('resourceToken')))]",
+    "appInsightsTokenName": "[toLower(format('{0}-func-appins-{1}', parameters('resourcePrefix'), parameters('resourceToken')))]",
+    "keyVaultName": "[toLower(format('{0}-kv-{1}', parameters('resourcePrefix'), parameters('resourceToken')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}/{1}', variables('functionAppTokenName'), 'appsettings')]",
+      "properties": {
+        "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+        "AzureWebJobsStorage": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('blobStorageAccountTokenName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('blobStorageAccountTokenName')), '2023-01-01').keys[0].value)]",
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsTokenName')), '2020-02-02').ConnectionString]",
+        "FUNCTIONS_EXTENSION_VERSION": "~4",
+        "FUNCTIONS_WORKER_RUNTIME": "python",
+        "WEBSITE_CONTENTSHARE": "[toLower(variables('functionAppTokenName'))]",
+        "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('blobStorageAccountTokenName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('blobStorageAccountTokenName')), '2023-01-01').keys[0].value)]",
+        "BLOB_STORAGE_CONNECTION_STRING": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('blobStorageAccountTokenName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('blobStorageAccountTokenName')), '2023-01-01').keys[0].value)]",
+        "AOAI_ENDPOINT": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('openAITokenName')), '2023-05-01').endpoint]",
+        "AOAI_DEPLOYMENT": "[variables('oaiDeploymentName')]",
+        "AOAI_API_KEY": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', variables('keyVaultName'), parameters('aoaiKeyKvSecretName'))]",
+        "DOC_INTEL_ENDPOINT": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('docIntelTokenName')), '2023-05-01').endpoint]",
+        "DOC_INTEL_API_KEY": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', variables('keyVaultName'), parameters('docIntelKeyKvSecretName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsTokenName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAITokenName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('blobStorageAccountTokenName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('docIntelTokenName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('functionAppTokenName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2022-03-01",
+      "name": "[format('{0}/{1}', variables('webAppTokenName'), 'appsettings')]",
+      "properties": {
+        "SCM_DO_BUILD_DURING_DEPLOYMENT": "1",
+        "FUNCTION_HOSTNAME": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppTokenName')), '2020-06-01').defaultHostName)]",
+        "FUNCTION_KEY": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', variables('keyVaultName'), parameters('funcKeyKvSecretName'))]",
+        "WEB_APP_USE_PASSWORD_AUTH": "[string(parameters('webAppUsePasswordAuth'))]",
+        "WEB_APP_USERNAME": "[parameters('webAppUsername')]",
+        "WEB_APP_PASSWORD": "[parameters('webAppPassword')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppTokenName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppTokenName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('blobStorageAccountTokenName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "defaultToOAuthAuthentication": true,
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('docIntelTokenName')]",
+      "location": "[parameters('location')]",
+      "kind": "FormRecognizer",
+      "properties": {
+        "publicNetworkAccess": "Enabled",
+        "customSubDomainName": "[variables('docIntelTokenName')]"
+      },
+      "sku": {
+        "name": "S0"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('openAITokenName')]",
+      "location": "[parameters('openAILocation')]",
+      "kind": "OpenAI",
+      "properties": {
+        "publicNetworkAccess": "Enabled",
+        "customSubDomainName": "[variables('openAITokenName')]"
+      },
+      "sku": {
+        "name": "S0"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('openAITokenName'), variables('oaiDeploymentName'))]",
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "[parameters('openAImodel')]",
+          "version": "[parameters('openAImodelVersion')]"
+        }
+      },
+      "sku": {
+        "name": "[parameters('openAIDeploymentSku')]",
+        "capacity": "[parameters('oaiDeploymentCapacity')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAITokenName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2021-06-01-preview",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "standard",
+          "family": "A"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": []
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'add')]",
+      "properties": {
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppTokenName')), '2020-06-01', 'full').identity.principalId]",
+            "permissions": {
+              "keys": [
+                "get",
+                "list"
+              ],
+              "secrets": [
+                "get",
+                "list"
+              ]
+            }
+          },
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('webAppTokenName')), '2022-03-01', 'full').identity.principalId]",
+            "permissions": {
+              "keys": [
+                "get",
+                "list"
+              ],
+              "secrets": [
+                "get",
+                "list"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppTokenName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppTokenName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), parameters('aoaiKeyKvSecretName'))]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', variables('openAITokenName')), '2023-05-01').key1]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAITokenName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), parameters('docIntelKeyKvSecretName'))]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', variables('docIntelTokenName')), '2023-05-01').key1]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('docIntelTokenName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), parameters('funcKeyKvSecretName'))]",
+      "properties": {
+        "value": "[listkeys(format('{0}/host/default', resourceId('Microsoft.Web/sites', variables('functionAppTokenName'))), '2022-03-01').masterKey]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppTokenName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('logAnalyticsTokenName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsTokenName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsTokenName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsTokenName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2020-06-01",
+      "name": "[variables('functionAppPlanTokenName')]",
+      "location": "[parameters('location')]",
+      "kind": "linux",
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic"
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2020-06-01",
+      "name": "[variables('functionAppTokenName')]",
+      "kind": "functionapp,linux",
+      "location": "[parameters('location')]",
+      "tags": "[union(parameters('tags'), createObject('azd-service-name', parameters('apiServiceName')))]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "httpsOnly": true,
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppPlanTokenName'))]",
+        "clientAffinityEnabled": true,
+        "siteConfig": {
+          "pythonVersion": "3.11",
+          "linuxFxVersion": "python|3.11",
+          "cors": {
+            "allowedOrigins": [
+              "*"
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('functionAppPlanTokenName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2020-06-01",
+      "name": "[variables('webAppPlanTokenName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "reserved": true
+      },
+      "sku": {
+        "name": "P0v3",
+        "tier": "Premium0V3",
+        "size": "P0v3",
+        "family": "Pv3",
+        "capacity": 1
+      },
+      "kind": "linux",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('functionAppPlanTokenName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[variables('webAppTokenName')]",
+      "location": "[parameters('location')]",
+      "tags": "[union(parameters('tags'), createObject('azd-service-name', parameters('webAppServiceName')))]",
+      "kind": "app,linux",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('webAppPlanTokenName'))]",
+        "siteConfig": {
+          "alwaysOn": true,
+          "linuxFxVersion": "python|3.11",
+          "ftpsState": "Disabled",
+          "appCommandLine": "python demo_app.py",
+          "minTlsVersion": "1.2"
+        },
+        "httpsOnly": true
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('webAppPlanTokenName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "storageAccountConnectionString": {
+      "type": "string",
+      "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('blobStorageAccountTokenName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('blobStorageAccountTokenName')), '2023-01-01').keys[0].value)]"
+    }
+  }
+}
