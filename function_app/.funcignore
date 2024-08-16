@@ -1,0 +1,5 @@
+.venv
+tests
+sample_local.settings.json
+send_req_summarize_text.sh
+setup_env.sh
