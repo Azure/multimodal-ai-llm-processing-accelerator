@@ -16,11 +16,11 @@ services:
       postdeploy:
         windows:
           shell: pwsh
-          run:  python3.11 -m pip install -r requirements.txt
+          run:  python3 -m pip install -r requirements.txt
           interactive: false
           continueOnError: false
         posix:
           shell: sh
-          run:  python3.11 -m pip install -r requirements.txt
+          run:  python3 -m pip install -r requirements.txt
           interactive: false
           continueOnError: false

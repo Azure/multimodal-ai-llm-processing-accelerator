@@ -3,11 +3,14 @@
     "Values": {
         "FUNCTIONS_WORKER_RUNTIME": "python",
         "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+        "AOAI_ENDPOINT": "",
+        "AOAI_LLM_DEPLOYMENT": "",
+        "AOAI_WHISPER_DEPLOYMENT": "",
+        "AOAI_API_KEY": "",
         "DOC_INTEL_ENDPOINT": "",
         "DOC_INTEL_API_KEY": "",
-        "AOAI_ENDPOINT": "",
-        "AOAI_DEPLOYMENT": "",
-        "AOAI_API_KEY": ""
+        "SPEECH_REGION": "",
+        "SPEECH_API_KEY": ""
     },
     "Host": {
         "LocalHttpPort": 7071,

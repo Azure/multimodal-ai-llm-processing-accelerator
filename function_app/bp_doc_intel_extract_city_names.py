@@ -25,7 +25,7 @@ bp_doc_intel_extract_city_names = func.Blueprint()
 # Load environment variables
 DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
-AOAI_DEPLOYMENT = os.getenv("AOAI_DEPLOYMENT")
+AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
 # Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
 DOC_INTEL_API_KEY_SECRET = Secret.from_env_var("DOC_INTEL_API_KEY")
 AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
@@ -38,7 +38,7 @@ di_converter = AzureOCRDocumentConverter(
 )
 azure_generator = AzureOpenAIChatGenerator(
     azure_endpoint=AOAI_ENDPOINT,
-    azure_deployment=AOAI_DEPLOYMENT,
+    azure_deployment=AOAI_LLM_DEPLOYMENT,
     api_key=AOAI_API_KEY_SECRET,
     api_version="2024-06-01",
     generation_kwargs={

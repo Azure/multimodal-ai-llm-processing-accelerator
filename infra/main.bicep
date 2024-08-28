@@ -23,20 +23,32 @@ param resourcePrefix string = 'llm-proc'
 @description('The name of the Blob Storage account. This should be only lowercase letters and numbers')
 param blobStorageAccountName string = 'llmprocstorage'
 
-@description('The location of the OpenAI model deployment')
+@description('The location of the OpenAI Azure resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)')
 param openAILocation string = 'eastus2'
 
-@description('The OpenAI model to be deployed')
-param openAImodel string = 'gpt-4o'
+@description('The OpenAI LLM model to be deployed')
+param openAILLMModel string = 'gpt-4o'
 
-@description('The OpenAI model version to be deployed')
-param openAImodelVersion string = '2024-05-13'
+@description('The OpenAI LLM model version to be deployed')
+param openAILLMModelVersion string = '2024-05-13'
 
-@description('The OpenAI model deployment SKU')
-param openAIDeploymentSku string = 'GlobalStandard'
+@description('The OpenAI LLM model deployment SKU')
+param openAILLMDeploymentSku string = 'Standard'
 
-@description('The max TPM of the deployed OpenAI model, in thousands. `30` = 30k max TPM.')
-param oaiDeploymentCapacity int = 30
+@description('The max TPM of the deployed OpenAI LLM model, in thousands. `30` = 30k max TPM.')
+param openAILLMDeploymentCapacity int = 30
+
+@description('The OpenAI Whisper model to be deployed')
+param openAIWhisperModel string = 'whisper'
+
+@description('The OpenAI Whisper model version to be deployed')
+param openAIWhisperModelVersion string = '001'
+
+@description('The OpenAI LLM model deployment SKU')
+param openAIWhisperDeploymentSku string = 'Standard'
+
+@description('The max TPM of the deployed OpenAI Whisper model, in thousands. `3` = 3k max TPM.')
+param openAIWhisperDeploymentCapacity int = 3
 
 param location string = resourceGroup().location
 param resourceToken string = take(toLower(uniqueString(subscription().id, resourceGroup().id, location)), 5)
@@ -45,6 +57,7 @@ param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
 param aoaiKeyKvSecretName string = 'aoai-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
+param speechKeyKvSecretName string = 'speech-api-key'
 param funcKeyKvSecretName string = 'func-api-key'
 
 var functionAppTokenName = appendUniqueUrlSuffix
@@ -55,8 +68,10 @@ var blobStorageAccountTokenName = toLower('${blobStorageAccountName}${resourceTo
 var functionAppPlanTokenName = toLower('${functionAppName}-plan-${resourceToken}')
 var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
 var openAITokenName = toLower('${resourcePrefix}-aoai-${location}-${resourceToken}')
-var oaiDeploymentName = toLower('${openAImodel}-${openAImodelVersion}-${openAIDeploymentSku}')
+var openAILLMDeploymentName = toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
+var openAIWhisperDeploymentName = toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
 var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${resourceToken}')
+var speechTokenName = toLower('${resourcePrefix}-speech-${resourceToken}')
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
 var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToken}')
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
@@ -95,6 +110,19 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
+resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+  name: speechTokenName
+  location: location
+  kind: 'SpeechServices'
+  properties: {
+    publicNetworkAccess: 'Enabled'
+    customSubDomainName: speechTokenName
+  }
+  sku: {
+    name: 'S0'
+  }
+}
+
 resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: openAITokenName
   location: openAILocation
@@ -110,17 +138,34 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
 
 resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
   parent: azureopenai
-  name: oaiDeploymentName
+  name: openAILLMDeploymentName
   properties: {
     model: {
       format: 'OpenAI'
-      name: openAImodel
-      version: openAImodelVersion
+      name: openAILLMModel
+      version: openAILLMModelVersion
     }
   }
   sku: {
-    name: openAIDeploymentSku
-    capacity: oaiDeploymentCapacity
+    name: openAILLMDeploymentSku
+    capacity: openAILLMDeploymentCapacity
+  }
+}
+
+resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+  parent: azureopenai
+  dependsOn: [llmdeployment] // Ensure one model deployment at a time
+  name: openAIWhisperDeploymentName
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: openAIWhisperModel
+      version: openAIWhisperModelVersion
+    }
+  }
+  sku: {
+    name: openAIWhisperDeploymentSku
+    capacity: openAIWhisperDeploymentCapacity
   }
 }
 
@@ -176,6 +221,14 @@ resource docIntelKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   parent: keyVault
   properties: {
     value: docIntel.listKeys().key1
+  }
+}
+
+resource SpeechKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: speechKeyKvSecretName
+  parent: keyVault
+  properties: {
+    value: speech.listKeys().key1
   }
 }
 
@@ -254,10 +307,13 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString
       BLOB_STORAGE_CONNECTION_STRING: storageAccountConnectionString
       AOAI_ENDPOINT: azureopenai.properties.endpoint
-      AOAI_DEPLOYMENT: oaiDeploymentName
+      AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
+      AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
       AOAI_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${aoaiKeyKvSecretName})'
       DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
       DOC_INTEL_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${docIntelKeyKvSecretName})'
+      SPEECH_REGION: location
+      SPEECH_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${speechKeyKvSecretName})'
     }
   }
 }
