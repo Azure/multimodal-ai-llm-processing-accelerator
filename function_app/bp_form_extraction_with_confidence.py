@@ -44,6 +44,9 @@ pymupdf_converter = PyMuPDFConverter(
     to_img_dpi=200,
     correct_img_rotation=False,
 )
+# For now we will use Haystack's Azure OCR Document Converter, but in the near
+# future this will be replaced with a much better and more performant
+# implementation
 di_converter = AzureOCRDocumentConverter(
     endpoint=DOC_INTEL_ENDPOINT,
     api_key=DOC_INTEL_API_KEY_SECRET,
@@ -225,6 +228,11 @@ class FunctionReponseModel(BaseModel):
     )
 
 
+# Create the system prompt for the LLM, dynamically including the JSON schema
+# of the expected response so that any changes to the schema are automatically
+# reflected in the prompt, and in a JSON format that is similar in structure
+# to the training data on which the LLM was trained (increasing reliability of
+# the result).
 LLM_SYSTEM_PROMPT = (
     "You are a data extraction expert."
     "Your task is to review the following information and extract all of the information that appears in the form.\n"

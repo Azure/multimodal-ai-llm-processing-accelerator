@@ -28,7 +28,7 @@ from src.schema import LLMResponseBaseModel
 
 load_dotenv()
 
-bp_call_center_audio_processing = func.Blueprint()
+bp_call_center_audio_analysis = func.Blueprint()
 
 SPEECH_ENDPOINT = os.getenv("SPEECH_ENDPOINT")
 SPEECH_API_KEY = os.getenv("SPEECH_API_KEY")
@@ -51,7 +51,7 @@ transcriber = AzureSpeechTranscriber(
     speech_key=SPEECH_API_KEY,
     aoai_whisper_async_client=aoai_whisper_async_client,
 )
-
+# Define the configuration for the transcription job
 # More info: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create
 # And: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/batch-transcription-create?pivots=rest-api#request-configuration-options
 fast_transcription_definition = {
@@ -85,7 +85,8 @@ TRANSCRIPTION_METHOD_TO_MIME_MAPPER = {
 }
 
 
-# Setup Pydantic models for validation of LLM calls, and the Function response itself
+### Setup Pydantic models for validation of LLM calls, and the Function response itself
+# Classification fields
 class CustomerSatisfactionEnum(Enum):
     Satisfied = "Satisfied"
     Dissatisfied = "Dissatisfied"
@@ -103,6 +104,7 @@ class CustomerSentimentEnum(Enum):
 CUSTOMER_SENTIMENT_VALUES = [e.value for e in CustomerSentimentEnum]
 
 
+# Setup a class for the raw keywords returned by the LLM, and then the enriched version (after we match the keywords to the transcription)
 class RawKeyword(LLMResponseBaseModel):
     keyword: str = Field(
         description="A keyword extracted from the call. This should be a direct match to a word or phrase in the transcription without modification of the spelling or grammar.",
@@ -136,6 +138,7 @@ class ProcessedKeyWord(RawKeyword):
     )
 
 
+# Define the full schema for the LLM's response. We inherit from LLMResponseBaseModel to get the prompt generation functionality.
 class LLMRawResponseModel(LLMResponseBaseModel):
     """
     Defines the required JSON schema for the LLM to adhere to. This can be used
@@ -189,6 +192,14 @@ class LLMRawResponseModel(LLMResponseBaseModel):
 
 
 class ProcessedResultModel(LLMRawResponseModel):
+    """
+    Defined the schema for the processed result that will be returned by the
+    function. This class inherits from LLMRawResponseModel but overwrites the
+    `keywords` field to use the ProcessedKeyWord model instead of the
+    RawKeyword. This way we can return the processed keywords with additional
+    metadata.
+    """
+
     keywords: list[ProcessedKeyWord] = Field(
         description=(
             "A list of key phrases related to the purpose of the call, the products they are interested in, or any issues that have occurred. "
@@ -243,6 +254,11 @@ class FunctionReponseModel(BaseModel):
     )
 
 
+# Create the system prompt for the LLM, dynamically including the JSON schema
+# of the expected response so that any changes to the schema are automatically
+# reflected in the prompt, and in a JSON format that is similar in structure
+# to the training data on which the LLM was trained (increasing reliability of
+# the result).
 LLM_SYSTEM_PROMPT = (
     "You are a customer service contact center agent, and you specialize in summarizing and classifying "
     "the content of customer service call recordings.\n"
@@ -251,8 +267,8 @@ LLM_SYSTEM_PROMPT = (
 )
 
 
-@bp_call_center_audio_processing.route(route="call_center_audio_processing")
-async def call_center_audio_processing(
+@bp_call_center_audio_analysis.route(route="call_center_audio_analysis")
+async def call_center_audio_analysis(
     req: func.HttpRequest,
 ) -> func.HttpResponse:
     logging.info("Python HTTP trigger function processed a request.")
@@ -339,7 +355,7 @@ async def call_center_audio_processing(
             )
         # Create the messages to send to the LLM in the following order:
         # 1. System prompt
-        # 2. Audio transcription
+        # 2. Audio transcription, formatted in a clear way
         try:
             input_messages = [
                 ChatMessage.from_system(LLM_SYSTEM_PROMPT),
