@@ -23,6 +23,9 @@ param resourcePrefix string = 'llm-proc'
 @description('The name of the Blob Storage account. This should be only lowercase letters and numbers')
 param blobStorageAccountName string = 'llmprocstorage'
 
+@description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
+param speechLocation string = 'eastus'
+
 @description('The location of the OpenAI Azure resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)')
 param openAILocation string = 'eastus2'
 
@@ -112,7 +115,7 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
 
 resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: speechTokenName
-  location: location
+  location: speechLocation
   kind: 'SpeechServices'
   properties: {
     publicNetworkAccess: 'Enabled'
@@ -312,7 +315,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       AOAI_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${aoaiKeyKvSecretName})'
       DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
       DOC_INTEL_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${docIntelKeyKvSecretName})'
-      SPEECH_REGION: location
+      SPEECH_REGION: speech.location
       SPEECH_ENDPOINT: speech.properties.endpoint
       SPEECH_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${speechKeyKvSecretName})'
     }
