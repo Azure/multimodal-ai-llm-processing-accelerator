@@ -47,6 +47,10 @@ urlFragment: multimodal-ai-llm-processing-accelerator
 
 This accelerator is as a customizable code template for building and deploying production-grade data processing pipelines that incorporate Azure AI services and Azure OpenAI/AI Studio LLM models. It uses a variety of data pre-processing and enrichment components to make it easy to build complex, reliable and accurate pipelines that solve real-world use cases. If you'd like to use AI to **summarize, classify, extract or enrich** your data with structured and reliable outputs, this is the code repository for you.
 
+#### Important Note: This accelerator is currently under development and may include regular breaking changes
+
+It is recommended to review the main repo before pulling new changes, as work is in progress to replace many of the third-party components (e.g. those imported from Haystack) with more complete, performant & fully-featured components. Once the core application is stable, a standard release pattern with semantic versioning will be used to manage releases.
+
 ### Solution Design
 
 ![Solution Design](/docs/solution-design.png)
@@ -76,7 +80,7 @@ This accelerator provides the tools and patterns required to combine the best of
 
 ### Example pipeline output
 
-Here is an example of the pre-built Form Field Extraction pipeline. By combining the structured outputs from Azure Document Intelligence with GPT-4o, we can verify and enrich the values extracted by GPT-4o with confidence scores, bounding boxes, style and more. This allows us to make sure the LLM has not hallucinated, and allows us to automatically flag the document for human review if the confidence scores do not meet our minimum criteria (in this case, all values must have a Document Intelligence confidence score above 80% to avoid human review).
+Here is an example of the pre-built [Form Field Extraction pipeline](#prebuilt-pipelines). By combining the structured outputs from Azure Document Intelligence with GPT-4o, we can verify and enrich the values extracted by GPT-4o with confidence scores, bounding boxes, style and more. This allows us to make sure the LLM has not hallucinated, and allows us to automatically flag the document for human review if the confidence scores do not meet our minimum criteria (in this case, all values must have a Document Intelligence confidence score above 80% to avoid human review).
 
 ![Form Extraction Example](/docs/form-extraction-example.png)
 
@@ -97,11 +101,12 @@ The accelerator comes with these pre-built pipeline examples to help you get sta
 
 | Example  | Description & Pipeline Steps|
 | ---------|---------|
-|**Form Field Extraction with Confidence Scores & Bboxes**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form, and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing: confidence scores and bounding boxes<br>- Return structured JSON |
+|**Form Field Extraction with Confidence Scores & Bboxes**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form, and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing:<br><ul>- Match LLM field values with Document Intelligence extracted lines<br>- Merge Confidence scores and bounding boxes<br>- Determine whether to human review is required</ul>- Return structured JSON |
+|**Call Center Analysis with Confidence Scores & Timestamps**<br>[Code](/function_app/bp_call_center_audio_analysis.py)| Processes a call center recording, classifying customer sentiment & satisfaction, summarizing the call and next best action, and extracting any keywords mentioned. Returns the response with timestamps, confidence scores and the full sentence text for the next best action and each of the keywords mentioned.<br>- Azure AI Speech (Speech -> Text)<br>- GPT-4o (text input)<br>- Post-processing:<br><ul>- Match LLM timestamps to transcribed phrases<br>- Merge sentence info & confidence scores</ul>- Return structured JSON |
 |**Summarize Text**<br>[Code](/function_app/bp_summarize_text.py)| Summarizes text input into a desired style and number of output sentences.<br>- GPT-4o (text input + style/length instructions)<br>- Return raw text |
-|**City Names Extraction (Doc Intelligence)**<br>[Code](/function_app/bp_doc_intel_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF/image & text (extracted by Document Intelligence).<br>- Document Intelligence (Image/PDF -> text)<br>- GPT-4o (text + image input)<br>- Return JSON array of city names |
-|**City Names Extraction (PyMuPDF)**<br>[Code](/function_app/bp_pymupdf_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF/image + text (extracted locally by PyMuPDF).<br>- PyMuPDF (Image/PDF -> text)<br>- GPT-4o (text + image input)<br>- Return JSON array of city names |
-|**Doc Intelligence Only**<br>[Code](/function_app/bp_doc_intel_only.py)| A simple pipeline that calls Document Intelligence and returns the full response and raw text content.<br>- Document Intelligence (Image/PDF -> text)<br>- Return Structured JSON object |
+|**City Names Extraction (Doc Intelligence)**<br>[Code](/function_app/bp_doc_intel_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF (using text extracted by Document Intelligence).<br>- Document Intelligence (PDF/image -> text)<br>- GPT-4o (text input)<br>- Return JSON array of city names |
+|**City Names Extraction (PyMuPDF)**<br>[Code](/function_app/bp_pymupdf_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF/image + text (extracted locally by PyMuPDF).<br>- PyMuPDF (PDF/image -> text & images)<br>- GPT-4o (text + image input)<br>- Return JSON array of city names |
+|**Doc Intelligence Only**<br>[Code](/function_app/bp_doc_intel_only.py)| A simple pipeline that calls Document Intelligence and returns the full response and raw text content.<br>- Document Intelligence (PDF/image -> text)<br>- Return structured JSON object |
 
 These pipelines can be duplicated and customized to your specific use case, and should be modified as required. The pipelines all return a large amount of additional information (such as intermediate outputs from each component, time taken for each step, and the raw source code) which will usually not be required in production use cases. Make sure to review the code thoroughly prior to deployment.
 
@@ -133,18 +138,51 @@ To help prioritise these features or request new ones, please head to the Issues
 
 ### FAQ
 
+**How can I get started with a solution for my own use case?**
+
+The demo piipelines are examples and require customization in order to have them work accurately in production. The best strategy to get started is to clone one of the existing demo pipelines and modify them for your own purpose. The following steps are recommended:
+
+1. Clone the repository and walk through the local & cloud deployment instructions. Deploy the application to Azure and then test out some of the demo pipelines to understand how they work.
+1. Walk through the code for the pipelines that are the most similar to what you would like to build, or which have the different components that you want to use.
+    - For example, if you want to build a document extraction pipeline, start with the pipelines that use Azure Document Intelligence.
+    - If you want to then combine this with AI Speech or with a different kind of trigger, look through the other pipelines for examples of those.
+    - Once familiar with the example pipelines, you should be able to see how you can plug different pipeline components together by into an end-to-end solution.
+1. Clone the python blueprint file (e.g. `function_app/bp_<pipeline_name>.py`) that is most similar to your ideal use case, renaming it and using it as a base to start with.
+1. Review and modify the different parts of the pipeline. The common things are:
+    1. The AI/LLM components that are used and their configurations.
+    1. The Azure Function route and required input/output schemas and validation logic.
+    1. The Pydantic classes and definitions that define the schema of the LLM's response and the response to be returned from the API.
+        - The repo includes a useful Pydantic base model (LLMRawResponseModel) that makes it easy to print out the JSON schema in a prompt-friendly way, and it is suggested to use this model to define your schema so that you can easily provide it to your model and then validate the LLM's responses.
+        - By default, these include a lot of additional information from each step of the pipeline, but you may want to remove, modify or add new fields.
+    1. The LLM system prompt(s), which contain instructions on how the LLM should complete the task.
+        - All prompt examples in this repo are very basic and it is recommended to spend time crafting detailed instructions for the LLM and including some few-shot examples.
+        - These should be in addition to the JSON schema definition - if you use the JSON schema alone, expect that the model will make a number of mistakes (you can see this occur in some of the example pipelines).
+    1. The post-processing validation logic. This is how you automatically determine when to trust the outputs and when to escalate to human review.
+1. Once you have started making progress on the core processing pipeline, you may want to modify the demo web app (`demo_app/`) so that you can easily test the endpoint end-to-end.
+    - The Gradio app has a tab built for each of the Function app pipelines, and you should start with the code built for the base of your new function app pipeline.
+    - If you need different data inputs or a different request schema (e.g. switching from sending a single file to a file with other JSON parameters), check out each of the other pipelines. These will help you determine how to build the front-end and API request logic so that things work end-to-end.
+    - Once you have these working together, you can easily iterate and test your pipelines quickly with the demo web app via the UI.
+1. When your pipeline is working end-to-end, it's time to think about testing & evaluating the accuracy and reliability of your solution.
+    - It is critical with any AI system to ensure that the pipeline is evaluated on a representative sample of validation data.
+    - Without this, it is impossible to know how accurate the solution is, or whether the solution fails under specific circumstances. This is often the time-consuming step of building and deployment an AI solution, but is also the most important.
+    - While more tools to help simplify this process are coming soon, you should take a look at the [evaluation tools within Azure AI Studio](https://learn.microsoft.com/en-us/azure/ai-studio/how-to/evaluate-generative-ai-app).
+1. Finally, its time to deploy your custom application to Azure.
+    - Review and modify the infrastructure templates and parameters to ensure the solution is deployed to your requirements
+    - Setup automated CI/CD deployment pipelines using Github Actions or Azure DevOps (base templates are coming to the repo soon).
+
 **Does this repo use or support Langchain/Llamaindex/Framework X?**
 
-- There are many different frameworks available for LLM/Generative AI applications, each offering different features, integrations, and production suitability. This accelerator uses some existing components from [Haystack](https://haystack.deepset.ai/overview/intro), but it is framework agnostic and you can use any or all frameworks for your pipelines. This allows you to take advantage of the solution architecture and many of the helper functions while still having full control over how you build your pipeline logic.
+There are many different frameworks available for LLM/Generative AI applications, each offering different features, integrations, and production suitability. This accelerator uses some existing components from [Haystack](https://haystack.deepset.ai/overview/intro), but it is framework agnostic and you can use any or all frameworks for your pipelines. This allows you to take advantage of the solution architecture and many of the helper functions while still having full control over how you build your pipeline logic.
 
 **What about a custom UI?**
 
-- The majority of applications built using this accelerator will be integrated into existing software platforms such as those use in call centres, customer support, case management, ERP platforms and more. Integrating with these platforms typically requires an API call or an event-driven database/blob trigger so that any processing done by this accelerator can seamlessly integrate with any existing workflows and processes (e.g. to trigger escalations, human reviews, automated emails and more).
-- While a demo application is included in this repository for testing your pipelines, the accelerator is built to prioritise integrations with other software platforms. If you would like a more advanced UI, you can either build your own and have it call the Azure Function that is deployed by this accelerator, or look at other accelerators that may offer more narrow and specialized solutions for specific use cases or types of data.
+The majority of applications built using this accelerator will be integrated into existing software platforms such as those use in call centres, customer support, case management, ERP platforms and more. Integrating with these platforms typically requires an API call or an event-driven database/blob trigger so that any processing done by this accelerator can seamlessly integrate with any existing workflows and processes (e.g. to trigger escalations, human reviews, automated emails and more).
+
+While a demo application is included in this repository for testing your pipelines, the accelerator is built to prioritise integrations with other software platforms. If you would like a more advanced UI, you can either build your own and have it call the Azure Function that is deployed by this accelerator, or look at other accelerators that may offer more narrow and specialized solutions for specific use cases or types of data.
 
 **Can I use existing Azure resources?**
 
-- Yes - you'll need to modify the Bicep templates to refer to existing resources instead of creating new ones. See [here](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/existing-resource) for more info.
+Yes - you'll need to modify the Bicep templates to refer to existing resources instead of creating new ones. See [here](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/existing-resource) for more info.
 
 **How can I integrate with other triggers?**
 
@@ -160,6 +198,7 @@ The following are links to the pricing details for some of the resources:
 
 - [Azure OpenAI service pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/).
 - [Azure AI Document Intelligence pricing](https://azure.microsoft.com/pricing/details/ai-document-intelligence/)
+- [Azure AI Speech pricing](https://azure.microsoft.com/en-au/pricing/details/cognitive-services/speech-services/)
 - [Azure Functions pricing](https://azure.microsoft.com/pricing/details/functions/)
 - [Azure Web App Pricing](https://azure.microsoft.com/pricing/details/app-service/linux/)
 - [Azure Blob Storage pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)
@@ -193,7 +232,7 @@ Execute the following command, if you don't have any pre-existing Azure services
 4. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
 It will look like the following:
 
-![Deployed endpoints](/docs/deployment/azd-deployed-endpoints.png)
+![Deployed endpoints](/docs/azd-deployed-endpoints.png)
 
 Note that the Function app is deployed on a consumption plan under the default infrastructure configuration. This means the first request after deployment or periods of inactivity will take 20-30 seconds longer while the function warms up. All requests after this should complete in a normal timeframe.
 
