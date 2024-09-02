@@ -224,17 +224,17 @@ To customize and develop the app locally, you will need to install the following
 Execute the following command, if you don't have any pre-existing Azure services and want to start from a fresh deployment.
 
 1. Run `azd auth login`
-2. Review the default parameters in `infra/main.bicepparam` and update as required.
-3. Run `azd up` - This will provision the Azure resources and deploy the services.
-
-- Note: When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. If this error occurs, simple rerun `azd deploy` after 1-2 minutes.
-
-4. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
+1. Make a copy of `infra/main.bicepparam` and rename it to the name of your test environment - e.g. `infra/main.dev.bicepparam`.
+    - Note that the `.gitignore` includes an entry that automatically excludes files matching `infra/main.*.bicepparam` - if you want your env-specific bicep files to be included in your git history, remove this entry.
+1. Review the default parameters in the bicep file and update as required.
+1. Run `azd up` - This will provision the Azure resources and deploy the services. Make sure to name your environment to the same name as your bicep params file (e.g. `dev`)
+    - Note: When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. If this error occurs, simple rerun `azd deploy` after 1-2 minutes.
+1. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
 It will look like the following:
 
 ![Deployed endpoints](/docs/azd-deployed-endpoints.png)
 
-Note that the Function app is deployed on a consumption plan under the default infrastructure configuration. This means the first request after deployment or periods of inactivity will take 20-30 seconds longer while the function warms up. All requests after this should complete in a normal timeframe.
+Note that the Function app is deployed on a consumption plan under the default infrastructure configuration. This means the first request after deployment or periods of inactivity will take 20-30 seconds longer while the function warms up. All requests made once the function is warm should complete in a normal timeframe.
 
 #### Deploying again
 
@@ -250,8 +250,8 @@ If you've changed the infrastructure files (`infra` folder or `azure.yaml`), the
 
 To clean up all the resources created by this sample:
 
-1. Remove any model deployments within the AOAI resource. If not removed, these will cause the resource cleanup to fail.
-2. Run `azd down --purge`. This will permanently delete the resource group and all resources.
+1. Remove any model deployments within the AOAI resource. If not removed, these may the resource cleanup to fail.
+1. Run `azd down --purge`. This will permanently delete the resource group and all resources.
 
 ### Running the solution locally
 
