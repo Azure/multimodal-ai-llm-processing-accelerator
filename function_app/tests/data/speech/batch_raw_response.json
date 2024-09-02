@@ -1,0 +1,4142 @@
+{
+    "source": "https://sstudioprodsause.blob.core.windows.net/tempfiles/9426436c-1ede-401a-a8e9-b7148efeaf62?skoid=3fdd8927-6ff6-4248-a3c8-246cacfd5da8&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2024-08-16T11%3A01%3A37Z&ske=2024-08-17T11%3A01%3A37Z&sks=b&skv=2023-11-03&sv=2023-11-03&st=2024-08-16T11%3A01%3A37Z&se=2024-08-18T11%3A01%3A37Z&sr=b&sp=r&sig=hk6xRcko0c4wJzQHPf2PLd6Ypq3K1DvFVxbvTPkrrjc%3D&speechstudiofilename=Call1_separated_16k_health_insurance.wav",
+    "timestamp": "2024-08-16T11:02:24Z",
+    "durationInTicks": 1850800000,
+    "duration": "PT3M5.08S",
+    "combinedRecognizedPhrases": [
+        {
+            "channel": 0,
+            "lexical": "hello thank you for calling contoso who am i speaking with today hi mary are you calling because he needs health insurance great if you can answer a few questions we can get you signed up in a jiffy so what's your full name got it and what's the best call back number in case we get disconnected yeah that'll be fine got it so to confirm it's two three four five five four nine three one two excellent let's get some additional information from your for your application do you have a job OK so then you have a social security number as well OK and what is your social security number please sorry what was that a two five or a two two five you cut out for a bit right thank you so much and could i have your email address please great that is the last question so let me take your information and i'll be able to get you signed up right away thank you for calling contoso and i'll be able to get you signed up immediately one of our agents will call you back in about twenty four hours or so to confirm your application absolutely if you need anything else please give us a call at one eight hundred five five five five five six four extension one two three thank you very much for calling contoso yes of course so the default is a digital membership card but we can send you a physical card if you prefer yeah absolutely i've made a note on your file you're very welcome thank you for calling contoso and have a great day",
+            "itn": "hello thank you for calling contoso who am i speaking with today hi mary are you calling because he needs health insurance great if you can answer a few questions we can get you signed up in a jiffy so what's your full name got it and what's the best call back number in case we get disconnected yeah that'll be fine got it so to confirm it's 234-554-9312 excellent let's get some additional information from your for your application do you have a job OK so then you have a social security number as well OK and what is your social security number please sorry what was that A-25 or A225 you cut out for a bit right thank you so much and could i have your email address please great that is the last question so let me take your information and i'll be able to get you signed up right away thank you for calling contoso and i'll be able to get you signed up immediately one of our agents will call you back in about 24 hours or so to confirm your application absolutely if you need anything else please give us a call at 1-800-555-5564 ext 123 thank you very much for calling contoso yes of course so the default is a digital membership card but we can send you a physical card if you prefer yeah absolutely i've made a note on your file you're very welcome thank you for calling contoso and have a great day",
+            "maskedITN": "Hello thank you for calling Contoso who am I speaking with today Hi Mary Are you calling because he needs health insurance Great If you can answer a few questions we can get you signed up in a jiffy So what's your full name Got it And what's the best call back number in case we get disconnected Yeah that'll be fine Got it So to confirm it's 234-554-9312 Excellent Let's get some additional information from your for your application Do you have a job OK so then you have a Social Security number as well OK And what is your Social Security number please Sorry what was that A-25 or A225 you cut out for a bit Right Thank you so much And could I have your e-mail address please Great That is the last question So let me take your information and I'll be able to get you signed up right away Thank you for calling Contoso And I'll be able to get you signed up immediately One of our agents will call you back in about 24 hours or so to confirm your application Absolutely If you need anything else please give us a call at 1-800-555-5564 ext 123 Thank you very much for calling Contoso Yes of course So the default is a digital membership card but we can send you a physical card if you prefer Yeah absolutely I've made a note on your file You're very welcome Thank you for calling Contoso and have a great day",
+            "display": "Hello, thank you for calling Contoso, who am I speaking with today? Hi, Mary. Are you calling because he needs health insurance? Great. If you can answer a few questions, we can get you signed up in a jiffy. So what's your full name? Got it. And what's the best call back number in case we get disconnected? Yeah, that'll be fine. Got it. So to confirm, it's 234-554-9312. Excellent. Let's get some additional information from your for your application. Do you have a job? OK, so then you have a Social Security number as well. OK, And what is your Social Security number please? Sorry, what was that, A-25 or A225 you cut out for a bit, Right? Thank you so much. And could I have your e-mail address, please? Great. That is the last question. So let me take your information and I'll be able to get you signed up right away. Thank you for calling Contoso. And I'll be able to get you signed up immediately. One of our agents will call you back in about 24 hours or so to confirm your application. Absolutely. If you need anything else, please give us a call at 1-800-555-5564, ext 123. Thank you very much for calling Contoso. Yes, of course. So the default is a digital membership card, but we can send you a physical card if you prefer. Yeah, absolutely. I've made a note on your file. You're very welcome. Thank you for calling Contoso and have a great day."
+        },
+        {
+            "channel": 1,
+            "lexical": "hi my name is mary rondo i'm trying to enroll myself with contoso yes yeah i'm calling to sign up for insurance OK so mary beth rondo last name is R like romeo O like ocean N like nancy DD like dog and O like ocean again rondo i only have a cell phone so i can give you that sure so it's two three four five five four and then nine three one two yep that's right yes i am self employed yes i do sure so it's four one two two five six seven eight nine it's double two so four one two then another two then five yeah it's mary rondo at gmail dot com so my first and last name at gmail dot com no periods no dashes that was quick thank you actually so i have one more question i'm curious will i be getting a physical card as proof of coverage yes could you please mail it to me when it's ready i'd like to have it shipped to ready for my address so it's two six six zero unit A on maple avenue southeast lansing and then zip code is four eight eight two three awesome thanks so much",
+            "itn": "hi my name is mary rondo i'm trying to enroll myself with contoso yes yeah i'm calling to sign up for insurance OK so mary beth rondo last name is R like romeo O like ocean N like nancy DD like dog and O like ocean again rondo i only have a cell phone so i can give you that sure so it's 234554 and then 9312 yep that's right yes i am self employed yes i do sure so it's 412256789 it's 22 so 412 then another two then five yeah it's mary rondo@gmail.com so myfirstandlastname@gmail.com no periods no dashes that was quick thank you actually so i have one more question i'm curious will i be getting a physical card as proof of coverage yes could you please mail it to me when it's ready i'd like to have it shipped to ready for my address so it's 2660 unit A on maple ave SE lansing and then zip code is 48823 awesome thanks so much",
+            "maskedITN": "Hi My name is Mary Rondo I'm trying to enroll myself with Contoso Yes Yeah I'm calling to sign up for insurance OK so Mary Beth Rondo last name is R like Romeo O like Ocean N like Nancy DD like Dog and O like Ocean Again Rondo I only have a cell phone so I can give you that Sure So it's 234554 and then 9312 Yep that's right Yes I am self-employed Yes I do Sure So it's 412256789 It's 22 so 412 then another two then five Yeah it's Mary rondo@gmail.com So myfirstandlastname@gmail.com No periods no dashes That was quick Thank you Actually So I have one more question I'm curious will I be getting a physical card as proof of coverage Yes Could you please mail it to me when it's ready I'd like to have it shipped to ready for my address So it's 2660 unit A on Maple Ave SE Lansing and then zip code is 48823 Awesome Thanks so much",
+            "display": "Hi, My name is Mary Rondo. I'm trying to enroll myself with Contoso. Yes, Yeah, I'm calling to sign up for insurance. OK, so Mary Beth Rondo, last name is R like Romeo, O like Ocean, N like Nancy, DD like Dog and O like Ocean. Again Rondo, I only have a cell phone so I can give you that. Sure. So it's 234554 and then 9312. Yep, that's right. Yes, I am self-employed. Yes I do. Sure. So it's 412256789. It's 22, so 412, then another two, then five. Yeah, it's Mary rondo@gmail.com. So myfirstandlastname@gmail.com. No periods, no dashes. That was quick. Thank you. Actually. So I have one more question. I'm curious, will I be getting a physical card as proof of coverage? Yes. Could you please mail it to me when it's ready? I'd like to have it shipped to ready for my address. So it's 2660 unit A on Maple Ave. SE Lansing and then zip code is 48823. Awesome. Thanks so much."
+        }
+    ],
+    "recognizedPhrases": [
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT0.68S",
+            "duration": "PT2.72S",
+            "offsetInTicks": 6800000,
+            "durationInTicks": 27200000,
+            "nBest": [
+                {
+                    "confidence": 0.8985405,
+                    "lexical": "hello thank you for calling contoso who am i speaking with today",
+                    "itn": "hello thank you for calling contoso who am i speaking with today",
+                    "maskedITN": "Hello thank you for calling Contoso who am I speaking with today",
+                    "display": "Hello, thank you for calling Contoso, who am I speaking with today?",
+                    "displayWords": [
+                        {
+                            "displayText": "Hello,",
+                            "offset": "PT0.68S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 6800000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "thank",
+                            "offset": "PT1.12S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 11200000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT1.4S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 14000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT1.48S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 14800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "calling",
+                            "offset": "PT1.6S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 16000000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "Contoso,",
+                            "offset": "PT1.8S",
+                            "duration": "PT0.52S",
+                            "offsetInTicks": 18000000,
+                            "durationInTicks": 5200000
+                        },
+                        {
+                            "displayText": "who",
+                            "offset": "PT2.32S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 23200000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "am",
+                            "offset": "PT2.48S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 24800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT2.56S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 25600000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "speaking",
+                            "offset": "PT2.6S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 26000000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "with",
+                            "offset": "PT2.96S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 29600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "today?",
+                            "offset": "PT3.08S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 30800000,
+                            "durationInTicks": 3200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT9.46S",
+            "duration": "PT0.48S",
+            "offsetInTicks": 94600000,
+            "durationInTicks": 4800000,
+            "nBest": [
+                {
+                    "confidence": 0.8155379,
+                    "lexical": "hi mary",
+                    "itn": "hi mary",
+                    "maskedITN": "Hi Mary",
+                    "display": "Hi, Mary.",
+                    "displayWords": [
+                        {
+                            "displayText": "Hi,",
+                            "offset": "PT9.46S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 94600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "Mary.",
+                            "offset": "PT9.58S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 95800000,
+                            "durationInTicks": 3600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT10.3S",
+            "duration": "PT1.68S",
+            "offsetInTicks": 103000000,
+            "durationInTicks": 16800000,
+            "nBest": [
+                {
+                    "confidence": 0.852193,
+                    "lexical": "are you calling because he needs health insurance",
+                    "itn": "are you calling because he needs health insurance",
+                    "maskedITN": "Are you calling because he needs health insurance",
+                    "display": "Are you calling because he needs health insurance?",
+                    "displayWords": [
+                        {
+                            "displayText": "Are",
+                            "offset": "PT10.3S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 103000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT10.38S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 103800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "calling",
+                            "offset": "PT10.5S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 105000000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "because",
+                            "offset": "PT10.82S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 108200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "he",
+                            "offset": "PT11.06S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 110600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "needs",
+                            "offset": "PT11.14S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 111400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "health",
+                            "offset": "PT11.3S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 113000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "insurance?",
+                            "offset": "PT11.46S",
+                            "duration": "PT0.52S",
+                            "offsetInTicks": 114600000,
+                            "durationInTicks": 5200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT15.94S",
+            "duration": "PT0.32S",
+            "offsetInTicks": 159400000,
+            "durationInTicks": 3200000,
+            "nBest": [
+                {
+                    "confidence": 0.9706886,
+                    "lexical": "great",
+                    "itn": "great",
+                    "maskedITN": "Great",
+                    "display": "Great.",
+                    "displayWords": [
+                        {
+                            "displayText": "Great.",
+                            "offset": "PT15.94S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 159400000,
+                            "durationInTicks": 3200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT16.5S",
+            "duration": "PT2.68S",
+            "offsetInTicks": 165000000,
+            "durationInTicks": 26800000,
+            "nBest": [
+                {
+                    "confidence": 0.8614329,
+                    "lexical": "if you can answer a few questions we can get you signed up in a jiffy",
+                    "itn": "if you can answer a few questions we can get you signed up in a jiffy",
+                    "maskedITN": "If you can answer a few questions we can get you signed up in a jiffy",
+                    "display": "If you can answer a few questions, we can get you signed up in a jiffy.",
+                    "displayWords": [
+                        {
+                            "displayText": "If",
+                            "offset": "PT16.5S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 165000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT16.58S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 165800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "can",
+                            "offset": "PT16.66S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 166600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "answer",
+                            "offset": "PT16.82S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 168200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT17.02S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 170200000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "few",
+                            "offset": "PT17.06S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 170600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "questions,",
+                            "offset": "PT17.18S",
+                            "duration": "PT0.64S",
+                            "offsetInTicks": 171800000,
+                            "durationInTicks": 6400000
+                        },
+                        {
+                            "displayText": "we",
+                            "offset": "PT17.82S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 178200000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "can",
+                            "offset": "PT17.98S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 179800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "get",
+                            "offset": "PT18.1S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 181000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT18.26S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 182600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "signed",
+                            "offset": "PT18.34S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 183400000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "up",
+                            "offset": "PT18.58S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 185800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "in",
+                            "offset": "PT18.66S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 186600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT18.74S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 187400000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "jiffy.",
+                            "offset": "PT18.78S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 187800000,
+                            "durationInTicks": 4000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT21.74S",
+            "duration": "PT1.16S",
+            "offsetInTicks": 217400000,
+            "durationInTicks": 11600000,
+            "nBest": [
+                {
+                    "confidence": 0.92273057,
+                    "lexical": "so what's your full name",
+                    "itn": "so what's your full name",
+                    "maskedITN": "So what's your full name",
+                    "display": "So what's your full name?",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT21.74S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 217400000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "what's",
+                            "offset": "PT22.14S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 221400000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT22.34S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 223400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "full",
+                            "offset": "PT22.46S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 224600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "name?",
+                            "offset": "PT22.58S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 225800000,
+                            "durationInTicks": 3200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT35.84S",
+            "duration": "PT0.44S",
+            "offsetInTicks": 358400000,
+            "durationInTicks": 4400000,
+            "nBest": [
+                {
+                    "confidence": 0.9028621,
+                    "lexical": "got it",
+                    "itn": "got it",
+                    "maskedITN": "Got it",
+                    "display": "Got it.",
+                    "displayWords": [
+                        {
+                            "displayText": "Got",
+                            "offset": "PT35.84S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 358400000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "it.",
+                            "offset": "PT36.16S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 361600000,
+                            "durationInTicks": 1200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT36.76S",
+            "duration": "PT3.2S",
+            "offsetInTicks": 367600000,
+            "durationInTicks": 32000000,
+            "nBest": [
+                {
+                    "confidence": 0.79516983,
+                    "lexical": "and what's the best call back number in case we get disconnected",
+                    "itn": "and what's the best call back number in case we get disconnected",
+                    "maskedITN": "And what's the best call back number in case we get disconnected",
+                    "display": "And what's the best call back number in case we get disconnected?",
+                    "displayWords": [
+                        {
+                            "displayText": "And",
+                            "offset": "PT36.76S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 367600000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "what's",
+                            "offset": "PT37.2S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 372000000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "the",
+                            "offset": "PT37.48S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 374800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "best",
+                            "offset": "PT37.88S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 378800000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "call",
+                            "offset": "PT38.16S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 381600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "back",
+                            "offset": "PT38.32S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 383200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "number",
+                            "offset": "PT38.56S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 385600000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "in",
+                            "offset": "PT38.88S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 388800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "case",
+                            "offset": "PT38.96S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 389600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "we",
+                            "offset": "PT39.12S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 391200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "get",
+                            "offset": "PT39.2S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 392000000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "disconnected?",
+                            "offset": "PT39.32S",
+                            "duration": "PT0.64S",
+                            "offsetInTicks": 393200000,
+                            "durationInTicks": 6400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT44.12S",
+            "duration": "PT0.8S",
+            "offsetInTicks": 441200000,
+            "durationInTicks": 8000000,
+            "nBest": [
+                {
+                    "confidence": 0.6222426,
+                    "lexical": "yeah that'll be fine",
+                    "itn": "yeah that'll be fine",
+                    "maskedITN": "Yeah that'll be fine",
+                    "display": "Yeah, that'll be fine.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yeah,",
+                            "offset": "PT44.12S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 441200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "that'll",
+                            "offset": "PT44.36S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 443600000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "be",
+                            "offset": "PT44.6S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 446000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "fine.",
+                            "offset": "PT44.68S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 446800000,
+                            "durationInTicks": 2400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT54.68S",
+            "duration": "PT0.44S",
+            "offsetInTicks": 546800000,
+            "durationInTicks": 4400000,
+            "nBest": [
+                {
+                    "confidence": 0.92818105,
+                    "lexical": "got it",
+                    "itn": "got it",
+                    "maskedITN": "Got it",
+                    "display": "Got it.",
+                    "displayWords": [
+                        {
+                            "displayText": "Got",
+                            "offset": "PT54.68S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 546800000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "it.",
+                            "offset": "PT54.96S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 549600000,
+                            "durationInTicks": 1600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT55.12S",
+            "duration": "PT3.8S",
+            "offsetInTicks": 551200000,
+            "durationInTicks": 38000000,
+            "nBest": [
+                {
+                    "confidence": 0.90473604,
+                    "lexical": "so to confirm it's two three four five five four nine three one two",
+                    "itn": "so to confirm it's 234-554-9312",
+                    "maskedITN": "So to confirm it's 234-554-9312",
+                    "display": "So to confirm, it's 234-554-9312.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT55.12S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 551200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT55.2S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 552000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "confirm,",
+                            "offset": "PT55.36S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 553600000,
+                            "durationInTicks": 5600000
+                        },
+                        {
+                            "displayText": "it's",
+                            "offset": "PT55.92S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 559200000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "234-554-9312.",
+                            "offset": "PT56.32S",
+                            "duration": "PT2.6S",
+                            "offsetInTicks": 563200000,
+                            "durationInTicks": 26000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M1.64S",
+            "duration": "PT0.44S",
+            "offsetInTicks": 616400000,
+            "durationInTicks": 4400000,
+            "nBest": [
+                {
+                    "confidence": 0.8972401,
+                    "lexical": "excellent",
+                    "itn": "excellent",
+                    "maskedITN": "Excellent",
+                    "display": "Excellent.",
+                    "displayWords": [
+                        {
+                            "displayText": "Excellent.",
+                            "offset": "PT1M1.64S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 616400000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M2.72S",
+            "duration": "PT3.08S",
+            "offsetInTicks": 627200000,
+            "durationInTicks": 30800000,
+            "nBest": [
+                {
+                    "confidence": 0.8462127,
+                    "lexical": "let's get some additional information from your for your application",
+                    "itn": "let's get some additional information from your for your application",
+                    "maskedITN": "Let's get some additional information from your for your application",
+                    "display": "Let's get some additional information from your for your application.",
+                    "displayWords": [
+                        {
+                            "displayText": "Let's",
+                            "offset": "PT1M2.72S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 627200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "get",
+                            "offset": "PT1M2.92S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 629200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "some",
+                            "offset": "PT1M3.04S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 630400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "additional",
+                            "offset": "PT1M3.16S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 631600000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "information",
+                            "offset": "PT1M3.52S",
+                            "duration": "PT0.52S",
+                            "offsetInTicks": 635200000,
+                            "durationInTicks": 5200000
+                        },
+                        {
+                            "displayText": "from",
+                            "offset": "PT1M4.04S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 640400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT1M4.2S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 642000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT1M4.68S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 646800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT1M4.88S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 648800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "application.",
+                            "offset": "PT1M5S",
+                            "duration": "PT0.8S",
+                            "offsetInTicks": 650000000,
+                            "durationInTicks": 8000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M6.2S",
+            "duration": "PT0.88S",
+            "offsetInTicks": 662000000,
+            "durationInTicks": 8800000,
+            "nBest": [
+                {
+                    "confidence": 0.9743475,
+                    "lexical": "do you have a job",
+                    "itn": "do you have a job",
+                    "maskedITN": "Do you have a job",
+                    "display": "Do you have a job?",
+                    "displayWords": [
+                        {
+                            "displayText": "Do",
+                            "offset": "PT1M6.2S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 662000000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT1M6.44S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 664400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "have",
+                            "offset": "PT1M6.56S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 665600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT1M6.68S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 666800000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "job?",
+                            "offset": "PT1M6.72S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 667200000,
+                            "durationInTicks": 3600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M11.16S",
+            "duration": "PT2.32S",
+            "offsetInTicks": 711600000,
+            "durationInTicks": 23200000,
+            "nBest": [
+                {
+                    "confidence": 0.9412824,
+                    "lexical": "OK so then you have a social security number as well",
+                    "itn": "OK so then you have a social security number as well",
+                    "maskedITN": "OK so then you have a Social Security number as well",
+                    "display": "OK, so then you have a Social Security number as well.",
+                    "displayWords": [
+                        {
+                            "displayText": "OK,",
+                            "offset": "PT1M11.16S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 711600000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "so",
+                            "offset": "PT1M11.6S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 716000000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "then",
+                            "offset": "PT1M11.72S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 717200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT1M11.92S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 719200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "have",
+                            "offset": "PT1M12S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 720000000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT1M12.2S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 722000000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "Social",
+                            "offset": "PT1M12.24S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 722400000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "Security",
+                            "offset": "PT1M12.52S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 725200000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "number",
+                            "offset": "PT1M12.88S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 728800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "as",
+                            "offset": "PT1M13.12S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 731200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "well.",
+                            "offset": "PT1M13.24S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 732400000,
+                            "durationInTicks": 2400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M16.12S",
+            "duration": "PT2.6S",
+            "offsetInTicks": 761200000,
+            "durationInTicks": 26000000,
+            "nBest": [
+                {
+                    "confidence": 0.9441096,
+                    "lexical": "OK and what is your social security number please",
+                    "itn": "OK and what is your social security number please",
+                    "maskedITN": "OK And what is your Social Security number please",
+                    "display": "OK, And what is your Social Security number please?",
+                    "displayWords": [
+                        {
+                            "displayText": "OK,",
+                            "offset": "PT1M16.12S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 761200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "And",
+                            "offset": "PT1M16.84S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 768400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "what",
+                            "offset": "PT1M17S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 770000000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "is",
+                            "offset": "PT1M17.2S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 772000000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT1M17.32S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 773200000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "Social",
+                            "offset": "PT1M17.48S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 774800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "Security",
+                            "offset": "PT1M17.72S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 777200000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "number",
+                            "offset": "PT1M18.08S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 780800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "please?",
+                            "offset": "PT1M18.32S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 783200000,
+                            "durationInTicks": 4000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M27.07S",
+            "duration": "PT11.61S",
+            "offsetInTicks": 870700000,
+            "durationInTicks": 116100000,
+            "nBest": [
+                {
+                    "confidence": 0.8517647,
+                    "lexical": "sorry what was that a two five or a two two five you cut out for a bit right",
+                    "itn": "sorry what was that A-25 or A225 you cut out for a bit right",
+                    "maskedITN": "Sorry what was that A-25 or A225 you cut out for a bit Right",
+                    "display": "Sorry, what was that, A-25 or A225 you cut out for a bit, Right?",
+                    "displayWords": [
+                        {
+                            "displayText": "Sorry,",
+                            "offset": "PT1M27.07S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 870700000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "what",
+                            "offset": "PT1M27.35S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 873500000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "was",
+                            "offset": "PT1M27.51S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 875100000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "that,",
+                            "offset": "PT1M27.63S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 876300000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "A-25",
+                            "offset": "PT1M27.79S",
+                            "duration": "PT0.68S",
+                            "offsetInTicks": 877900000,
+                            "durationInTicks": 6800000
+                        },
+                        {
+                            "displayText": "or",
+                            "offset": "PT1M28.47S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 884700000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "A225",
+                            "offset": "PT1M28.63S",
+                            "duration": "PT1.08S",
+                            "offsetInTicks": 886300000,
+                            "durationInTicks": 10800000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT1M29.71S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 897100000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "cut",
+                            "offset": "PT1M29.87S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 898700000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "out",
+                            "offset": "PT1M30.15S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 901500000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT1M30.23S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 902300000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT1M30.39S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 903900000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "bit,",
+                            "offset": "PT1M30.43S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 904300000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "Right?",
+                            "offset": "PT1M38.44S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 984400000,
+                            "durationInTicks": 2400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M38.68S",
+            "duration": "PT0.76S",
+            "offsetInTicks": 986800000,
+            "durationInTicks": 7600000,
+            "nBest": [
+                {
+                    "confidence": 0.956172,
+                    "lexical": "thank you so much",
+                    "itn": "thank you so much",
+                    "maskedITN": "Thank you so much",
+                    "display": "Thank you so much.",
+                    "displayWords": [
+                        {
+                            "displayText": "Thank",
+                            "offset": "PT1M38.68S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 986800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT1M38.88S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 988800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "so",
+                            "offset": "PT1M38.96S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 989600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "much.",
+                            "offset": "PT1M39.04S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 990400000,
+                            "durationInTicks": 4000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M40.32S",
+            "duration": "PT2.76S",
+            "offsetInTicks": 1003200000,
+            "durationInTicks": 27600000,
+            "nBest": [
+                {
+                    "confidence": 0.9587393,
+                    "lexical": "and could i have your email address please",
+                    "itn": "and could i have your email address please",
+                    "maskedITN": "And could I have your e-mail address please",
+                    "display": "And could I have your e-mail address, please?",
+                    "displayWords": [
+                        {
+                            "displayText": "And",
+                            "offset": "PT1M40.32S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1003200000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "could",
+                            "offset": "PT1M40.72S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1007200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT1M40.96S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1009600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "have",
+                            "offset": "PT1M41.12S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 1011200000,
+                            "durationInTicks": 5600000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT1M41.68S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1016800000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "e-mail",
+                            "offset": "PT1M42.04S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1020400000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "address,",
+                            "offset": "PT1M42.36S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1023600000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "please?",
+                            "offset": "PT1M42.64S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1026400000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M52.76S",
+            "duration": "PT0.32S",
+            "offsetInTicks": 1127600000,
+            "durationInTicks": 3200000,
+            "nBest": [
+                {
+                    "confidence": 0.9033491,
+                    "lexical": "great",
+                    "itn": "great",
+                    "maskedITN": "Great",
+                    "display": "Great.",
+                    "displayWords": [
+                        {
+                            "displayText": "Great.",
+                            "offset": "PT1M52.76S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1127600000,
+                            "durationInTicks": 3200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M53.64S",
+            "duration": "PT1.44S",
+            "offsetInTicks": 1136400000,
+            "durationInTicks": 14400000,
+            "nBest": [
+                {
+                    "confidence": 0.9713893,
+                    "lexical": "that is the last question",
+                    "itn": "that is the last question",
+                    "maskedITN": "That is the last question",
+                    "display": "That is the last question.",
+                    "displayWords": [
+                        {
+                            "displayText": "That",
+                            "offset": "PT1M53.64S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1136400000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "is",
+                            "offset": "PT1M54.04S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1140400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "the",
+                            "offset": "PT1M54.2S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1142000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "last",
+                            "offset": "PT1M54.36S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1143600000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "question.",
+                            "offset": "PT1M54.64S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1146400000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M55.08S",
+            "duration": "PT3.92S",
+            "offsetInTicks": 1150800000,
+            "durationInTicks": 39200000,
+            "nBest": [
+                {
+                    "confidence": 0.96565706,
+                    "lexical": "so let me take your information and i'll be able to get you signed up right away",
+                    "itn": "so let me take your information and i'll be able to get you signed up right away",
+                    "maskedITN": "So let me take your information and I'll be able to get you signed up right away",
+                    "display": "So let me take your information and I'll be able to get you signed up right away.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT1M55.08S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1150800000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "let",
+                            "offset": "PT1M55.36S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1153600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "me",
+                            "offset": "PT1M55.48S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1154800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "take",
+                            "offset": "PT1M55.72S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1157200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT1M55.92S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1159200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "information",
+                            "offset": "PT1M56.04S",
+                            "duration": "PT0.68S",
+                            "offsetInTicks": 1160400000,
+                            "durationInTicks": 6800000
+                        },
+                        {
+                            "displayText": "and",
+                            "offset": "PT1M56.72S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1167200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "I'll",
+                            "offset": "PT1M56.84S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1168400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "be",
+                            "offset": "PT1M56.96S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1169600000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "able",
+                            "offset": "PT1M57.64S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1176400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT1M57.8S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1178000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "get",
+                            "offset": "PT1M57.88S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1178800000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT1M58.04S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1180400000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "signed",
+                            "offset": "PT1M58.12S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1181200000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "up",
+                            "offset": "PT1M58.4S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1184000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "right",
+                            "offset": "PT1M58.48S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1184800000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "away.",
+                            "offset": "PT1M58.64S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1186400000,
+                            "durationInTicks": 3600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT1M59.44S",
+            "duration": "PT1.56S",
+            "offsetInTicks": 1194400000,
+            "durationInTicks": 15600000,
+            "nBest": [
+                {
+                    "confidence": 0.91785514,
+                    "lexical": "thank you for calling contoso",
+                    "itn": "thank you for calling contoso",
+                    "maskedITN": "Thank you for calling Contoso",
+                    "display": "Thank you for calling Contoso.",
+                    "displayWords": [
+                        {
+                            "displayText": "Thank",
+                            "offset": "PT1M59.44S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1194400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT1M59.6S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1196000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT1M59.68S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1196800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "calling",
+                            "offset": "PT1M59.8S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1198000000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "Contoso.",
+                            "offset": "PT2M0.36S",
+                            "duration": "PT0.64S",
+                            "offsetInTicks": 1203600000,
+                            "durationInTicks": 6400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M1S",
+            "duration": "PT2.08S",
+            "offsetInTicks": 1210000000,
+            "durationInTicks": 20800000,
+            "nBest": [
+                {
+                    "confidence": 0.9202359,
+                    "lexical": "and i'll be able to get you signed up immediately",
+                    "itn": "and i'll be able to get you signed up immediately",
+                    "maskedITN": "And I'll be able to get you signed up immediately",
+                    "display": "And I'll be able to get you signed up immediately.",
+                    "displayWords": [
+                        {
+                            "displayText": "And",
+                            "offset": "PT2M1S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1210000000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "I'll",
+                            "offset": "PT2M1.48S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1214800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "be",
+                            "offset": "PT2M1.6S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1216000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "able",
+                            "offset": "PT2M1.68S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1216800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT2M1.92S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1219200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "get",
+                            "offset": "PT2M2S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1220000000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT2M2.12S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1221200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "signed",
+                            "offset": "PT2M2.2S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1222000000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "up",
+                            "offset": "PT2M2.4S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1224000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "immediately.",
+                            "offset": "PT2M2.48S",
+                            "duration": "PT0.6S",
+                            "offsetInTicks": 1224800000,
+                            "durationInTicks": 6000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M3.44S",
+            "duration": "PT4.16S",
+            "offsetInTicks": 1234400000,
+            "durationInTicks": 41600000,
+            "nBest": [
+                {
+                    "confidence": 0.93729526,
+                    "lexical": "one of our agents will call you back in about twenty four hours or so to confirm your application",
+                    "itn": "one of our agents will call you back in about 24 hours or so to confirm your application",
+                    "maskedITN": "One of our agents will call you back in about 24 hours or so to confirm your application",
+                    "display": "One of our agents will call you back in about 24 hours or so to confirm your application.",
+                    "displayWords": [
+                        {
+                            "displayText": "One",
+                            "offset": "PT2M3.44S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1234400000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "of",
+                            "offset": "PT2M3.76S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1237600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "our",
+                            "offset": "PT2M3.84S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1238400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "agents",
+                            "offset": "PT2M3.96S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1239600000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "will",
+                            "offset": "PT2M4.28S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1242800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "call",
+                            "offset": "PT2M4.48S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1244800000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT2M4.64S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1246400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "back",
+                            "offset": "PT2M4.76S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1247600000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "in",
+                            "offset": "PT2M5.12S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1251200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "about",
+                            "offset": "PT2M5.2S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1252000000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "24",
+                            "offset": "PT2M5.4S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1254000000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "hours",
+                            "offset": "PT2M5.84S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1258400000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "or",
+                            "offset": "PT2M6.08S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1260800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "so",
+                            "offset": "PT2M6.16S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1261600000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT2M6.44S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1264400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "confirm",
+                            "offset": "PT2M6.56S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1265600000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT2M6.92S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1269200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "application.",
+                            "offset": "PT2M7.04S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 1270400000,
+                            "durationInTicks": 5600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M11.24S",
+            "duration": "PT0.56S",
+            "offsetInTicks": 1312400000,
+            "durationInTicks": 5600000,
+            "nBest": [
+                {
+                    "confidence": 0.83429044,
+                    "lexical": "absolutely",
+                    "itn": "absolutely",
+                    "maskedITN": "Absolutely",
+                    "display": "Absolutely.",
+                    "displayWords": [
+                        {
+                            "displayText": "Absolutely.",
+                            "offset": "PT2M11.24S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 1312400000,
+                            "durationInTicks": 5600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M12.2S",
+            "duration": "PT6.32S",
+            "offsetInTicks": 1322000000,
+            "durationInTicks": 63200000,
+            "nBest": [
+                {
+                    "confidence": 0.93204105,
+                    "lexical": "if you need anything else please give us a call at one eight hundred five five five five five six four extension one two three",
+                    "itn": "if you need anything else please give us a call at 1-800-555-5564 ext 123",
+                    "maskedITN": "If you need anything else please give us a call at 1-800-555-5564 ext 123",
+                    "display": "If you need anything else, please give us a call at 1-800-555-5564, ext 123.",
+                    "displayWords": [
+                        {
+                            "displayText": "If",
+                            "offset": "PT2M12.2S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1322000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT2M12.36S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1323600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "need",
+                            "offset": "PT2M12.44S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1324400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "anything",
+                            "offset": "PT2M12.6S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1326000000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "else,",
+                            "offset": "PT2M12.88S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1328800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "please",
+                            "offset": "PT2M13.08S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1330800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "give",
+                            "offset": "PT2M13.32S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1333200000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "us",
+                            "offset": "PT2M13.48S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1334800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT2M13.56S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1335600000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "call",
+                            "offset": "PT2M13.6S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1336000000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "at",
+                            "offset": "PT2M13.92S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1339200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "1-800-555-5564,",
+                            "offset": "PT2M14.16S",
+                            "duration": "PT3.2S",
+                            "offsetInTicks": 1341600000,
+                            "durationInTicks": 32000000
+                        },
+                        {
+                            "displayText": "ext",
+                            "offset": "PT2M17.44S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 1374400000,
+                            "durationInTicks": 5600000
+                        },
+                        {
+                            "displayText": "123.",
+                            "offset": "PT2M18S",
+                            "duration": "PT0.52S",
+                            "offsetInTicks": 1380000000,
+                            "durationInTicks": 5200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M19.24S",
+            "duration": "PT1.8S",
+            "offsetInTicks": 1392400000,
+            "durationInTicks": 18000000,
+            "nBest": [
+                {
+                    "confidence": 0.93250614,
+                    "lexical": "thank you very much for calling contoso",
+                    "itn": "thank you very much for calling contoso",
+                    "maskedITN": "Thank you very much for calling Contoso",
+                    "display": "Thank you very much for calling Contoso.",
+                    "displayWords": [
+                        {
+                            "displayText": "Thank",
+                            "offset": "PT2M19.24S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1392400000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT2M19.44S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1394400000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "very",
+                            "offset": "PT2M19.52S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1395200000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "much",
+                            "offset": "PT2M19.68S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1396800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT2M20.08S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1400800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "calling",
+                            "offset": "PT2M20.28S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1402800000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "Contoso.",
+                            "offset": "PT2M20.56S",
+                            "duration": "PT0.48S",
+                            "offsetInTicks": 1405600000,
+                            "durationInTicks": 4800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M25.04S",
+            "duration": "PT0.64S",
+            "offsetInTicks": 1450400000,
+            "durationInTicks": 6400000,
+            "nBest": [
+                {
+                    "confidence": 0.9152841,
+                    "lexical": "yes of course",
+                    "itn": "yes of course",
+                    "maskedITN": "Yes of course",
+                    "display": "Yes, of course.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yes,",
+                            "offset": "PT2M25.04S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1450400000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "of",
+                            "offset": "PT2M25.28S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1452800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "course.",
+                            "offset": "PT2M25.36S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1453600000,
+                            "durationInTicks": 3200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M31.4S",
+            "duration": "PT5S",
+            "offsetInTicks": 1514000000,
+            "durationInTicks": 50000000,
+            "nBest": [
+                {
+                    "confidence": 0.9512522,
+                    "lexical": "so the default is a digital membership card but we can send you a physical card if you prefer",
+                    "itn": "so the default is a digital membership card but we can send you a physical card if you prefer",
+                    "maskedITN": "So the default is a digital membership card but we can send you a physical card if you prefer",
+                    "display": "So the default is a digital membership card, but we can send you a physical card if you prefer.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT2M31.4S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1514000000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "the",
+                            "offset": "PT2M31.76S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1517600000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "default",
+                            "offset": "PT2M31.96S",
+                            "duration": "PT0.72S",
+                            "offsetInTicks": 1519600000,
+                            "durationInTicks": 7200000
+                        },
+                        {
+                            "displayText": "is",
+                            "offset": "PT2M32.68S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1526800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT2M32.8S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1528000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "digital",
+                            "offset": "PT2M32.88S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1528800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "membership",
+                            "offset": "PT2M33.28S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1532800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "card,",
+                            "offset": "PT2M33.68S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1536800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "but",
+                            "offset": "PT2M34.28S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1542800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "we",
+                            "offset": "PT2M34.48S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1544800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "can",
+                            "offset": "PT2M34.6S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1546000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "send",
+                            "offset": "PT2M34.76S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1547600000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT2M34.96S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1549600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT2M35.04S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1550400000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "physical",
+                            "offset": "PT2M35.08S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1550800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "card",
+                            "offset": "PT2M35.48S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1554800000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "if",
+                            "offset": "PT2M35.8S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1558000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT2M35.88S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1558800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "prefer.",
+                            "offset": "PT2M35.96S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1559600000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M43.58S",
+            "duration": "PT13.26S",
+            "offsetInTicks": 1635800000,
+            "durationInTicks": 132600000,
+            "nBest": [
+                {
+                    "confidence": 0.66069114,
+                    "lexical": "yeah absolutely",
+                    "itn": "yeah absolutely",
+                    "maskedITN": "Yeah absolutely",
+                    "display": "Yeah, absolutely.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yeah,",
+                            "offset": "PT2M43.58S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1635800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "absolutely.",
+                            "offset": "PT2M56.24S",
+                            "duration": "PT0.6S",
+                            "offsetInTicks": 1762400000,
+                            "durationInTicks": 6000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT2M56.92S",
+            "duration": "PT1.2S",
+            "offsetInTicks": 1769200000,
+            "durationInTicks": 12000000,
+            "nBest": [
+                {
+                    "confidence": 0.86548096,
+                    "lexical": "i've made a note on your file",
+                    "itn": "i've made a note on your file",
+                    "maskedITN": "I've made a note on your file",
+                    "display": "I've made a note on your file.",
+                    "displayWords": [
+                        {
+                            "displayText": "I've",
+                            "offset": "PT2M56.92S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1769200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "made",
+                            "offset": "PT2M57.16S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1771600000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT2M57.4S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1774000000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "note",
+                            "offset": "PT2M57.44S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1774400000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "on",
+                            "offset": "PT2M57.64S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1776400000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "your",
+                            "offset": "PT2M57.72S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1777200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "file.",
+                            "offset": "PT2M57.84S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1778400000,
+                            "durationInTicks": 2800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT3M1.56S",
+            "duration": "PT0.68S",
+            "offsetInTicks": 1815600000,
+            "durationInTicks": 6800000,
+            "nBest": [
+                {
+                    "confidence": 0.96450114,
+                    "lexical": "you're very welcome",
+                    "itn": "you're very welcome",
+                    "maskedITN": "You're very welcome",
+                    "display": "You're very welcome.",
+                    "displayWords": [
+                        {
+                            "displayText": "You're",
+                            "offset": "PT3M1.56S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1815600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "very",
+                            "offset": "PT3M1.72S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1817200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "welcome.",
+                            "offset": "PT3M1.92S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1819200000,
+                            "durationInTicks": 3200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 0,
+            "offset": "PT3M2.24S",
+            "duration": "PT2S",
+            "offsetInTicks": 1822400000,
+            "durationInTicks": 20000000,
+            "nBest": [
+                {
+                    "confidence": 0.9487717,
+                    "lexical": "thank you for calling contoso and have a great day",
+                    "itn": "thank you for calling contoso and have a great day",
+                    "maskedITN": "Thank you for calling Contoso and have a great day",
+                    "display": "Thank you for calling Contoso and have a great day.",
+                    "displayWords": [
+                        {
+                            "displayText": "Thank",
+                            "offset": "PT3M2.24S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1822400000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT3M2.52S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1825200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT3M2.6S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1826000000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "calling",
+                            "offset": "PT3M2.72S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1827200000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "Contoso",
+                            "offset": "PT3M3.04S",
+                            "duration": "PT0.48S",
+                            "offsetInTicks": 1830400000,
+                            "durationInTicks": 4800000
+                        },
+                        {
+                            "displayText": "and",
+                            "offset": "PT3M3.52S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1835200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "have",
+                            "offset": "PT3M3.72S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1837200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT3M3.84S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1838400000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "great",
+                            "offset": "PT3M3.88S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1838800000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "day.",
+                            "offset": "PT3M4.04S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1840400000,
+                            "durationInTicks": 2000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT4.48S",
+            "duration": "PT1.6S",
+            "offsetInTicks": 44800000,
+            "durationInTicks": 16000000,
+            "nBest": [
+                {
+                    "confidence": 0.91635025,
+                    "lexical": "hi my name is mary rondo",
+                    "itn": "hi my name is mary rondo",
+                    "maskedITN": "Hi My name is Mary Rondo",
+                    "display": "Hi, My name is Mary Rondo.",
+                    "displayWords": [
+                        {
+                            "displayText": "Hi,",
+                            "offset": "PT4.48S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 44800000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "My",
+                            "offset": "PT4.84S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 48400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "name",
+                            "offset": "PT4.96S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 49600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "is",
+                            "offset": "PT5.12S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 51200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "Mary",
+                            "offset": "PT5.24S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 52400000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "Rondo.",
+                            "offset": "PT5.52S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 55200000,
+                            "durationInTicks": 5600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT6.08S",
+            "duration": "PT1.88S",
+            "offsetInTicks": 60800000,
+            "durationInTicks": 18800000,
+            "nBest": [
+                {
+                    "confidence": 0.749767,
+                    "lexical": "i'm trying to enroll myself with contoso",
+                    "itn": "i'm trying to enroll myself with contoso",
+                    "maskedITN": "I'm trying to enroll myself with Contoso",
+                    "display": "I'm trying to enroll myself with Contoso.",
+                    "displayWords": [
+                        {
+                            "displayText": "I'm",
+                            "offset": "PT6.08S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 60800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "trying",
+                            "offset": "PT6.2S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 62000000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT6.44S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 64400000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "enroll",
+                            "offset": "PT6.52S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 65200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "myself",
+                            "offset": "PT6.72S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 67200000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "with",
+                            "offset": "PT7.08S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 70800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "Contoso.",
+                            "offset": "PT7.2S",
+                            "duration": "PT0.76S",
+                            "offsetInTicks": 72000000,
+                            "durationInTicks": 7600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT13S",
+            "duration": "PT2.04S",
+            "offsetInTicks": 130000000,
+            "durationInTicks": 20400000,
+            "nBest": [
+                {
+                    "confidence": 0.892505,
+                    "lexical": "yes yeah i'm calling to sign up for insurance",
+                    "itn": "yes yeah i'm calling to sign up for insurance",
+                    "maskedITN": "Yes Yeah I'm calling to sign up for insurance",
+                    "display": "Yes, Yeah, I'm calling to sign up for insurance.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yes,",
+                            "offset": "PT13S",
+                            "duration": "PT0.48S",
+                            "offsetInTicks": 130000000,
+                            "durationInTicks": 4800000
+                        },
+                        {
+                            "displayText": "Yeah,",
+                            "offset": "PT13.52S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 135200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "I'm",
+                            "offset": "PT13.72S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 137200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "calling",
+                            "offset": "PT13.84S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 138400000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT14.16S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 141600000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "sign",
+                            "offset": "PT14.24S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 142400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "up",
+                            "offset": "PT14.4S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 144000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT14.48S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 144800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "insurance.",
+                            "offset": "PT14.6S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 146000000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT20.16S",
+            "duration": "PT12.92S",
+            "offsetInTicks": 201600000,
+            "durationInTicks": 129200000,
+            "nBest": [
+                {
+                    "confidence": 0.87911457,
+                    "lexical": "OK so mary beth rondo last name is R like romeo O like ocean N like nancy DD like dog and O like ocean",
+                    "itn": "OK so mary beth rondo last name is R like romeo O like ocean N like nancy DD like dog and O like ocean",
+                    "maskedITN": "OK so Mary Beth Rondo last name is R like Romeo O like Ocean N like Nancy DD like Dog and O like Ocean",
+                    "display": "OK, so Mary Beth Rondo, last name is R like Romeo, O like Ocean, N like Nancy, DD like Dog and O like Ocean.",
+                    "displayWords": [
+                        {
+                            "displayText": "OK,",
+                            "offset": "PT20.16S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 201600000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "so",
+                            "offset": "PT24.56S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 245600000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "Mary",
+                            "offset": "PT24.76S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 247600000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "Beth",
+                            "offset": "PT25.08S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 250800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "Rondo,",
+                            "offset": "PT25.32S",
+                            "duration": "PT0.52S",
+                            "offsetInTicks": 253200000,
+                            "durationInTicks": 5200000
+                        },
+                        {
+                            "displayText": "last",
+                            "offset": "PT25.84S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 258400000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "name",
+                            "offset": "PT26.24S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 262400000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "is",
+                            "offset": "PT26.44S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 264400000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "R",
+                            "offset": "PT26.68S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 266800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "like",
+                            "offset": "PT27.08S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 270800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "Romeo,",
+                            "offset": "PT27.28S",
+                            "duration": "PT0.8S",
+                            "offsetInTicks": 272800000,
+                            "durationInTicks": 8000000
+                        },
+                        {
+                            "displayText": "O",
+                            "offset": "PT28.2S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 282000000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "like",
+                            "offset": "PT28.6S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 286000000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "Ocean,",
+                            "offset": "PT28.84S",
+                            "duration": "PT0.64S",
+                            "offsetInTicks": 288400000,
+                            "durationInTicks": 6400000
+                        },
+                        {
+                            "displayText": "N",
+                            "offset": "PT29.56S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 295600000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "like",
+                            "offset": "PT29.88S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 298800000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "Nancy,",
+                            "offset": "PT30.04S",
+                            "duration": "PT0.76S",
+                            "offsetInTicks": 300400000,
+                            "durationInTicks": 7600000
+                        },
+                        {
+                            "displayText": "DD",
+                            "offset": "PT31.32S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 313200000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "like",
+                            "offset": "PT31.52S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 315200000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "Dog",
+                            "offset": "PT31.68S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 316800000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "and",
+                            "offset": "PT32.08S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 320800000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "O",
+                            "offset": "PT32.44S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 324400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "like",
+                            "offset": "PT32.6S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 326000000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "Ocean.",
+                            "offset": "PT32.8S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 328000000,
+                            "durationInTicks": 2800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT33.08S",
+            "duration": "PT10.25S",
+            "offsetInTicks": 330800000,
+            "durationInTicks": 102500000,
+            "nBest": [
+                {
+                    "confidence": 0.8845322,
+                    "lexical": "again rondo i only have a cell phone so i can give you that",
+                    "itn": "again rondo i only have a cell phone so i can give you that",
+                    "maskedITN": "Again Rondo I only have a cell phone so I can give you that",
+                    "display": "Again Rondo, I only have a cell phone so I can give you that.",
+                    "displayWords": [
+                        {
+                            "displayText": "Again",
+                            "offset": "PT33.08S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 330800000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "Rondo,",
+                            "offset": "PT34.32S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 343200000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT41.69S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 416900000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "only",
+                            "offset": "PT41.85S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 418500000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "have",
+                            "offset": "PT42.01S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 420100000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT42.13S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 421300000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "cell",
+                            "offset": "PT42.17S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 421700000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "phone",
+                            "offset": "PT42.37S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 423700000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "so",
+                            "offset": "PT42.57S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 425700000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT42.65S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 426500000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "can",
+                            "offset": "PT42.69S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 426900000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "give",
+                            "offset": "PT42.81S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 428100000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT42.97S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 429700000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "that.",
+                            "offset": "PT43.05S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 430500000,
+                            "durationInTicks": 2800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT46.09S",
+            "duration": "PT0.4S",
+            "offsetInTicks": 460900000,
+            "durationInTicks": 4000000,
+            "nBest": [
+                {
+                    "confidence": 0.9718636,
+                    "lexical": "sure",
+                    "itn": "sure",
+                    "maskedITN": "Sure",
+                    "display": "Sure.",
+                    "displayWords": [
+                        {
+                            "displayText": "Sure.",
+                            "offset": "PT46.09S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 460900000,
+                            "durationInTicks": 4000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT46.49S",
+            "duration": "PT7.2S",
+            "offsetInTicks": 464900000,
+            "durationInTicks": 72000000,
+            "nBest": [
+                {
+                    "confidence": 0.95714915,
+                    "lexical": "so it's two three four five five four and then nine three one two",
+                    "itn": "so it's 234554 and then 9312",
+                    "maskedITN": "So it's 234554 and then 9312",
+                    "display": "So it's 234554 and then 9312.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT46.49S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 464900000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "it's",
+                            "offset": "PT46.73S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 467300000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "234554",
+                            "offset": "PT47.21S",
+                            "duration": "PT3.84S",
+                            "offsetInTicks": 472100000,
+                            "durationInTicks": 38400000
+                        },
+                        {
+                            "displayText": "and",
+                            "offset": "PT51.21S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 512100000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "then",
+                            "offset": "PT51.37S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 513700000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "9312.",
+                            "offset": "PT51.49S",
+                            "duration": "PT2.2S",
+                            "offsetInTicks": 514900000,
+                            "durationInTicks": 22000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M",
+            "duration": "PT0.64S",
+            "offsetInTicks": 600000000,
+            "durationInTicks": 6400000,
+            "nBest": [
+                {
+                    "confidence": 0.6379246,
+                    "lexical": "yep that's right",
+                    "itn": "yep that's right",
+                    "maskedITN": "Yep that's right",
+                    "display": "Yep, that's right.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yep,",
+                            "offset": "PT1M",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 600000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "that's",
+                            "offset": "PT1M0.24S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 602400000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "right.",
+                            "offset": "PT1M0.44S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 604400000,
+                            "durationInTicks": 2000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M8.54S",
+            "duration": "PT1.08S",
+            "offsetInTicks": 685400000,
+            "durationInTicks": 10800000,
+            "nBest": [
+                {
+                    "confidence": 0.6701387,
+                    "lexical": "yes i am self employed",
+                    "itn": "yes i am self employed",
+                    "maskedITN": "Yes I am self-employed",
+                    "display": "Yes, I am self-employed.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yes,",
+                            "offset": "PT1M8.54S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 685400000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT1M8.98S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 689800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "am",
+                            "offset": "PT1M9.14S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 691400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "self-employed.",
+                            "offset": "PT1M9.3S",
+                            "duration": "PT0.64S",
+                            "offsetInTicks": 693000000,
+                            "durationInTicks": 6400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M14.62S",
+            "duration": "PT0.44S",
+            "offsetInTicks": 746200000,
+            "durationInTicks": 4400000,
+            "nBest": [
+                {
+                    "confidence": 0.9184088,
+                    "lexical": "yes i do",
+                    "itn": "yes i do",
+                    "maskedITN": "Yes I do",
+                    "display": "Yes I do.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yes",
+                            "offset": "PT1M14.62S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 746200000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT1M14.94S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 749400000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "do.",
+                            "offset": "PT1M14.98S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 749800000,
+                            "durationInTicks": 800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M20.02S",
+            "duration": "PT0.44S",
+            "offsetInTicks": 800200000,
+            "durationInTicks": 4400000,
+            "nBest": [
+                {
+                    "confidence": 0.960051,
+                    "lexical": "sure",
+                    "itn": "sure",
+                    "maskedITN": "Sure",
+                    "display": "Sure.",
+                    "displayWords": [
+                        {
+                            "displayText": "Sure.",
+                            "offset": "PT1M20.02S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 800200000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M20.46S",
+            "duration": "PT5.64S",
+            "offsetInTicks": 804600000,
+            "durationInTicks": 56400000,
+            "nBest": [
+                {
+                    "confidence": 0.9611851,
+                    "lexical": "so it's four one two two five six seven eight nine",
+                    "itn": "so it's 412256789",
+                    "maskedITN": "So it's 412256789",
+                    "display": "So it's 412256789.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT1M20.46S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 804600000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "it's",
+                            "offset": "PT1M20.7S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 807000000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "412256789.",
+                            "offset": "PT1M21.14S",
+                            "duration": "PT4.96S",
+                            "offsetInTicks": 811400000,
+                            "durationInTicks": 49600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M32.1S",
+            "duration": "PT5.38S",
+            "offsetInTicks": 921000000,
+            "durationInTicks": 53800000,
+            "nBest": [
+                {
+                    "confidence": 0.8802118,
+                    "lexical": "it's double two so four one two then another two then five",
+                    "itn": "it's 22 so 412 then another two then five",
+                    "maskedITN": "It's 22 so 412 then another two then five",
+                    "display": "It's 22, so 412, then another two, then five.",
+                    "displayWords": [
+                        {
+                            "displayText": "It's",
+                            "offset": "PT1M32.1S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 921000000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "22,",
+                            "offset": "PT1M32.3S",
+                            "duration": "PT0.68S",
+                            "offsetInTicks": 923000000,
+                            "durationInTicks": 6800000
+                        },
+                        {
+                            "displayText": "so",
+                            "offset": "PT1M32.98S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 929800000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "412,",
+                            "offset": "PT1M34.56S",
+                            "duration": "PT1.12S",
+                            "offsetInTicks": 945600000,
+                            "durationInTicks": 11200000
+                        },
+                        {
+                            "displayText": "then",
+                            "offset": "PT1M35.76S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 957600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "another",
+                            "offset": "PT1M35.92S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 959200000,
+                            "durationInTicks": 3600000
+                        },
+                        {
+                            "displayText": "two,",
+                            "offset": "PT1M36.28S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 962800000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "then",
+                            "offset": "PT1M36.76S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 967600000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "five.",
+                            "offset": "PT1M37.04S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 970400000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M44.27S",
+            "duration": "PT3.12S",
+            "offsetInTicks": 1042700000,
+            "durationInTicks": 31200000,
+            "nBest": [
+                {
+                    "confidence": 0.8621518,
+                    "lexical": "yeah it's mary rondo at gmail dot com",
+                    "itn": "yeah it's mary rondo@gmail.com",
+                    "maskedITN": "Yeah it's Mary rondo@gmail.com",
+                    "display": "Yeah, it's Mary rondo@gmail.com.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yeah,",
+                            "offset": "PT1M44.27S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1042700000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "it's",
+                            "offset": "PT1M44.59S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1045900000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "Mary",
+                            "offset": "PT1M44.79S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 1047900000,
+                            "durationInTicks": 5600000
+                        },
+                        {
+                            "displayText": "rondo@gmail.com.",
+                            "offset": "PT1M45.43S",
+                            "duration": "PT1.96S",
+                            "offsetInTicks": 1054300000,
+                            "durationInTicks": 19600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M47.39S",
+            "duration": "PT2.2S",
+            "offsetInTicks": 1073900000,
+            "durationInTicks": 22000000,
+            "nBest": [
+                {
+                    "confidence": 0.93163997,
+                    "lexical": "so my first and last name at gmail dot com",
+                    "itn": "so myfirstandlastname@gmail.com",
+                    "maskedITN": "So myfirstandlastname@gmail.com",
+                    "display": "So myfirstandlastname@gmail.com.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT1M47.39S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1073900000,
+                            "durationInTicks": 2800000
+                        },
+                        {
+                            "displayText": "myfirstandlastname@gmail.com.",
+                            "offset": "PT1M47.67S",
+                            "duration": "PT1.92S",
+                            "offsetInTicks": 1076700000,
+                            "durationInTicks": 19200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT1M49.71S",
+            "duration": "PT1.68S",
+            "offsetInTicks": 1097100000,
+            "durationInTicks": 16800000,
+            "nBest": [
+                {
+                    "confidence": 0.8384917,
+                    "lexical": "no periods no dashes",
+                    "itn": "no periods no dashes",
+                    "maskedITN": "No periods no dashes",
+                    "display": "No periods, no dashes.",
+                    "displayWords": [
+                        {
+                            "displayText": "No",
+                            "offset": "PT1M49.71S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1097100000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "periods,",
+                            "offset": "PT1M49.91S",
+                            "duration": "PT0.52S",
+                            "offsetInTicks": 1099100000,
+                            "durationInTicks": 5200000
+                        },
+                        {
+                            "displayText": "no",
+                            "offset": "PT1M50.51S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1105100000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "dashes.",
+                            "offset": "PT1M50.71S",
+                            "duration": "PT0.68S",
+                            "offsetInTicks": 1107100000,
+                            "durationInTicks": 6800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M8.72S",
+            "duration": "PT0.44S",
+            "offsetInTicks": 1287200000,
+            "durationInTicks": 4400000,
+            "nBest": [
+                {
+                    "confidence": 0.23063053,
+                    "lexical": "that was quick",
+                    "itn": "that was quick",
+                    "maskedITN": "That was quick",
+                    "display": "That was quick.",
+                    "displayWords": [
+                        {
+                            "displayText": "That",
+                            "offset": "PT2M8.72S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1287200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "was",
+                            "offset": "PT2M8.84S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1288400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "quick.",
+                            "offset": "PT2M8.96S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1289600000,
+                            "durationInTicks": 2000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M9.48S",
+            "duration": "PT0.4S",
+            "offsetInTicks": 1294800000,
+            "durationInTicks": 4000000,
+            "nBest": [
+                {
+                    "confidence": 0.95179754,
+                    "lexical": "thank you",
+                    "itn": "thank you",
+                    "maskedITN": "Thank you",
+                    "display": "Thank you.",
+                    "displayWords": [
+                        {
+                            "displayText": "Thank",
+                            "offset": "PT2M9.48S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1294800000,
+                            "durationInTicks": 2000000
+                        },
+                        {
+                            "displayText": "you.",
+                            "offset": "PT2M9.68S",
+                            "duration": "PT0.2S",
+                            "offsetInTicks": 1296800000,
+                            "durationInTicks": 2000000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M22.23S",
+            "duration": "PT0.48S",
+            "offsetInTicks": 1422300000,
+            "durationInTicks": 4800000,
+            "nBest": [
+                {
+                    "confidence": 0.93217516,
+                    "lexical": "actually",
+                    "itn": "actually",
+                    "maskedITN": "Actually",
+                    "display": "Actually.",
+                    "displayWords": [
+                        {
+                            "displayText": "Actually.",
+                            "offset": "PT2M22.23S",
+                            "duration": "PT0.48S",
+                            "offsetInTicks": 1422300000,
+                            "durationInTicks": 4800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M22.71S",
+            "duration": "PT1.4S",
+            "offsetInTicks": 1427100000,
+            "durationInTicks": 14000000,
+            "nBest": [
+                {
+                    "confidence": 0.84188044,
+                    "lexical": "so i have one more question",
+                    "itn": "so i have one more question",
+                    "maskedITN": "So I have one more question",
+                    "display": "So I have one more question.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT2M22.71S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1427100000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT2M22.83S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1428300000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "have",
+                            "offset": "PT2M22.99S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1429900000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "one",
+                            "offset": "PT2M23.11S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1431100000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "more",
+                            "offset": "PT2M23.27S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1432700000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "question.",
+                            "offset": "PT2M23.39S",
+                            "duration": "PT0.72S",
+                            "offsetInTicks": 1433900000,
+                            "durationInTicks": 7200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M27.11S",
+            "duration": "PT2.84S",
+            "offsetInTicks": 1471100000,
+            "durationInTicks": 28400000,
+            "nBest": [
+                {
+                    "confidence": 0.8625487,
+                    "lexical": "i'm curious will i be getting a physical card as proof of coverage",
+                    "itn": "i'm curious will i be getting a physical card as proof of coverage",
+                    "maskedITN": "I'm curious will I be getting a physical card as proof of coverage",
+                    "display": "I'm curious, will I be getting a physical card as proof of coverage?",
+                    "displayWords": [
+                        {
+                            "displayText": "I'm",
+                            "offset": "PT2M27.11S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1471100000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "curious,",
+                            "offset": "PT2M27.19S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1471900000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "will",
+                            "offset": "PT2M27.51S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1475100000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "I",
+                            "offset": "PT2M27.63S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1476300000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "be",
+                            "offset": "PT2M27.67S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1476700000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "getting",
+                            "offset": "PT2M27.79S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1477900000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "a",
+                            "offset": "PT2M28.03S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1480300000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "physical",
+                            "offset": "PT2M28.07S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1480700000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "card",
+                            "offset": "PT2M28.47S",
+                            "duration": "PT0.48S",
+                            "offsetInTicks": 1484700000,
+                            "durationInTicks": 4800000
+                        },
+                        {
+                            "displayText": "as",
+                            "offset": "PT2M28.95S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1489500000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "proof",
+                            "offset": "PT2M29.03S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1490300000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "of",
+                            "offset": "PT2M29.27S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1492700000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "coverage?",
+                            "offset": "PT2M29.39S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 1493900000,
+                            "durationInTicks": 5600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M37.82S",
+            "duration": "PT0.44S",
+            "offsetInTicks": 1578200000,
+            "durationInTicks": 4400000,
+            "nBest": [
+                {
+                    "confidence": 0.7050054,
+                    "lexical": "yes",
+                    "itn": "yes",
+                    "maskedITN": "Yes",
+                    "display": "Yes.",
+                    "displayWords": [
+                        {
+                            "displayText": "Yes.",
+                            "offset": "PT2M37.82S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1578200000,
+                            "durationInTicks": 4400000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M38.26S",
+            "duration": "PT1.48S",
+            "offsetInTicks": 1582600000,
+            "durationInTicks": 14800000,
+            "nBest": [
+                {
+                    "confidence": 0.86165065,
+                    "lexical": "could you please mail it to me when it's ready",
+                    "itn": "could you please mail it to me when it's ready",
+                    "maskedITN": "Could you please mail it to me when it's ready",
+                    "display": "Could you please mail it to me when it's ready?",
+                    "displayWords": [
+                        {
+                            "displayText": "Could",
+                            "offset": "PT2M38.26S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1582600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "you",
+                            "offset": "PT2M38.42S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1584200000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "please",
+                            "offset": "PT2M38.54S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1585400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "mail",
+                            "offset": "PT2M38.7S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1587000000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "it",
+                            "offset": "PT2M38.82S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1588200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT2M38.9S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1589000000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "me",
+                            "offset": "PT2M38.98S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1589800000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "when",
+                            "offset": "PT2M39.1S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1591000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "it's",
+                            "offset": "PT2M39.26S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1592600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "ready?",
+                            "offset": "PT2M39.38S",
+                            "duration": "PT0.36S",
+                            "offsetInTicks": 1593800000,
+                            "durationInTicks": 3600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M39.74S",
+            "duration": "PT2.68S",
+            "offsetInTicks": 1597400000,
+            "durationInTicks": 26800000,
+            "nBest": [
+                {
+                    "confidence": 0.84688926,
+                    "lexical": "i'd like to have it shipped to ready for my address",
+                    "itn": "i'd like to have it shipped to ready for my address",
+                    "maskedITN": "I'd like to have it shipped to ready for my address",
+                    "display": "I'd like to have it shipped to ready for my address.",
+                    "displayWords": [
+                        {
+                            "displayText": "I'd",
+                            "offset": "PT2M39.74S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1597400000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "like",
+                            "offset": "PT2M39.9S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1599000000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT2M40.02S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1600200000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "have",
+                            "offset": "PT2M40.1S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1601000000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "it",
+                            "offset": "PT2M40.26S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1602600000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "shipped",
+                            "offset": "PT2M40.38S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1603800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "to",
+                            "offset": "PT2M40.62S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1606200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "ready",
+                            "offset": "PT2M40.86S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1608600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "for",
+                            "offset": "PT2M41.46S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1614600000,
+                            "durationInTicks": 3200000
+                        },
+                        {
+                            "displayText": "my",
+                            "offset": "PT2M41.78S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1617800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "address.",
+                            "offset": "PT2M41.86S",
+                            "duration": "PT0.56S",
+                            "offsetInTicks": 1618600000,
+                            "durationInTicks": 5600000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M45.12S",
+            "duration": "PT4.88S",
+            "offsetInTicks": 1651200000,
+            "durationInTicks": 48800000,
+            "nBest": [
+                {
+                    "confidence": 0.91426504,
+                    "lexical": "so it's two six six zero unit A on maple avenue",
+                    "itn": "so it's 2660 unit A on maple ave",
+                    "maskedITN": "So it's 2660 unit A on Maple Ave",
+                    "display": "So it's 2660 unit A on Maple Ave.",
+                    "displayWords": [
+                        {
+                            "displayText": "So",
+                            "offset": "PT2M45.12S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1651200000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "it's",
+                            "offset": "PT2M45.36S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1653600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "2660",
+                            "offset": "PT2M45.64S",
+                            "duration": "PT1.84S",
+                            "offsetInTicks": 1656400000,
+                            "durationInTicks": 18400000
+                        },
+                        {
+                            "displayText": "unit",
+                            "offset": "PT2M47.72S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1677200000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "A",
+                            "offset": "PT2M48.16S",
+                            "duration": "PT0.04S",
+                            "offsetInTicks": 1681600000,
+                            "durationInTicks": 400000
+                        },
+                        {
+                            "displayText": "on",
+                            "offset": "PT2M48.88S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1688800000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "Maple",
+                            "offset": "PT2M49.04S",
+                            "duration": "PT0.44S",
+                            "offsetInTicks": 1690400000,
+                            "durationInTicks": 4400000
+                        },
+                        {
+                            "displayText": "Ave.",
+                            "offset": "PT2M49.48S",
+                            "duration": "PT0.52S",
+                            "offsetInTicks": 1694800000,
+                            "durationInTicks": 5200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M50S",
+            "duration": "PT4.76S",
+            "offsetInTicks": 1700000000,
+            "durationInTicks": 47600000,
+            "nBest": [
+                {
+                    "confidence": 0.89561754,
+                    "lexical": "southeast lansing and then zip code is four eight eight two three",
+                    "itn": "SE lansing and then zip code is 48823",
+                    "maskedITN": "SE Lansing and then zip code is 48823",
+                    "display": "SE Lansing and then zip code is 48823.",
+                    "displayWords": [
+                        {
+                            "displayText": "SE",
+                            "offset": "PT2M50S",
+                            "duration": "PT0.76S",
+                            "offsetInTicks": 1700000000,
+                            "durationInTicks": 7600000
+                        },
+                        {
+                            "displayText": "Lansing",
+                            "offset": "PT2M50.76S",
+                            "duration": "PT0.68S",
+                            "offsetInTicks": 1707600000,
+                            "durationInTicks": 6800000
+                        },
+                        {
+                            "displayText": "and",
+                            "offset": "PT2M51.44S",
+                            "duration": "PT0.12S",
+                            "offsetInTicks": 1714400000,
+                            "durationInTicks": 1200000
+                        },
+                        {
+                            "displayText": "then",
+                            "offset": "PT2M51.56S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1715600000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "zip",
+                            "offset": "PT2M51.72S",
+                            "duration": "PT0.16S",
+                            "offsetInTicks": 1717200000,
+                            "durationInTicks": 1600000
+                        },
+                        {
+                            "displayText": "code",
+                            "offset": "PT2M51.88S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1718800000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "is",
+                            "offset": "PT2M52.12S",
+                            "duration": "PT0.4S",
+                            "offsetInTicks": 1721200000,
+                            "durationInTicks": 4000000
+                        },
+                        {
+                            "displayText": "48823.",
+                            "offset": "PT2M52.88S",
+                            "duration": "PT1.88S",
+                            "offsetInTicks": 1728800000,
+                            "durationInTicks": 18800000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M59.52S",
+            "duration": "PT0.32S",
+            "offsetInTicks": 1795200000,
+            "durationInTicks": 3200000,
+            "nBest": [
+                {
+                    "confidence": 0.9643824,
+                    "lexical": "awesome",
+                    "itn": "awesome",
+                    "maskedITN": "Awesome",
+                    "display": "Awesome.",
+                    "displayWords": [
+                        {
+                            "displayText": "Awesome.",
+                            "offset": "PT2M59.52S",
+                            "duration": "PT0.32S",
+                            "offsetInTicks": 1795200000,
+                            "durationInTicks": 3200000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "recognitionStatus": "Success",
+            "channel": 1,
+            "offset": "PT2M59.84S",
+            "duration": "PT0.6S",
+            "offsetInTicks": 1798400000,
+            "durationInTicks": 6000000,
+            "nBest": [
+                {
+                    "confidence": 0.9568529,
+                    "lexical": "thanks so much",
+                    "itn": "thanks so much",
+                    "maskedITN": "Thanks so much",
+                    "display": "Thanks so much.",
+                    "displayWords": [
+                        {
+                            "displayText": "Thanks",
+                            "offset": "PT2M59.84S",
+                            "duration": "PT0.24S",
+                            "offsetInTicks": 1798400000,
+                            "durationInTicks": 2400000
+                        },
+                        {
+                            "displayText": "so",
+                            "offset": "PT3M0.08S",
+                            "duration": "PT0.08S",
+                            "offsetInTicks": 1800800000,
+                            "durationInTicks": 800000
+                        },
+                        {
+                            "displayText": "much.",
+                            "offset": "PT3M0.16S",
+                            "duration": "PT0.28S",
+                            "offsetInTicks": 1801600000,
+                            "durationInTicks": 2800000
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

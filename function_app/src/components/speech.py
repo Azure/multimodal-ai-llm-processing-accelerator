@@ -1,11 +1,13 @@
 import json
 import os
 from enum import Enum
+from io import BytesIO
 from typing import Any, Dict, List, Optional, Union
 
-import httpx
-from haystack import Document
+from httpx import AsyncClient, Timeout
+from openai import AsyncAzureOpenAI
 from pydantic import BaseModel, Field, computed_field
+from src.result_enrichment.common import is_value_in_content
 
 
 class AzureSpeechTranscriptionEnum(Enum):
@@ -15,7 +17,47 @@ class AzureSpeechTranscriptionEnum(Enum):
     AOAI_WHISPER = "Azure OpenAI Whisper"
 
 
-def get_type_from_type_dict(type_dict: dict[str, str]) -> str:
+# Maps valid content types to file extensions for the Azure OpenAI Whisper API
+# https://platform.openai.com/docs/guides/speech-to-text
+AOAI_WHISPER_MIME_TYPE_MAPPER = {
+    "audio/mpeg": "mp3",
+    "audio/mp4": "mp4",
+    "audio/m4a": "m4a",
+    "audio/flac": "flac",
+    "audio/ogg": "ogg",
+    "audio/wav": "wav",
+    "audio/webm": "webm",
+}
+
+# Maps valid content types to file extensions for the Azure Batch Transcription API
+# https://learn.microsoft.com/en-us/azure/ai-services/speech-service/batch-transcription-audio-data?tabs=portal#supported-audio-formats-and-codecs
+BATCH_TRANSCRIPTION_MIME_TYPE_MAPPER = {
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/wave": "wave",
+    "audio/mpeg": "mp3",
+    "audio/ogg": "ogg",
+    "audio/flac": "flac",
+    "audio/wma": "wma",
+    "audio/x-ms-wma": "wma",
+    "audio/aac": "aac",
+    "audio/amr": "amr",
+    "audio/webm": "webm",
+    "audio/m4a": "m4a",
+    "audio/speex": "ogg",
+    "audio/x-speex": "ogg",
+}
+
+
+def get_type_from_pydantic_type_dict(type_dict: dict[str, str]) -> str:
+    """
+    Gets the object type from a Pydantic type dictionary.
+
+    :param type_dict: The Pydantic type dictionary.
+    :type type_dict: dict[str, str]
+    :return: The object type.
+    :rtype: str
+    """
     if "$ref" in type_dict:
         return "class:{}".format(type_dict["$ref"].split("/")[-1])
     return type_dict.get("type")
@@ -36,14 +78,14 @@ class TranscriptionBaseModel(BaseModel):
         ].items():
             if "anyOf" in info_dict:
                 type = " | ".join(
-                    get_type_from_type_dict(t) for t in info_dict["anyOf"]
+                    get_type_from_pydantic_type_dict(t) for t in info_dict["anyOf"]
                 )
             elif "allOf" in info_dict:
                 type = " & ".join(
-                    get_type_from_type_dict(t) for t in info_dict["allOf"]
+                    get_type_from_pydantic_type_dict(t) for t in info_dict["allOf"]
                 )
             elif "type" in info_dict:
-                type = get_type_from_type_dict(info_dict)
+                type = get_type_from_pydantic_type_dict(info_dict)
             else:
                 raise ValueError("Field type could not be processed.")
             output[field] = "[{}] - {}".format(type, info_dict["description"])
@@ -77,7 +119,7 @@ class TranscribedWord(TranscriptionBaseModel):
         ...,
         description="The ID of the word, offset from the start of the transcription.",
     )
-    text: str = Field(..., description="The text of the word.")
+    display_text: str = Field(..., description="The display text of the word.")
     confidence: Optional[float] = Field(
         None, description="The confidence score of the word, if available."
     )
@@ -117,8 +159,9 @@ class TranscribedPhrase(TranscriptionBaseModel):
         None, description="The masked ITN form of the phrase."
     )
     display_text: str = Field(..., description="The display form of the phrase.")
-    channel: int = Field(
-        ..., description="The audio channel from which the phrase was spoken."
+    channel: Optional[int] = Field(
+        None,
+        description="The audio channel from which the phrase was spoken, if available.",
     )
     speaker: Optional[Union[int, str]] = Field(
         None, description="The speaker ID of the phrase, if detected."
@@ -126,8 +169,8 @@ class TranscribedPhrase(TranscriptionBaseModel):
     confidence: Optional[float] = Field(
         None, description="The confidence score of the phrase, if available."
     )
-    detected_language: Optional[str] = Field(
-        None, description="The detected language of the phrase, if available."
+    language: Optional[str] = Field(
+        None, description="The language of the phrase, if available."
     )
     start_secs: float = Field(
         ..., description="The start time of the phrase in seconds."
@@ -187,33 +230,6 @@ class TranscribedPhrase(TranscriptionBaseModel):
                 f"Variable {_e} does not exist - please use only variables that existing within the object: {list(self.get_vars_dict().keys())}"
             ) from None
 
-    # def _validate_can_map_field(
-    #     self, mapping_field: str, mapper: dict[Any, Any], on_error: str = "raise"
-    # ) -> bool:
-
-    #     is_mapping_field_valid = hasattr(self, mapping_field)
-    #     if on_error == "raise" and not is_mapping_field_valid:
-    #         raise ValueError(
-    #             f"Mapping field '{mapping_field}' does not exist in the object. Please use one of: {list(self.get_vars_dict().keys())}"
-    #         )
-    #     existing_value = getattr(self, mapping_field)
-    #     is_existing_value_in_mapper = existing_value in mapper.values()
-    #     if on_error == "raise" and not is_existing_value_in_mapper:
-    #         raise ValueError(
-    #             f"Existing value of '{existing_value}' for '{mapping_field}' is not contained in value mapper. Please ensure all existing values can be mapped by."
-    #         )
-    #     return is_mapping_field_valid and is_existing_value_in_mapper
-
-    # def map_field_to_speaker_id(
-    #     self, mapping_field: str, mapper: dict[Any, Any]
-    # ) -> None:
-    #     """
-    #     Updates the speaker ID based on a mapping dictionary.
-    #     """
-    #     self._validate_can_map_field(mapping_field, mapper, on_error="raise")
-    #     self.speaker = mapper[getattr(self, mapping_field)]
-    #     return
-
 
 class PhraseIdMethod(Enum):
     SPEAKER = "speaker"
@@ -235,8 +251,8 @@ class Transcription(TranscriptionBaseModel):
     duration_secs: Optional[float] = Field(
         None, description="The duration of the transcription in seconds."
     )
-    detected_language: Optional[str] = Field(
-        None, description="The detected language of the transcription, if available."
+    language: Optional[str] = Field(
+        None, description="The language of the transcription, if available."
     )
     raw_api_response: Optional[Dict | List] = Field(
         None, description="The raw API response from the transcription service."
@@ -246,6 +262,10 @@ class Transcription(TranscriptionBaseModel):
         description="The duration in a formatted version. E.g. the 127 seconds becomes '2:07'."
     )
     def formatted_duration(self) -> str:
+        """
+        Returns the transcription duration as a formatted string minute:second
+        (e.g. '2:15').
+        """
         if self.duration_secs is None:
             return ""
         return "{}:{}".format(
@@ -254,7 +274,7 @@ class Transcription(TranscriptionBaseModel):
 
     def to_formatted_str(
         self,
-        transcription_prefix_format: str = "Detected Language: {detected_language}\nDuration: {formatted_duration} minutes\n\nConversation:\n",
+        transcription_prefix_format: str = "Language: {language}\nDuration: {formatted_duration} minutes\n\nConversation:\n",
         phrase_format: str = "[{start_min}:{start_sub_sec}] {auto_phrase_source_name} {auto_phrase_source_id}: {display_text}",
         auto_phrase_speaker_name: str = "Speaker",
         auto_phrase_channel_name: str = "Channel",
@@ -273,9 +293,9 @@ class Transcription(TranscriptionBaseModel):
             auto_phrase_offset_id_name: The name to use for the offset_id in the phrase format. (e.g. "Phrase 0")
 
         Usage examples:
-        transcription_info_format: str = "Detected Language: {detected_language}\nDuration: {formatted_duration} minutes\n\nConversation:\n",
+        transcription_info_format: str = "Language: {language}\nDuration: {formatted_duration} minutes\n\nConversation:\n",
         phrase_format: str = "[{start_min}:{start_sub_sec}] Speaker {auto_speaker_channel_id}: {display_text}"
-        > Detected Language: English
+        > Language: English
         > Duration: 1:07 minutes
         >
         > Conversation:
@@ -332,6 +352,45 @@ class Transcription(TranscriptionBaseModel):
         return PhraseIdMethod.OFFSET_ID, "offset_id"
 
 
+def is_text_in_phrase_display_text(text: str, phrase: TranscribedPhrase) -> bool:
+    """
+    Checks if a text is contained within a phrase's display_text field.
+
+    :param text: The text to check.
+    :type text: str
+    :param phrase: The phrase to check within.
+    :type phrase: TranscribedPhrase
+    :return: Whether the text is contained within the phrase.
+    :rtype: bool
+    """
+    return is_value_in_content(text, phrase.display_text)
+
+
+def is_phrase_start_time_match(
+    expected_start_time_secs: int | float,
+    phrase: TranscribedPhrase,
+    start_time_tolerance_secs: int | float = 0,
+) -> bool:
+    """
+    Checks if the start time of the phrase matches the expected start time.
+
+    :param expected_start_time_secs: The expected start time in seconds.
+    :type expected_start_time_secs: int | float
+    :param phrase: The phrase to check
+    :type phrase: TranscribedPhrase
+    :param start_time_tolerance_secs: The tolerance (in seconds) for matching
+        the start time. defaults to 0
+    :type start_time_tolerance_secs: int | float, optional
+    :return: Whether the phrase start time matches the expected start time.
+    :rtype: bool
+    """
+    return (
+        expected_start_time_secs - start_time_tolerance_secs
+        <= phrase.start_secs
+        <= expected_start_time_secs + start_time_tolerance_secs
+    )
+
+
 # Set divisor when converting from ticks to seconds
 TIME_DIVISORS = {
     AzureSpeechTranscriptionEnum.BATCH: 10000000,
@@ -342,10 +401,22 @@ TIME_DIVISORS = {
 
 
 def process_batch_word_dict(word_dict: Dict, offset_id: int) -> TranscribedWord:
+    """
+    Processes a word dictionary from the Azure AI Speech Batch Transcription
+    API.
+
+    :param word_dict: The word dictionary to process.
+    :type word_dict: Dict
+    :param offset_id: The ID of the word, offset from the start of the
+        transcription.
+    :type offset_id: int
+    :return: A processed TranscribedWord object.
+    :rtype: TranscribedWord
+    """
     time_divisor = TIME_DIVISORS[AzureSpeechTranscriptionEnum.BATCH]
     return TranscribedWord(
         offset_id=offset_id,
-        text=word_dict["displayText"],
+        display_text=word_dict["displayText"],
         confidence=word_dict.get(
             "confidence", None
         ),  # Only returned for mono audio input
@@ -357,10 +428,22 @@ def process_batch_word_dict(word_dict: Dict, offset_id: int) -> TranscribedWord:
 
 
 def process_realtime_word_dict(word_dict: Dict, offset_id: int) -> TranscribedWord:
+    """
+    Processes a word dictionary from the Azure AI Speech Real-time Transcription
+     API.
+
+    :param word_dict: The word dictionary to process.
+    :type word_dict: Dict
+    :param offset_id: The ID of the word, offset from the start of the
+        transcription.
+    :type offset_id: int
+    :return: A processed TranscribedWord object.
+    :rtype: TranscribedWord
+    """
     time_divisor = TIME_DIVISORS[AzureSpeechTranscriptionEnum.REALTIME]
     return TranscribedWord(
         offset_id=offset_id,
-        text=word_dict["Word"],
+        display_text=word_dict["Word"],
         start_secs=word_dict["Offset"] / time_divisor,
         duration_secs=word_dict["Duration"] / time_divisor,
         end_secs=(word_dict["Offset"] + word_dict["Duration"]) / time_divisor,
@@ -368,10 +451,21 @@ def process_realtime_word_dict(word_dict: Dict, offset_id: int) -> TranscribedWo
 
 
 def process_fast_word_dict(word_dict: Dict, offset_id: int) -> TranscribedWord:
+    """
+    Processes a word dictionary from the Azure AI Speech Fast Transcription API
+
+    :param word_dict: The word dictionary to process.
+    :type word_dict: Dict
+    :param offset_id: The ID of the word, offset from the start of the
+        transcription.
+    :type offset_id: int
+    :return: A processed TranscribedWord object.
+    :rtype: TranscribedWord
+    """
     time_divisor = TIME_DIVISORS[AzureSpeechTranscriptionEnum.FAST]
     return TranscribedWord(
         offset_id=offset_id,
-        text=word_dict["text"],
+        display_text=word_dict["text"],
         start_secs=word_dict["offset"] / time_divisor,
         duration_secs=word_dict["duration"] / time_divisor,
         end_secs=(word_dict["offset"] + word_dict["duration"]) / time_divisor,
@@ -381,22 +475,38 @@ def process_fast_word_dict(word_dict: Dict, offset_id: int) -> TranscribedWord:
 def process_batch_phrase_dict(
     phrase_dict: Dict, offset_id: int, words: List[TranscribedWord]
 ) -> TranscribedPhrase:
+    """
+    Processes a phrase dictionary from the Azure AI Speech Batch Transcription
+    API.
+
+    :param phrase_dict: The phrase dictionary to process.
+    :type phrase_dict: Dict
+    :param offset_id: The ID of the phrase, offset from the start of the
+        transcription.
+    :type offset_id: int
+    :param words: The list of individual words within the phrase.
+    :type words: List[TranscribedWord]
+    :return: A processed TranscribedPhrase object.
+    :rtype: TranscribedPhrase
+    """
     time_divisor = TIME_DIVISORS[AzureSpeechTranscriptionEnum.BATCH]
     best_phrase = phrase_dict["nBest"][0]
     return TranscribedPhrase(
         offset_id=offset_id,
-        lexical_text=best_phrase["lexical"],
-        itn_text=best_phrase["itn"],
+        lexical_text=best_phrase.get("lexical", None),
+        itn_text=best_phrase.get("itn", None),
         masked_itn_text=best_phrase["maskedITN"],
         display_text=best_phrase["display"],
-        channel=phrase_dict["channel"],
+        channel=phrase_dict.get("channel", None),
         speaker=phrase_dict.get("speaker", None),
-        detected_language=phrase_dict.get("locale", None),
+        language=phrase_dict.get("locale", None),
         start_secs=phrase_dict["offsetInTicks"] / time_divisor,
         duration_secs=phrase_dict["durationInTicks"] / time_divisor,
-        end_secs=(phrase_dict["offsetInTicks"] + phrase_dict["durationInTicks"])
-        / time_divisor,
-        confidence=best_phrase["confidence"],
+        end_secs=(
+            (phrase_dict["offsetInTicks"] + phrase_dict["durationInTicks"])
+            / time_divisor
+        ),
+        confidence=best_phrase.get("confidence", None),
         words=words,
     )
 
@@ -404,19 +514,31 @@ def process_batch_phrase_dict(
 def process_realtime_phrase_dict(
     phrase_dict: Dict, offset_id: int, words: List[TranscribedWord]
 ) -> TranscribedPhrase:
+    """
+    Processes a phrase dictionary from the Azure AI Speech Real-time
+    Transcription API.
+
+    :param phrase_dict: The phrase dictionary to process.
+    :type phrase_dict: Dict
+    :param offset_id: The ID of the phrase, offset from the start of the
+        transcription.
+    :type offset_id: int
+    :param words: The list of individual words within the phrase.
+    :type words: List[TranscribedWord]
+    :return: A processed TranscribedPhrase object.
+    :rtype: TranscribedPhrase
+    """
     time_divisor = TIME_DIVISORS[AzureSpeechTranscriptionEnum.REALTIME]
     best_phrase = phrase_dict["NBest"][0]
     return TranscribedPhrase(
         offset_id=offset_id,
-        lexical_text=best_phrase["Lexical"],
-        itn_text=best_phrase["ITN"],
-        masked_itn_text=best_phrase["MaskedITN"],
+        lexical_text=best_phrase.get("Lexical", None),
+        itn_text=best_phrase.get("ITN", None),
+        masked_itn_text=best_phrase.get("MaskedITN", None),
         display_text=phrase_dict["DisplayText"],
-        channel=phrase_dict["Channel"],
+        channel=phrase_dict.get("Channel", None),
         speaker=phrase_dict.get("SpeakerId", None),
-        detected_language=phrase_dict.get("PrimaryLanguage", dict()).get(
-            "Language", None
-        ),
+        language=phrase_dict.get("PrimaryLanguage", dict()).get("Language", None),
         start_secs=phrase_dict["Offset"] / time_divisor,
         duration_secs=phrase_dict["Duration"] / time_divisor,
         end_secs=(phrase_dict["Offset"] + phrase_dict["Duration"]) / time_divisor,
@@ -428,6 +550,20 @@ def process_realtime_phrase_dict(
 def process_fast_phrase_dict(
     phrase_dict: Dict, offset_id: int, words: List[TranscribedWord]
 ) -> TranscribedPhrase:
+    """
+    Processes a phrase dictionary from the Azure AI Speech Fast Transcription
+    API.
+
+    :param phrase_dict: The phrase dictionary to process.
+    :type phrase_dict: Dict
+    :param offset_id: The ID of the phrase, offset from the start of the
+        transcription.
+    :type offset_id: int
+    :param words: The list of individual words within the phrase.
+    :type words: List[TranscribedWord]
+    :return: A processed TranscribedPhrase object.
+    :rtype: TranscribedPhrase
+    """
     time_divisor = TIME_DIVISORS[AzureSpeechTranscriptionEnum.FAST]
     return TranscribedPhrase(
         offset_id=offset_id,
@@ -435,9 +571,9 @@ def process_fast_phrase_dict(
         itn_text=None,
         masked_itn_text=None,
         display_text=phrase_dict["text"],
-        channel=phrase_dict["channel"],
-        speaker=None,
-        detected_language=phrase_dict.get("locale", None),
+        channel=phrase_dict.get("channel", None),
+        speaker=phrase_dict.get("speaker", None),
+        language=phrase_dict.get("locale", None),
         start_secs=phrase_dict["offset"] / time_divisor,
         duration_secs=phrase_dict["duration"] / time_divisor,
         end_secs=(phrase_dict["offset"] + phrase_dict["duration"]) / time_divisor,
@@ -449,6 +585,20 @@ def process_fast_phrase_dict(
 def process_whisper_phrase_dict(
     phrase_dict: Dict, offset_id: int, words: List[TranscribedWord]
 ) -> TranscribedPhrase:
+    """
+    Processes a phrase dictionary from the Azure OpenAI Whisper
+    Transcription API.
+
+    :param phrase_dict: The phrase dictionary to process.
+    :type phrase_dict: Dict
+    :param offset_id: The ID of the phrase, offset from the start of the
+        transcription.
+    :type offset_id: int
+    :param words: The list of individual words within the phrase.
+    :type words: List[TranscribedWord]
+    :return: A processed TranscribedPhrase object.
+    :rtype: TranscribedPhrase
+    """
     time_divisor = TIME_DIVISORS[AzureSpeechTranscriptionEnum.AOAI_WHISPER]
     return TranscribedPhrase(
         offset_id=offset_id,
@@ -456,9 +606,9 @@ def process_whisper_phrase_dict(
         itn_text=None,
         masked_itn_text=None,
         display_text=phrase_dict["text"],
-        channel=0,
-        speaker=None,
-        detected_language=None,
+        channel=phrase_dict.get("channel", None),
+        speaker=phrase_dict.get("speaker", None),
+        language=None,
         start_secs=phrase_dict["start"] / time_divisor,
         duration_secs=(phrase_dict["end"] - phrase_dict["start"]) / time_divisor,
         end_secs=phrase_dict["end"] / time_divisor,
@@ -467,13 +617,22 @@ def process_whisper_phrase_dict(
     )
 
 
-def process_batch_transcription(transcription: Dict) -> List[TranscribedPhrase]:
+def process_batch_transcription(transcription: Dict) -> Transcription:
+    """
+    Processes a transcription response from the Azure AI Speech Batch
+    Transcription API.
+
+    :param transcription: The raw API response from Azure AI Speech API.
+    :type transcription: Dict
+    :return: A processed Transcription object.
+    :rtype: Transcription
+    """
     word_count = 0
     # Phrases come sorted by channel -> offset. Sort by offset alone
     raw_phrases = sorted(
         transcription["recognizedPhrases"], key=lambda phrase: phrase["offsetInTicks"]
     )
-    processed_phrases = list()
+    processed_phrases: list[TranscribedPhrase] = list()
     for phrase_num, raw_phrase in enumerate(raw_phrases):
         raw_words = raw_phrase["nBest"][0]["displayWords"]
         processed_words = [
@@ -489,14 +648,23 @@ def process_batch_transcription(transcription: Dict) -> List[TranscribedPhrase]:
         transcription_type=AzureSpeechTranscriptionEnum.BATCH,
         duration_secs=transcription["durationInTicks"]
         / TIME_DIVISORS[AzureSpeechTranscriptionEnum.BATCH],
-        detected_language=None,
+        language=None,
         raw_api_response=transcription,
     )
 
 
-def process_realtime_transcription(transcription: Dict) -> List[TranscribedPhrase]:
+def process_realtime_transcription(transcription: Dict) -> Transcription:
+    """
+    Processes a transcription response from the Azure AI Speech Real-time
+    Transcription API.
+
+    :param transcription: The raw API response from Azure AI Speech API.
+    :type transcription: Dict
+    :return: A processed Transcription object.
+    :rtype: Transcription
+    """
     word_count = 0
-    processed_phrases = list()
+    processed_phrases: list[TranscribedPhrase] = list()
     for phrase_num, raw_phrase in enumerate(transcription):
         raw_words = raw_phrase["NBest"][0]["Words"]
         processed_words = [
@@ -510,17 +678,26 @@ def process_realtime_transcription(transcription: Dict) -> List[TranscribedPhras
     return Transcription(
         phrases=processed_phrases,
         transcription_type=AzureSpeechTranscriptionEnum.REALTIME,
-        duration_secs=None,
-        detected_language=None,
+        duration_secs=processed_phrases[-1].end_secs,
+        language=None,
         raw_api_response=transcription,
     )
 
 
-def process_fast_transcription(transcription: Dict) -> List[TranscribedPhrase]:
+def process_fast_transcription(transcription: Dict) -> Transcription:
+    """
+    Processes a transcription response from the Azure AI Speech Fast
+    Transcription API.
+
+    :param transcription: The raw API response from Azure AI Speech API.
+    :type transcription: Dict
+    :return: A processed Transcription object.
+    :rtype: Transcription
+    """
     word_count = 0
     # Phrases come sorted by channel -> offset. Sort by offset alone
     raw_phrases = sorted(transcription["phrases"], key=lambda phrase: phrase["offset"])
-    processed_phrases = list()
+    processed_phrases: list[TranscribedPhrase] = list()
     for phrase_num, raw_phrase in enumerate(raw_phrases):
         raw_words = raw_phrase["words"]
         processed_words = [
@@ -539,15 +716,23 @@ def process_fast_transcription(transcription: Dict) -> List[TranscribedPhrase]:
             / TIME_DIVISORS[AzureSpeechTranscriptionEnum.FAST],
             3,
         ),
-        detected_language=None,
+        language=None,
         raw_api_response=transcription,
     )
 
 
-def process_whisper_transcription(transcription: Dict) -> List[TranscribedPhrase]:
-    processed_phrases = list()
+def process_aoai_whisper_transcription(transcription: Dict) -> Transcription:
+    """
+    Processes a transcription response from Azure OpenAI Whisper.
+
+    :param transcription: The raw API response from Azure OpenAI Whisper.
+    :type transcription: Dict
+    :return: A processed Transcription object.
+    :rtype: Transcription
+    """
+    processed_phrases: list[TranscribedPhrase] = list()
     for phrase_num, raw_phrase in enumerate(transcription["segments"]):
-        # Whisper does not return word-level information
+        # TODO: Align phrase and segment values
         processed_phrases.append(
             process_whisper_phrase_dict(raw_phrase, phrase_num, list())
         )
@@ -555,189 +740,150 @@ def process_whisper_transcription(transcription: Dict) -> List[TranscribedPhrase
         phrases=processed_phrases,
         transcription_type=AzureSpeechTranscriptionEnum.AOAI_WHISPER,
         duration_secs=round(transcription["duration"], 3),
-        detected_language=transcription.get("language", None),
+        language=transcription.get("language", None),
         raw_api_response=transcription,
     )
 
 
 class AzureSpeechTranscriber:
+    """
+    A component for transcribing audio files using Azure AI Speech and OpenAI
+    Services. This component handles running of transcription jobs and
+    processing the raw API responses into a more usable format.
+
+    :param speech_key: The Azure Speech API key.
+    :type speech_key: str
+    :param speech_endpoint: The Azure Speech API endpoint.
+    :type speech_endpoint: str
+    :param aoai_whisper_async_client: An optional Azure OpenAI client to use for
+        making requests This is required in order to get transcriptions using
+        Azure OpenAI Whisper deployments. Defaults to None.
+    :type aoai_whisper_async_client: Optional[AsyncAzureOpenAI], optional
+    :param httpx_async_client: An optional HTTPX AsyncClient object to use for
+        making requests. Defaults to None.
+    :type httpx_async_client: Optional[AsyncClient], optional
+    """
 
     def __init__(
         self,
         speech_key: str,
-        speech_region: str,
-        aoai_api_key: str = None,
-        aoai_endpoint: str = None,
-        aoai_whisper_deployment: str = None,
+        speech_endpoint: str,
+        aoai_whisper_async_client: Optional[AsyncAzureOpenAI] = None,
+        httpx_async_client: Optional[AsyncClient] = None,
     ):
         self._speech_key = speech_key
-        self._speech_region = speech_region
-        self._aoai_api_key = aoai_api_key
-        self._aoai_endpoint = aoai_endpoint
-        self._aoai_whisper_deployment = aoai_whisper_deployment
-        self._httpx_client = httpx.AsyncClient(timeout=httpx.Timeout(None))
+        self._speech_endpoint = speech_endpoint
+        self._aoai_whisper_async_client = aoai_whisper_async_client
+        self._httpx_async_client = httpx_async_client or AsyncClient(
+            timeout=Timeout(60)
+        )
+
+    def _validate_whisper_client_initialized(self) -> None:
+        """Validates that the Azure OpenAI client is initialized."""
+        if self._aoai_whisper_async_client is None:
+            raise ValueError(
+                "Azure OpenAI client is not initialized. Please provide 'aoai_whisper_async_client' when initializing the transcriber."
+            )
 
     def _get_speech_headers(self) -> dict[str, str]:
+        """Gets the headers for the Azure Speech API."""
         return {
             "Accept": "application/json",
             "Ocp-Apim-Subscription-Key": self._speech_key,
         }
 
-    def _get_aoai_whisper_headers(self) -> dict[str, str]:
-        return {
-            "api-key": self._aoai_api_key,
-        }
-
     async def get_fast_transcription_async(
         self,
-        audio_path: str,
+        audio_file: Union[bytes, BytesIO],
         definition: Optional[Dict[str, Any]] = None,
     ) -> tuple[Transcription, dict]:
-        url = f"https://{self._speech_region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-05-15-preview"
-        with open(audio_path, "rb") as audio_file:
-            headers = self._get_speech_headers()
-            files = {
+        """
+        Submits and returns a transcription of an audio file using the Azure AI
+        Speech's Fast Transcription API. More information on the API can be
+        found here: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create
+
+        :param audio_file: _description_
+        :type audio_file: Union[bytes, BytesIO]
+        :param definition: _description_, defaults to None
+        :type definition: Optional[Dict[str, Any]], optional
+        :raises RuntimeError: _description_
+        :return: _description_
+        :rtype: tuple[Transcription, dict]
+        """
+
+        url = os.path.join(
+            self._speech_endpoint,
+            "speechtotext/transcriptions:transcribe?api-version=2024-05-15-preview",
+        )
+        headers = self._get_speech_headers()
+        response = await self._httpx_async_client.post(
+            url=url,
+            headers=headers,
+            files={
                 "audio": audio_file,
                 "definition": (None, json.dumps(definition), "application/json"),
-            }
-            response = await self._httpx_client.post(
-                url=url,
-                # params=params,
-                headers=headers,
-                files=files,
+            },
+        )
+        if response.status_code != 200:
+            raise RuntimeError(
+                "Fast transcription failed with status code: {}. Reason: {}".format(
+                    response.status_code,
+                    response.text,
+                ),
             )
-            if response.status_code != 200:
-                raise RuntimeError(
-                    "Fast transcription failed with status code: {}. Reason: {}".format(
-                        response.status_code,
-                        response.text,
-                    ),
-                )
-            return process_fast_transcription(response.json()), response.json()
+        return process_fast_transcription(response.json()), response.json()
 
     async def get_aoai_whisper_transcription_async(
         self,
-        audio_path: str,
-        model: str = "whisper-1",
+        audio_file: Union[str, os.PathLike, BytesIO] = None,
         language: Optional[str] = None,
         prompt: Optional[str] = None,
         temperature: Optional[float] = None,
+        timeout: Optional[float] = None,
+        model: str = "whisper-1",
+        response_format: str = "verbose_json",
+        **kwargs,
     ) -> tuple[Transcription, dict]:
-        url = os.path.join(
-            self._aoai_endpoint,
-            f"openai/deployments/{self._aoai_whisper_deployment}/audio/transcriptions",
+        """
+        Gets a transcription of an audio file using OpenAI's Whisper model using
+        the Azure OpenAI resource. More information on model parameters can be
+        found at: https://platform.openai.com/docs/guides/speech-to-text
+
+        :param audio_file: Audio path or file buffer to be transcribed. Defaults
+            to None
+        :type audio_file: Union[str, os.PathLike, BytesIO], optional
+        :param language: Language of the recording. Providing this can reduce
+            the latency of the request. Defaults to None
+        :type language: Optional[str], optional
+        :param prompt: A prompt to be used to guide the model. This can be used
+            to help the model understand certain words and phrases, or to guide
+            the style of the transcription. Defaults to None
+        :type prompt: Optional[str], optional
+        :param temperature: Model temperature parameter. Defaults to None
+        :type temperature: Optional[float], optional
+        :param timeout: Timeout (in seconds) before the request is aborted.
+            Defaults to None
+        :type timeout: Optional[float], optional
+        :param model: Model name, defaults to "whisper-1"
+        :type model: str, optional
+        :param response_format: JSON format of the response, defaults to
+            "verbose_json"
+        :type response_format: str, optional
+        :return: Tuple of the processed transcription and the raw API response.
+        :rtype: tuple[Transcription, dict]
+        """
+        self._validate_whisper_client_initialized()
+        result = await self._aoai_whisper_async_client.audio.transcriptions.create(
+            file=audio_file,
+            model=model,
+            language=language,
+            prompt=prompt,
+            temperature=temperature,
+            response_format=response_format,
+            timeout=timeout,
+            timestamp_granularities=[
+                "segment"
+            ],  # TODO: Update once processing of words is supported.
+            **kwargs,
         )
-        headers = self._get_aoai_whisper_headers()
-        with open(audio_path, "rb") as audio_file:
-            params = {
-                "api-version": "2024-06-01",
-            }
-            files = {
-                "file": audio_file,
-                "model": (None, model),
-                "response_format": (None, "verbose_json"),
-            }
-            for key, value in {
-                "language": language,
-                "prompt": prompt,
-                "temperature": temperature,
-            }.items():
-                if value is not None:
-                    files[key] = (None, value)
-            response = await self._httpx_client.post(
-                url=url,
-                params=params,
-                headers=headers,
-                files=files,
-            )
-            if response.status_code != 200:
-                raise RuntimeError(
-                    "AOAI Whisper transcription failed with status code: {}. Reason: {}".format(
-                        response.status_code,
-                        response.text,
-                    ),
-                )
-            return process_whisper_transcription(response.json()), response.json()
-
-        # url = f"https://{self._speech_region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-05-15-preview"
-        # with open(audio_path, "rb") as audio_file:
-        #     files = {
-        #         "audio": audio_file,
-        #         "definition": (None, json.dumps(definition), "application/json"),
-        #     }
-        #     # data = aiohttp.FormData()
-        #     # data.add_field("audio", audio_file, content_type="audio/wav")
-        #     # data.add_field(
-        #     #     "definition", json.dumps(definition), content_type="application/json"
-        #     # )
-        #     response = await client.post(url=url, headers=headers, files=files)
-        #     return response
-
-        #     async with self._session.post(url, headers=headers, data=data) as response:
-        #         response_json = await response.json()
-        #         print(response.status)
-        #         return response_json
-        #         return process_fast_transcription(response_json)
-
-    # async def submit_batch_transcription_job_async(
-    #     self,
-    #     content_urls: List[str],
-    #     display_name: Optional[str] = None,
-    #     locale: Optional[str] = None,
-    #     model: Optional[str] = None,
-    #     properties: Optional[Dict[str, Any]] = None,
-    # ) -> Transcription:
-    #     url = f"https://{self._speech_region}.api.cognitive.microsoft.com/speechtotext/v3.2/transcriptions"
-    #     headers = self._get_headers()
-    #     payload = {
-    #         "contentUrls": content_urls,
-    #         "displayName": display_name or "Batch Transcription Job",
-    #         "locale": locale,
-    #         "model": model,
-    #         "properties": properties,
-    #     }
-    #     response = await self._httpx_client.post(
-    #         url=url,
-    #         # params=params,
-    #         headers=headers,
-    #         json=payload,
-    #     )
-    #     return response
-    #     if response.status_code != 200:
-    #         raise RuntimeError(
-    #             "Fast transcription failed with status code: {}. Reason: {}".format(
-    #                 response.status_code,
-    #                 response.text,
-    #             ),
-    #         )
-    #     return process_batch_transcription(response.json()), response.json()
-
-    #     async with self._session.post(url, headers=headers, json=payload) as response:
-    #         response_json = await response.json()
-    #         return response_json
-    #         return process_fast_transcription(response_json)
-
-
-# def TranscriptionToDocuments(
-#     transcription: Transcription,
-#     phrase_format: str = "[{start_min}:{start_sub_sec}] {auto_phrase_source_name} {auto_phrase_source_id}: {display_text}",
-#     auto_phrase_speaker_name: str = "Speaker",
-#     auto_phrase_channel_name: str = "Channel",
-#     auto_phrase_offset_id_name: str = "Phrase",
-# ) -> List[Document]:
-#     """Converts a Transcription object to a list of Haystack Document objects."""
-#     documents = list()
-#     for phrase in Transcription.phrases:
-#         documents.append(
-#             Document(
-#                 content=phrase.display_text,
-#                 meta={
-#                     "start_secs": phrase.start_secs,
-#                     "end_secs": phrase.end_secs,
-#                     "speaker": phrase.speaker,
-#                     "channel": phrase.channel,
-#                     "confidence": phrase.confidence,
-#                     "detected_language": phrase.detected_language,
-#                 },
-#             )
-#         )
+        return process_aoai_whisper_transcription(result.dict()), result.dict()

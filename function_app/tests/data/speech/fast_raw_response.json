@@ -1,0 +1,2815 @@
+{
+    "duration": 185079,
+    "combinedPhrases": [
+        {
+            "channel": 0,
+            "text": "Hello. Thank you for calling Contoso. Who am I speaking with today? Hi, Mary. Are you calling because you need health insurance? Great. If you can answer a few questions, we can get you signed up in the Jiffy. So what's your full name? Got it. And what's the best callback number in case we get disconnected? Yep, that'll be fine. Got it. So to confirm, it's 234-554-9312. Excellent. Let's get some additional information for your application. Do you have a job? OK, so then you have a Social Security number as well. OK, and what is your Social Security number please? Sorry, what was that, a 25 or a 225? You cut out for a bit. Alright, thank you so much. And could I have your e-mail address please? Great. Uh That is the last question. So let me take your information and I'll be able to get you signed up right away. Thank you for calling Contoso and I'll be able to get you signed up immediately. One of our agents will call you back in about 24 hours or so to confirm your application. Absolutely. If you need anything else, please give us a call at 1-800-555-5564, extension 123. Thank you very much for calling Contoso. Uh Yes, of course. So the default is a digital membership card, but we can send you a physical card if you prefer. Uh, yeah. Absolutely. I've made a note on your file. You're very welcome. Thank you for calling Contoso and have a great day."
+        },
+        {
+            "channel": 1,
+            "text": "Hi, my name is Mary Rondo. I'm trying to enroll myself with Contuso. Yes, yeah, I'm calling to sign up for insurance. Okay. So Mary Beth Rondo, last name is R like Romeo, O like Ocean, N like Nancy D, D like Dog, and O like Ocean again. Rondo. I only have a cell phone so I can give you that. Sure, so it's 234-554 and then 9312. Yep, that's right. Uh Yes, I am self-employed. Yes, I do. Uh Sure, so it's 412256789. It's double two, so 412, then another two, then five. Yeah, it's maryrondo@gmail.com. So my first and last name at gmail.com. No periods, no dashes. That was quick. Thank you. Actually, so I have one more question. I'm curious, will I be getting a physical card as proof of coverage? uh Yes. Could you please mail it to me when it's ready? I'd like to have it shipped to, are you ready for my address? So it's 2660 Unit A on Maple Avenue SE, Lansing, and then zip code is 48823. Awesome. Thanks so much."
+        }
+    ],
+    "phrases": [
+        {
+            "channel": 0,
+            "offset": 720,
+            "duration": 480,
+            "text": "Hello.",
+            "words": [
+                {
+                    "text": "Hello.",
+                    "offset": 720,
+                    "duration": 480
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 1200,
+            "duration": 1120,
+            "text": "Thank you for calling Contoso.",
+            "words": [
+                {
+                    "text": "Thank",
+                    "offset": 1200,
+                    "duration": 200
+                },
+                {
+                    "text": "you",
+                    "offset": 1400,
+                    "duration": 80
+                },
+                {
+                    "text": "for",
+                    "offset": 1480,
+                    "duration": 120
+                },
+                {
+                    "text": "calling",
+                    "offset": 1600,
+                    "duration": 240
+                },
+                {
+                    "text": "Contoso.",
+                    "offset": 1840,
+                    "duration": 480
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 2320,
+            "duration": 1120,
+            "text": "Who am I speaking with today?",
+            "words": [
+                {
+                    "text": "Who",
+                    "offset": 2320,
+                    "duration": 160
+                },
+                {
+                    "text": "am",
+                    "offset": 2480,
+                    "duration": 80
+                },
+                {
+                    "text": "I",
+                    "offset": 2560,
+                    "duration": 80
+                },
+                {
+                    "text": "speaking",
+                    "offset": 2640,
+                    "duration": 320
+                },
+                {
+                    "text": "with",
+                    "offset": 2960,
+                    "duration": 160
+                },
+                {
+                    "text": "today?",
+                    "offset": 3120,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 9520,
+            "duration": 400,
+            "text": "Hi, Mary.",
+            "words": [
+                {
+                    "text": "Hi,",
+                    "offset": 9520,
+                    "duration": 80
+                },
+                {
+                    "text": "Mary.",
+                    "offset": 9600,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 10240,
+            "duration": 1640,
+            "text": "Are you calling because you need health insurance?",
+            "words": [
+                {
+                    "text": "Are",
+                    "offset": 10240,
+                    "duration": 160
+                },
+                {
+                    "text": "you",
+                    "offset": 10400,
+                    "duration": 120
+                },
+                {
+                    "text": "calling",
+                    "offset": 10520,
+                    "duration": 320
+                },
+                {
+                    "text": "because",
+                    "offset": 10840,
+                    "duration": 200
+                },
+                {
+                    "text": "you",
+                    "offset": 11040,
+                    "duration": 80
+                },
+                {
+                    "text": "need",
+                    "offset": 11120,
+                    "duration": 200
+                },
+                {
+                    "text": "health",
+                    "offset": 11320,
+                    "duration": 160
+                },
+                {
+                    "text": "insurance?",
+                    "offset": 11480,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 15920,
+            "duration": 320,
+            "text": "Great.",
+            "words": [
+                {
+                    "text": "Great.",
+                    "offset": 15920,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 16480,
+            "duration": 2720,
+            "text": "If you can answer a few questions, we can get you signed up in the Jiffy.",
+            "words": [
+                {
+                    "text": "If",
+                    "offset": 16480,
+                    "duration": 80
+                },
+                {
+                    "text": "you",
+                    "offset": 16560,
+                    "duration": 80
+                },
+                {
+                    "text": "can",
+                    "offset": 16640,
+                    "duration": 160
+                },
+                {
+                    "text": "answer",
+                    "offset": 16800,
+                    "duration": 240
+                },
+                {
+                    "text": "a",
+                    "offset": 17040,
+                    "duration": 40
+                },
+                {
+                    "text": "few",
+                    "offset": 17080,
+                    "duration": 120
+                },
+                {
+                    "text": "questions,",
+                    "offset": 17200,
+                    "duration": 600
+                },
+                {
+                    "text": "we",
+                    "offset": 17840,
+                    "duration": 160
+                },
+                {
+                    "text": "can",
+                    "offset": 18000,
+                    "duration": 160
+                },
+                {
+                    "text": "get",
+                    "offset": 18160,
+                    "duration": 120
+                },
+                {
+                    "text": "you",
+                    "offset": 18280,
+                    "duration": 80
+                },
+                {
+                    "text": "signed",
+                    "offset": 18360,
+                    "duration": 240
+                },
+                {
+                    "text": "up",
+                    "offset": 18600,
+                    "duration": 80
+                },
+                {
+                    "text": "in",
+                    "offset": 18680,
+                    "duration": 80
+                },
+                {
+                    "text": "the",
+                    "offset": 18760,
+                    "duration": 80
+                },
+                {
+                    "text": "Jiffy.",
+                    "offset": 18840,
+                    "duration": 360
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 21760,
+            "duration": 1120,
+            "text": "So what's your full name?",
+            "words": [
+                {
+                    "text": "So",
+                    "offset": 21760,
+                    "duration": 240
+                },
+                {
+                    "text": "what's",
+                    "offset": 22160,
+                    "duration": 240
+                },
+                {
+                    "text": "your",
+                    "offset": 22400,
+                    "duration": 120
+                },
+                {
+                    "text": "full",
+                    "offset": 22520,
+                    "duration": 120
+                },
+                {
+                    "text": "name?",
+                    "offset": 22640,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9177142
+        },
+        {
+            "channel": 0,
+            "offset": 35920,
+            "duration": 1080,
+            "text": "Got it.",
+            "words": [
+                {
+                    "text": "Got",
+                    "offset": 35920,
+                    "duration": 320
+                },
+                {
+                    "text": "it.",
+                    "offset": 36920,
+                    "duration": 80
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 37000,
+            "duration": 2920,
+            "text": "And what's the best callback number in case we get disconnected?",
+            "words": [
+                {
+                    "text": "And",
+                    "offset": 37000,
+                    "duration": 200
+                },
+                {
+                    "text": "what's",
+                    "offset": 37200,
+                    "duration": 360
+                },
+                {
+                    "text": "the",
+                    "offset": 37560,
+                    "duration": 80
+                },
+                {
+                    "text": "best",
+                    "offset": 37840,
+                    "duration": 320
+                },
+                {
+                    "text": "callback",
+                    "offset": 38160,
+                    "duration": 360
+                },
+                {
+                    "text": "number",
+                    "offset": 38520,
+                    "duration": 320
+                },
+                {
+                    "text": "in",
+                    "offset": 38840,
+                    "duration": 80
+                },
+                {
+                    "text": "case",
+                    "offset": 38920,
+                    "duration": 160
+                },
+                {
+                    "text": "we",
+                    "offset": 39080,
+                    "duration": 80
+                },
+                {
+                    "text": "get",
+                    "offset": 39160,
+                    "duration": 120
+                },
+                {
+                    "text": "disconnected?",
+                    "offset": 39280,
+                    "duration": 640
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 44080,
+            "duration": 800,
+            "text": "Yep, that'll be fine.",
+            "words": [
+                {
+                    "text": "Yep,",
+                    "offset": 44080,
+                    "duration": 200
+                },
+                {
+                    "text": "that'll",
+                    "offset": 44320,
+                    "duration": 240
+                },
+                {
+                    "text": "be",
+                    "offset": 44560,
+                    "duration": 80
+                },
+                {
+                    "text": "fine.",
+                    "offset": 44640,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 54700,
+            "duration": 480,
+            "text": "Got it.",
+            "words": [
+                {
+                    "text": "Got",
+                    "offset": 54700,
+                    "duration": 240
+                },
+                {
+                    "text": "it.",
+                    "offset": 54940,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 55180,
+            "duration": 3680,
+            "text": "So to confirm, it's 234-554-9312.",
+            "words": [
+                {
+                    "text": "So",
+                    "offset": 55180,
+                    "duration": 80
+                },
+                {
+                    "text": "to",
+                    "offset": 55260,
+                    "duration": 80
+                },
+                {
+                    "text": "confirm,",
+                    "offset": 55340,
+                    "duration": 640
+                },
+                {
+                    "text": "it's",
+                    "offset": 55980,
+                    "duration": 320
+                },
+                {
+                    "text": "234-554-9312.",
+                    "offset": 56300,
+                    "duration": 2560
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 61620,
+            "duration": 440,
+            "text": "Excellent.",
+            "words": [
+                {
+                    "text": "Excellent.",
+                    "offset": 61620,
+                    "duration": 440
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 62740,
+            "duration": 3000,
+            "text": "Let's get some additional information for your application.",
+            "words": [
+                {
+                    "text": "Let's",
+                    "offset": 62740,
+                    "duration": 160
+                },
+                {
+                    "text": "get",
+                    "offset": 62900,
+                    "duration": 120
+                },
+                {
+                    "text": "some",
+                    "offset": 63020,
+                    "duration": 160
+                },
+                {
+                    "text": "additional",
+                    "offset": 63180,
+                    "duration": 320
+                },
+                {
+                    "text": "information",
+                    "offset": 63500,
+                    "duration": 1080
+                },
+                {
+                    "text": "for",
+                    "offset": 64580,
+                    "duration": 120
+                },
+                {
+                    "text": "your",
+                    "offset": 64700,
+                    "duration": 240
+                },
+                {
+                    "text": "application.",
+                    "offset": 64940,
+                    "duration": 800
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 66220,
+            "duration": 760,
+            "text": "Do you have a job?",
+            "words": [
+                {
+                    "text": "Do",
+                    "offset": 66220,
+                    "duration": 200
+                },
+                {
+                    "text": "you",
+                    "offset": 66420,
+                    "duration": 120
+                },
+                {
+                    "text": "have",
+                    "offset": 66540,
+                    "duration": 160
+                },
+                {
+                    "text": "a",
+                    "offset": 66700,
+                    "duration": 40
+                },
+                {
+                    "text": "job?",
+                    "offset": 66740,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9394031
+        },
+        {
+            "channel": 0,
+            "offset": 71120,
+            "duration": 2400,
+            "text": "OK, so then you have a Social Security number as well.",
+            "words": [
+                {
+                    "text": "OK,",
+                    "offset": 71120,
+                    "duration": 240
+                },
+                {
+                    "text": "so",
+                    "offset": 71520,
+                    "duration": 160
+                },
+                {
+                    "text": "then",
+                    "offset": 71680,
+                    "duration": 240
+                },
+                {
+                    "text": "you",
+                    "offset": 71920,
+                    "duration": 80
+                },
+                {
+                    "text": "have",
+                    "offset": 72000,
+                    "duration": 160
+                },
+                {
+                    "text": "a",
+                    "offset": 72200,
+                    "duration": 40
+                },
+                {
+                    "text": "Social",
+                    "offset": 72240,
+                    "duration": 280
+                },
+                {
+                    "text": "Security",
+                    "offset": 72520,
+                    "duration": 360
+                },
+                {
+                    "text": "number",
+                    "offset": 72880,
+                    "duration": 240
+                },
+                {
+                    "text": "as",
+                    "offset": 73120,
+                    "duration": 80
+                },
+                {
+                    "text": "well.",
+                    "offset": 73200,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91885185
+        },
+        {
+            "channel": 0,
+            "offset": 76120,
+            "duration": 2520,
+            "text": "OK, and what is your Social Security number please?",
+            "words": [
+                {
+                    "text": "OK,",
+                    "offset": 76120,
+                    "duration": 160
+                },
+                {
+                    "text": "and",
+                    "offset": 76280,
+                    "duration": 160
+                },
+                {
+                    "text": "what",
+                    "offset": 76920,
+                    "duration": 280
+                },
+                {
+                    "text": "is",
+                    "offset": 77200,
+                    "duration": 80
+                },
+                {
+                    "text": "your",
+                    "offset": 77280,
+                    "duration": 160
+                },
+                {
+                    "text": "Social",
+                    "offset": 77440,
+                    "duration": 280
+                },
+                {
+                    "text": "Security",
+                    "offset": 77720,
+                    "duration": 360
+                },
+                {
+                    "text": "number",
+                    "offset": 78080,
+                    "duration": 240
+                },
+                {
+                    "text": "please?",
+                    "offset": 78320,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91885185
+        },
+        {
+            "channel": 0,
+            "offset": 87060,
+            "duration": 2560,
+            "text": "Sorry, what was that, a 25 or a 225?",
+            "words": [
+                {
+                    "text": "Sorry,",
+                    "offset": 87060,
+                    "duration": 280
+                },
+                {
+                    "text": "what",
+                    "offset": 87340,
+                    "duration": 160
+                },
+                {
+                    "text": "was",
+                    "offset": 87500,
+                    "duration": 120
+                },
+                {
+                    "text": "that,",
+                    "offset": 87620,
+                    "duration": 160
+                },
+                {
+                    "text": "a",
+                    "offset": 87780,
+                    "duration": 40
+                },
+                {
+                    "text": "25",
+                    "offset": 87820,
+                    "duration": 640
+                },
+                {
+                    "text": "or",
+                    "offset": 88460,
+                    "duration": 160
+                },
+                {
+                    "text": "a",
+                    "offset": 88620,
+                    "duration": 40
+                },
+                {
+                    "text": "225?",
+                    "offset": 88660,
+                    "duration": 960
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91885185
+        },
+        {
+            "channel": 0,
+            "offset": 89620,
+            "duration": 1040,
+            "text": "You cut out for a bit.",
+            "words": [
+                {
+                    "text": "You",
+                    "offset": 89620,
+                    "duration": 240
+                },
+                {
+                    "text": "cut",
+                    "offset": 89940,
+                    "duration": 160
+                },
+                {
+                    "text": "out",
+                    "offset": 90100,
+                    "duration": 80
+                },
+                {
+                    "text": "for",
+                    "offset": 90180,
+                    "duration": 200
+                },
+                {
+                    "text": "a",
+                    "offset": 90380,
+                    "duration": 40
+                },
+                {
+                    "text": "bit.",
+                    "offset": 90420,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91885185
+        },
+        {
+            "channel": 0,
+            "offset": 98460,
+            "duration": 960,
+            "text": "Alright, thank you so much.",
+            "words": [
+                {
+                    "text": "Alright,",
+                    "offset": 98460,
+                    "duration": 240
+                },
+                {
+                    "text": "thank",
+                    "offset": 98700,
+                    "duration": 160
+                },
+                {
+                    "text": "you",
+                    "offset": 98860,
+                    "duration": 80
+                },
+                {
+                    "text": "so",
+                    "offset": 98940,
+                    "duration": 80
+                },
+                {
+                    "text": "much.",
+                    "offset": 99020,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91885185
+        },
+        {
+            "channel": 0,
+            "offset": 100300,
+            "duration": 2720,
+            "text": "And could I have your e-mail address please?",
+            "words": [
+                {
+                    "text": "And",
+                    "offset": 100300,
+                    "duration": 320
+                },
+                {
+                    "text": "could",
+                    "offset": 100700,
+                    "duration": 240
+                },
+                {
+                    "text": "I",
+                    "offset": 100940,
+                    "duration": 160
+                },
+                {
+                    "text": "have",
+                    "offset": 101100,
+                    "duration": 560
+                },
+                {
+                    "text": "your",
+                    "offset": 101660,
+                    "duration": 400
+                },
+                {
+                    "text": "e-mail",
+                    "offset": 102060,
+                    "duration": 320
+                },
+                {
+                    "text": "address",
+                    "offset": 102380,
+                    "duration": 240
+                },
+                {
+                    "text": "please?",
+                    "offset": 102620,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91885185
+        },
+        {
+            "channel": 0,
+            "offset": 112720,
+            "duration": 400,
+            "text": "Great.",
+            "words": [
+                {
+                    "text": "Great.",
+                    "offset": 112720,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91226566
+        },
+        {
+            "channel": 0,
+            "offset": 113640,
+            "duration": 1400,
+            "text": "Uh That is the last question.",
+            "words": [
+                {
+                    "text": "Uh",
+                    "offset": 113640,
+                    "duration": 40
+                },
+                {
+                    "text": "That",
+                    "offset": 113680,
+                    "duration": 320
+                },
+                {
+                    "text": "is",
+                    "offset": 114000,
+                    "duration": 160
+                },
+                {
+                    "text": "the",
+                    "offset": 114160,
+                    "duration": 120
+                },
+                {
+                    "text": "last",
+                    "offset": 114320,
+                    "duration": 320
+                },
+                {
+                    "text": "question.",
+                    "offset": 114640,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91226566
+        },
+        {
+            "channel": 0,
+            "offset": 115040,
+            "duration": 3840,
+            "text": "So let me take your information and I'll be able to get you signed up right away.",
+            "words": [
+                {
+                    "text": "So",
+                    "offset": 115040,
+                    "duration": 320
+                },
+                {
+                    "text": "let",
+                    "offset": 115360,
+                    "duration": 120
+                },
+                {
+                    "text": "me",
+                    "offset": 115480,
+                    "duration": 200
+                },
+                {
+                    "text": "take",
+                    "offset": 115680,
+                    "duration": 160
+                },
+                {
+                    "text": "your",
+                    "offset": 115840,
+                    "duration": 120
+                },
+                {
+                    "text": "information",
+                    "offset": 115960,
+                    "duration": 760
+                },
+                {
+                    "text": "and",
+                    "offset": 116720,
+                    "duration": 120
+                },
+                {
+                    "text": "I'll",
+                    "offset": 116840,
+                    "duration": 120
+                },
+                {
+                    "text": "be",
+                    "offset": 116960,
+                    "duration": 320
+                },
+                {
+                    "text": "able",
+                    "offset": 117600,
+                    "duration": 160
+                },
+                {
+                    "text": "to",
+                    "offset": 117760,
+                    "duration": 80
+                },
+                {
+                    "text": "get",
+                    "offset": 117840,
+                    "duration": 160
+                },
+                {
+                    "text": "you",
+                    "offset": 118000,
+                    "duration": 80
+                },
+                {
+                    "text": "signed",
+                    "offset": 118080,
+                    "duration": 280
+                },
+                {
+                    "text": "up",
+                    "offset": 118360,
+                    "duration": 80
+                },
+                {
+                    "text": "right",
+                    "offset": 118440,
+                    "duration": 200
+                },
+                {
+                    "text": "away.",
+                    "offset": 118640,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91226566
+        },
+        {
+            "channel": 0,
+            "offset": 119400,
+            "duration": 3640,
+            "text": "Thank you for calling Contoso and I'll be able to get you signed up immediately.",
+            "words": [
+                {
+                    "text": "Thank",
+                    "offset": 119400,
+                    "duration": 160
+                },
+                {
+                    "text": "you",
+                    "offset": 119560,
+                    "duration": 80
+                },
+                {
+                    "text": "for",
+                    "offset": 119640,
+                    "duration": 120
+                },
+                {
+                    "text": "calling",
+                    "offset": 119760,
+                    "duration": 400
+                },
+                {
+                    "text": "Contoso",
+                    "offset": 120320,
+                    "duration": 720
+                },
+                {
+                    "text": "and",
+                    "offset": 121040,
+                    "duration": 320
+                },
+                {
+                    "text": "I'll",
+                    "offset": 121440,
+                    "duration": 120
+                },
+                {
+                    "text": "be",
+                    "offset": 121560,
+                    "duration": 80
+                },
+                {
+                    "text": "able",
+                    "offset": 121640,
+                    "duration": 280
+                },
+                {
+                    "text": "to",
+                    "offset": 121920,
+                    "duration": 80
+                },
+                {
+                    "text": "get",
+                    "offset": 122000,
+                    "duration": 120
+                },
+                {
+                    "text": "you",
+                    "offset": 122120,
+                    "duration": 80
+                },
+                {
+                    "text": "signed",
+                    "offset": 122200,
+                    "duration": 160
+                },
+                {
+                    "text": "up",
+                    "offset": 122360,
+                    "duration": 80
+                },
+                {
+                    "text": "immediately.",
+                    "offset": 122440,
+                    "duration": 600
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91226566
+        },
+        {
+            "channel": 0,
+            "offset": 123440,
+            "duration": 4080,
+            "text": "One of our agents will call you back in about 24 hours or so to confirm your application.",
+            "words": [
+                {
+                    "text": "One",
+                    "offset": 123440,
+                    "duration": 280
+                },
+                {
+                    "text": "of",
+                    "offset": 123720,
+                    "duration": 80
+                },
+                {
+                    "text": "our",
+                    "offset": 123800,
+                    "duration": 120
+                },
+                {
+                    "text": "agents",
+                    "offset": 123920,
+                    "duration": 360
+                },
+                {
+                    "text": "will",
+                    "offset": 124280,
+                    "duration": 200
+                },
+                {
+                    "text": "call",
+                    "offset": 124480,
+                    "duration": 160
+                },
+                {
+                    "text": "you",
+                    "offset": 124640,
+                    "duration": 80
+                },
+                {
+                    "text": "back",
+                    "offset": 124720,
+                    "duration": 360
+                },
+                {
+                    "text": "in",
+                    "offset": 125080,
+                    "duration": 80
+                },
+                {
+                    "text": "about",
+                    "offset": 125160,
+                    "duration": 240
+                },
+                {
+                    "text": "24",
+                    "offset": 125400,
+                    "duration": 360
+                },
+                {
+                    "text": "hours",
+                    "offset": 125760,
+                    "duration": 280
+                },
+                {
+                    "text": "or",
+                    "offset": 126040,
+                    "duration": 120
+                },
+                {
+                    "text": "so",
+                    "offset": 126160,
+                    "duration": 240
+                },
+                {
+                    "text": "to",
+                    "offset": 126400,
+                    "duration": 120
+                },
+                {
+                    "text": "confirm",
+                    "offset": 126560,
+                    "duration": 360
+                },
+                {
+                    "text": "your",
+                    "offset": 126920,
+                    "duration": 120
+                },
+                {
+                    "text": "application.",
+                    "offset": 127040,
+                    "duration": 480
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.91226566
+        },
+        {
+            "channel": 0,
+            "offset": 131200,
+            "duration": 560,
+            "text": "Absolutely.",
+            "words": [
+                {
+                    "text": "Absolutely.",
+                    "offset": 131200,
+                    "duration": 560
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.92633015
+        },
+        {
+            "channel": 0,
+            "offset": 131760,
+            "duration": 6720,
+            "text": "If you need anything else, please give us a call at 1-800-555-5564, extension 123.",
+            "words": [
+                {
+                    "text": "If",
+                    "offset": 131760,
+                    "duration": 80
+                },
+                {
+                    "text": "you",
+                    "offset": 131920,
+                    "duration": 80
+                },
+                {
+                    "text": "need",
+                    "offset": 132000,
+                    "duration": 360
+                },
+                {
+                    "text": "anything",
+                    "offset": 132360,
+                    "duration": 480
+                },
+                {
+                    "text": "else,",
+                    "offset": 132840,
+                    "duration": 200
+                },
+                {
+                    "text": "please",
+                    "offset": 133040,
+                    "duration": 280
+                },
+                {
+                    "text": "give",
+                    "offset": 133320,
+                    "duration": 160
+                },
+                {
+                    "text": "us",
+                    "offset": 133480,
+                    "duration": 80
+                },
+                {
+                    "text": "a",
+                    "offset": 133560,
+                    "duration": 40
+                },
+                {
+                    "text": "call",
+                    "offset": 133600,
+                    "duration": 320
+                },
+                {
+                    "text": "at",
+                    "offset": 133920,
+                    "duration": 240
+                },
+                {
+                    "text": "1-800-555-5564,",
+                    "offset": 134160,
+                    "duration": 3120
+                },
+                {
+                    "text": "extension",
+                    "offset": 137440,
+                    "duration": 560
+                },
+                {
+                    "text": "123.",
+                    "offset": 138000,
+                    "duration": 480
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.92633015
+        },
+        {
+            "channel": 0,
+            "offset": 139240,
+            "duration": 1720,
+            "text": "Thank you very much for calling Contoso.",
+            "words": [
+                {
+                    "text": "Thank",
+                    "offset": 139240,
+                    "duration": 160
+                },
+                {
+                    "text": "you",
+                    "offset": 139400,
+                    "duration": 80
+                },
+                {
+                    "text": "very",
+                    "offset": 139480,
+                    "duration": 160
+                },
+                {
+                    "text": "much",
+                    "offset": 139640,
+                    "duration": 360
+                },
+                {
+                    "text": "for",
+                    "offset": 140080,
+                    "duration": 160
+                },
+                {
+                    "text": "calling",
+                    "offset": 140240,
+                    "duration": 320
+                },
+                {
+                    "text": "Contoso.",
+                    "offset": 140560,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.92633015
+        },
+        {
+            "channel": 0,
+            "offset": 145040,
+            "duration": 640,
+            "text": "Uh Yes, of course.",
+            "words": [
+                {
+                    "text": "Uh",
+                    "offset": 145040,
+                    "duration": 40
+                },
+                {
+                    "text": "Yes,",
+                    "offset": 145080,
+                    "duration": 200
+                },
+                {
+                    "text": "of",
+                    "offset": 145280,
+                    "duration": 80
+                },
+                {
+                    "text": "course.",
+                    "offset": 145360,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.92633015
+        },
+        {
+            "channel": 0,
+            "offset": 151440,
+            "duration": 4960,
+            "text": "So the default is a digital membership card, but we can send you a physical card if you prefer.",
+            "words": [
+                {
+                    "text": "So",
+                    "offset": 151440,
+                    "duration": 320
+                },
+                {
+                    "text": "the",
+                    "offset": 151760,
+                    "duration": 160
+                },
+                {
+                    "text": "default",
+                    "offset": 151920,
+                    "duration": 720
+                },
+                {
+                    "text": "is",
+                    "offset": 152640,
+                    "duration": 160
+                },
+                {
+                    "text": "a",
+                    "offset": 152800,
+                    "duration": 40
+                },
+                {
+                    "text": "digital",
+                    "offset": 152840,
+                    "duration": 440
+                },
+                {
+                    "text": "membership",
+                    "offset": 153280,
+                    "duration": 400
+                },
+                {
+                    "text": "card,",
+                    "offset": 153680,
+                    "duration": 320
+                },
+                {
+                    "text": "but",
+                    "offset": 154320,
+                    "duration": 160
+                },
+                {
+                    "text": "we",
+                    "offset": 154480,
+                    "duration": 80
+                },
+                {
+                    "text": "can",
+                    "offset": 154560,
+                    "duration": 160
+                },
+                {
+                    "text": "send",
+                    "offset": 154720,
+                    "duration": 200
+                },
+                {
+                    "text": "you",
+                    "offset": 154920,
+                    "duration": 80
+                },
+                {
+                    "text": "a",
+                    "offset": 155000,
+                    "duration": 40
+                },
+                {
+                    "text": "physical",
+                    "offset": 155040,
+                    "duration": 400
+                },
+                {
+                    "text": "card",
+                    "offset": 155440,
+                    "duration": 320
+                },
+                {
+                    "text": "if",
+                    "offset": 155760,
+                    "duration": 120
+                },
+                {
+                    "text": "you",
+                    "offset": 155880,
+                    "duration": 80
+                },
+                {
+                    "text": "prefer.",
+                    "offset": 155960,
+                    "duration": 440
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.92633015
+        },
+        {
+            "channel": 0,
+            "offset": 163560,
+            "duration": 280,
+            "text": "Uh, yeah.",
+            "words": [
+                {
+                    "text": "Uh,",
+                    "offset": 163560,
+                    "duration": 40
+                },
+                {
+                    "text": "yeah.",
+                    "offset": 163600,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8657892
+        },
+        {
+            "channel": 0,
+            "offset": 176280,
+            "duration": 560,
+            "text": "Absolutely.",
+            "words": [
+                {
+                    "text": "Absolutely.",
+                    "offset": 176280,
+                    "duration": 560
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8657892
+        },
+        {
+            "channel": 0,
+            "offset": 176840,
+            "duration": 1280,
+            "text": "I've made a note on your file.",
+            "words": [
+                {
+                    "text": "I've",
+                    "offset": 176840,
+                    "duration": 320
+                },
+                {
+                    "text": "made",
+                    "offset": 177160,
+                    "duration": 240
+                },
+                {
+                    "text": "a",
+                    "offset": 177400,
+                    "duration": 40
+                },
+                {
+                    "text": "note",
+                    "offset": 177440,
+                    "duration": 160
+                },
+                {
+                    "text": "on",
+                    "offset": 177600,
+                    "duration": 80
+                },
+                {
+                    "text": "your",
+                    "offset": 177680,
+                    "duration": 120
+                },
+                {
+                    "text": "file.",
+                    "offset": 177800,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8657892
+        },
+        {
+            "channel": 0,
+            "offset": 181560,
+            "duration": 640,
+            "text": "You're very welcome.",
+            "words": [
+                {
+                    "text": "You're",
+                    "offset": 181560,
+                    "duration": 160
+                },
+                {
+                    "text": "very",
+                    "offset": 181720,
+                    "duration": 160
+                },
+                {
+                    "text": "welcome.",
+                    "offset": 181880,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8657892
+        },
+        {
+            "channel": 0,
+            "offset": 182200,
+            "duration": 2000,
+            "text": "Thank you for calling Contoso and have a great day.",
+            "words": [
+                {
+                    "text": "Thank",
+                    "offset": 182200,
+                    "duration": 280
+                },
+                {
+                    "text": "you",
+                    "offset": 182480,
+                    "duration": 80
+                },
+                {
+                    "text": "for",
+                    "offset": 182560,
+                    "duration": 120
+                },
+                {
+                    "text": "calling",
+                    "offset": 182680,
+                    "duration": 320
+                },
+                {
+                    "text": "Contoso",
+                    "offset": 183000,
+                    "duration": 520
+                },
+                {
+                    "text": "and",
+                    "offset": 183520,
+                    "duration": 160
+                },
+                {
+                    "text": "have",
+                    "offset": 183680,
+                    "duration": 120
+                },
+                {
+                    "text": "a",
+                    "offset": 183800,
+                    "duration": 40
+                },
+                {
+                    "text": "great",
+                    "offset": 183840,
+                    "duration": 200
+                },
+                {
+                    "text": "day.",
+                    "offset": 184040,
+                    "duration": 160
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8657892
+        },
+        {
+            "channel": 1,
+            "offset": 4480,
+            "duration": 1600,
+            "text": "Hi, my name is Mary Rondo.",
+            "words": [
+                {
+                    "text": "Hi,",
+                    "offset": 4480,
+                    "duration": 400
+                },
+                {
+                    "text": "my",
+                    "offset": 4880,
+                    "duration": 120
+                },
+                {
+                    "text": "name",
+                    "offset": 5000,
+                    "duration": 120
+                },
+                {
+                    "text": "is",
+                    "offset": 5120,
+                    "duration": 160
+                },
+                {
+                    "text": "Mary",
+                    "offset": 5280,
+                    "duration": 240
+                },
+                {
+                    "text": "Rondo.",
+                    "offset": 5520,
+                    "duration": 560
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8989456
+        },
+        {
+            "channel": 1,
+            "offset": 6080,
+            "duration": 1920,
+            "text": "I'm trying to enroll myself with Contuso.",
+            "words": [
+                {
+                    "text": "I'm",
+                    "offset": 6080,
+                    "duration": 160
+                },
+                {
+                    "text": "trying",
+                    "offset": 6240,
+                    "duration": 200
+                },
+                {
+                    "text": "to",
+                    "offset": 6440,
+                    "duration": 80
+                },
+                {
+                    "text": "enroll",
+                    "offset": 6520,
+                    "duration": 200
+                },
+                {
+                    "text": "myself",
+                    "offset": 6720,
+                    "duration": 360
+                },
+                {
+                    "text": "with",
+                    "offset": 7080,
+                    "duration": 120
+                },
+                {
+                    "text": "Contuso.",
+                    "offset": 7200,
+                    "duration": 800
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8989456
+        },
+        {
+            "channel": 1,
+            "offset": 13040,
+            "duration": 2040,
+            "text": "Yes, yeah, I'm calling to sign up for insurance.",
+            "words": [
+                {
+                    "text": "Yes,",
+                    "offset": 13040,
+                    "duration": 320
+                },
+                {
+                    "text": "yeah,",
+                    "offset": 13520,
+                    "duration": 160
+                },
+                {
+                    "text": "I'm",
+                    "offset": 13680,
+                    "duration": 160
+                },
+                {
+                    "text": "calling",
+                    "offset": 13840,
+                    "duration": 320
+                },
+                {
+                    "text": "to",
+                    "offset": 14160,
+                    "duration": 80
+                },
+                {
+                    "text": "sign",
+                    "offset": 14240,
+                    "duration": 160
+                },
+                {
+                    "text": "up",
+                    "offset": 14400,
+                    "duration": 80
+                },
+                {
+                    "text": "for",
+                    "offset": 14480,
+                    "duration": 160
+                },
+                {
+                    "text": "insurance.",
+                    "offset": 14640,
+                    "duration": 440
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8989456
+        },
+        {
+            "channel": 1,
+            "offset": 20160,
+            "duration": 320,
+            "text": "Okay.",
+            "words": [
+                {
+                    "text": "Okay.",
+                    "offset": 20160,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.8989456
+        },
+        {
+            "channel": 1,
+            "offset": 24640,
+            "duration": 8800,
+            "text": "So Mary Beth Rondo, last name is R like Romeo, O like Ocean, N like Nancy D, D like Dog, and O like Ocean again.",
+            "words": [
+                {
+                    "text": "So",
+                    "offset": 24640,
+                    "duration": 160
+                },
+                {
+                    "text": "Mary",
+                    "offset": 24800,
+                    "duration": 320
+                },
+                {
+                    "text": "Beth",
+                    "offset": 25120,
+                    "duration": 240
+                },
+                {
+                    "text": "Rondo,",
+                    "offset": 25360,
+                    "duration": 560
+                },
+                {
+                    "text": "last",
+                    "offset": 25920,
+                    "duration": 400
+                },
+                {
+                    "text": "name",
+                    "offset": 26320,
+                    "duration": 160
+                },
+                {
+                    "text": "is",
+                    "offset": 26480,
+                    "duration": 240
+                },
+                {
+                    "text": "R",
+                    "offset": 26720,
+                    "duration": 400
+                },
+                {
+                    "text": "like",
+                    "offset": 27120,
+                    "duration": 240
+                },
+                {
+                    "text": "Romeo,",
+                    "offset": 27360,
+                    "duration": 720
+                },
+                {
+                    "text": "O",
+                    "offset": 28320,
+                    "duration": 320
+                },
+                {
+                    "text": "like",
+                    "offset": 28640,
+                    "duration": 240
+                },
+                {
+                    "text": "Ocean,",
+                    "offset": 28880,
+                    "duration": 560
+                },
+                {
+                    "text": "N",
+                    "offset": 29640,
+                    "duration": 280
+                },
+                {
+                    "text": "like",
+                    "offset": 29920,
+                    "duration": 160
+                },
+                {
+                    "text": "Nancy",
+                    "offset": 30080,
+                    "duration": 480
+                },
+                {
+                    "text": "D,",
+                    "offset": 30560,
+                    "duration": 320
+                },
+                {
+                    "text": "D",
+                    "offset": 31360,
+                    "duration": 160
+                },
+                {
+                    "text": "like",
+                    "offset": 31520,
+                    "duration": 200
+                },
+                {
+                    "text": "Dog,",
+                    "offset": 31720,
+                    "duration": 360
+                },
+                {
+                    "text": "and",
+                    "offset": 32160,
+                    "duration": 320
+                },
+                {
+                    "text": "O",
+                    "offset": 32480,
+                    "duration": 160
+                },
+                {
+                    "text": "like",
+                    "offset": 32640,
+                    "duration": 240
+                },
+                {
+                    "text": "Ocean",
+                    "offset": 32880,
+                    "duration": 240
+                },
+                {
+                    "text": "again.",
+                    "offset": 33120,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9035013
+        },
+        {
+            "channel": 1,
+            "offset": 34320,
+            "duration": 480,
+            "text": "Rondo.",
+            "words": [
+                {
+                    "text": "Rondo.",
+                    "offset": 34320,
+                    "duration": 480
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9035013
+        },
+        {
+            "channel": 1,
+            "offset": 41790,
+            "duration": 1600,
+            "text": "I only have a cell phone so I can give you that.",
+            "words": [
+                {
+                    "text": "I",
+                    "offset": 41790,
+                    "duration": 80
+                },
+                {
+                    "text": "only",
+                    "offset": 41870,
+                    "duration": 160
+                },
+                {
+                    "text": "have",
+                    "offset": 42030,
+                    "duration": 120
+                },
+                {
+                    "text": "a",
+                    "offset": 42150,
+                    "duration": 40
+                },
+                {
+                    "text": "cell",
+                    "offset": 42190,
+                    "duration": 240
+                },
+                {
+                    "text": "phone",
+                    "offset": 42430,
+                    "duration": 160
+                },
+                {
+                    "text": "so",
+                    "offset": 42590,
+                    "duration": 80
+                },
+                {
+                    "text": "I",
+                    "offset": 42670,
+                    "duration": 80
+                },
+                {
+                    "text": "can",
+                    "offset": 42750,
+                    "duration": 120
+                },
+                {
+                    "text": "give",
+                    "offset": 42870,
+                    "duration": 120
+                },
+                {
+                    "text": "you",
+                    "offset": 42990,
+                    "duration": 120
+                },
+                {
+                    "text": "that.",
+                    "offset": 43110,
+                    "duration": 280
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9035013
+        },
+        {
+            "channel": 1,
+            "offset": 46110,
+            "duration": 7520,
+            "text": "Sure, so it's 234-554 and then 9312.",
+            "words": [
+                {
+                    "text": "Sure,",
+                    "offset": 46110,
+                    "duration": 480
+                },
+                {
+                    "text": "so",
+                    "offset": 46590,
+                    "duration": 240
+                },
+                {
+                    "text": "it's",
+                    "offset": 46830,
+                    "duration": 320
+                },
+                {
+                    "text": "234-554",
+                    "offset": 47310,
+                    "duration": 3760
+                },
+                {
+                    "text": "and",
+                    "offset": 51310,
+                    "duration": 120
+                },
+                {
+                    "text": "then",
+                    "offset": 51430,
+                    "duration": 120
+                },
+                {
+                    "text": "9312.",
+                    "offset": 51550,
+                    "duration": 2080
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9035013
+        },
+        {
+            "channel": 1,
+            "offset": 60000,
+            "duration": 640,
+            "text": "Yep, that's right.",
+            "words": [
+                {
+                    "text": "Yep,",
+                    "offset": 60000,
+                    "duration": 160
+                },
+                {
+                    "text": "that's",
+                    "offset": 60240,
+                    "duration": 240
+                },
+                {
+                    "text": "right.",
+                    "offset": 60480,
+                    "duration": 160
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.79178166
+        },
+        {
+            "channel": 1,
+            "offset": 68600,
+            "duration": 1320,
+            "text": "Uh Yes, I am self-employed.",
+            "words": [
+                {
+                    "text": "Uh",
+                    "offset": 68600,
+                    "duration": 40
+                },
+                {
+                    "text": "Yes,",
+                    "offset": 68640,
+                    "duration": 320
+                },
+                {
+                    "text": "I",
+                    "offset": 68960,
+                    "duration": 160
+                },
+                {
+                    "text": "am",
+                    "offset": 69120,
+                    "duration": 160
+                },
+                {
+                    "text": "self-employed.",
+                    "offset": 69280,
+                    "duration": 640
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.79178166
+        },
+        {
+            "channel": 1,
+            "offset": 74720,
+            "duration": 480,
+            "text": "Yes, I do.",
+            "words": [
+                {
+                    "text": "Yes,",
+                    "offset": 74720,
+                    "duration": 200
+                },
+                {
+                    "text": "I",
+                    "offset": 74920,
+                    "duration": 40
+                },
+                {
+                    "text": "do.",
+                    "offset": 74960,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.79178166
+        },
+        {
+            "channel": 1,
+            "offset": 79960,
+            "duration": 6120,
+            "text": "Uh Sure, so it's 412256789.",
+            "words": [
+                {
+                    "text": "Uh",
+                    "offset": 79960,
+                    "duration": 40
+                },
+                {
+                    "text": "Sure,",
+                    "offset": 80000,
+                    "duration": 480
+                },
+                {
+                    "text": "so",
+                    "offset": 80480,
+                    "duration": 240
+                },
+                {
+                    "text": "it's",
+                    "offset": 80720,
+                    "duration": 160
+                },
+                {
+                    "text": "412256789.",
+                    "offset": 81200,
+                    "duration": 4880
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.79178166
+        },
+        {
+            "channel": 1,
+            "offset": 92100,
+            "duration": 5360,
+            "text": "It's double two, so 412, then another two, then five.",
+            "words": [
+                {
+                    "text": "It's",
+                    "offset": 92100,
+                    "duration": 120
+                },
+                {
+                    "text": "double",
+                    "offset": 92220,
+                    "duration": 400
+                },
+                {
+                    "text": "two,",
+                    "offset": 92620,
+                    "duration": 360
+                },
+                {
+                    "text": "so",
+                    "offset": 92980,
+                    "duration": 400
+                },
+                {
+                    "text": "412,",
+                    "offset": 94580,
+                    "duration": 960
+                },
+                {
+                    "text": "then",
+                    "offset": 95780,
+                    "duration": 160
+                },
+                {
+                    "text": "another",
+                    "offset": 95940,
+                    "duration": 320
+                },
+                {
+                    "text": "two,",
+                    "offset": 96260,
+                    "duration": 400
+                },
+                {
+                    "text": "then",
+                    "offset": 96740,
+                    "duration": 320
+                },
+                {
+                    "text": "five.",
+                    "offset": 97060,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.79178166
+        },
+        {
+            "channel": 1,
+            "offset": 104240,
+            "duration": 3120,
+            "text": "Yeah, it's maryrondo@gmail.com.",
+            "words": [
+                {
+                    "text": "Yeah,",
+                    "offset": 104240,
+                    "duration": 320
+                },
+                {
+                    "text": "it's",
+                    "offset": 104560,
+                    "duration": 160
+                },
+                {
+                    "text": "maryrondo@gmail.com.",
+                    "offset": 104800,
+                    "duration": 2560
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9038477
+        },
+        {
+            "channel": 1,
+            "offset": 107440,
+            "duration": 2160,
+            "text": "So my first and last name at gmail.com.",
+            "words": [
+                {
+                    "text": "So",
+                    "offset": 107440,
+                    "duration": 240
+                },
+                {
+                    "text": "my",
+                    "offset": 107680,
+                    "duration": 120
+                },
+                {
+                    "text": "first",
+                    "offset": 107800,
+                    "duration": 240
+                },
+                {
+                    "text": "and",
+                    "offset": 108040,
+                    "duration": 120
+                },
+                {
+                    "text": "last",
+                    "offset": 108160,
+                    "duration": 280
+                },
+                {
+                    "text": "name",
+                    "offset": 108440,
+                    "duration": 200
+                },
+                {
+                    "text": "at",
+                    "offset": 108640,
+                    "duration": 160
+                },
+                {
+                    "text": "gmail.com.",
+                    "offset": 108800,
+                    "duration": 800
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9038477
+        },
+        {
+            "channel": 1,
+            "offset": 109680,
+            "duration": 1600,
+            "text": "No periods, no dashes.",
+            "words": [
+                {
+                    "text": "No",
+                    "offset": 109680,
+                    "duration": 240
+                },
+                {
+                    "text": "periods,",
+                    "offset": 109920,
+                    "duration": 480
+                },
+                {
+                    "text": "no",
+                    "offset": 110480,
+                    "duration": 160
+                },
+                {
+                    "text": "dashes.",
+                    "offset": 110640,
+                    "duration": 640
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9038477
+        },
+        {
+            "channel": 1,
+            "offset": 128630,
+            "duration": 560,
+            "text": "That was quick.",
+            "words": [
+                {
+                    "text": "That",
+                    "offset": 128630,
+                    "duration": 120
+                },
+                {
+                    "text": "was",
+                    "offset": 128790,
+                    "duration": 160
+                },
+                {
+                    "text": "quick.",
+                    "offset": 128950,
+                    "duration": 240
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9038477
+        },
+        {
+            "channel": 1,
+            "offset": 129510,
+            "duration": 320,
+            "text": "Thank you.",
+            "words": [
+                {
+                    "text": "Thank",
+                    "offset": 129510,
+                    "duration": 160
+                },
+                {
+                    "text": "you.",
+                    "offset": 129670,
+                    "duration": 160
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9038477
+        },
+        {
+            "channel": 1,
+            "offset": 142300,
+            "duration": 1840,
+            "text": "Actually, so I have one more question.",
+            "words": [
+                {
+                    "text": "Actually,",
+                    "offset": 142300,
+                    "duration": 400
+                },
+                {
+                    "text": "so",
+                    "offset": 142860,
+                    "duration": 80
+                },
+                {
+                    "text": "I",
+                    "offset": 142940,
+                    "duration": 40
+                },
+                {
+                    "text": "have",
+                    "offset": 142980,
+                    "duration": 120
+                },
+                {
+                    "text": "one",
+                    "offset": 143100,
+                    "duration": 160
+                },
+                {
+                    "text": "more",
+                    "offset": 143260,
+                    "duration": 160
+                },
+                {
+                    "text": "question.",
+                    "offset": 143420,
+                    "duration": 720
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9038477
+        },
+        {
+            "channel": 1,
+            "offset": 147100,
+            "duration": 2800,
+            "text": "I'm curious, will I be getting a physical card as proof of coverage?",
+            "words": [
+                {
+                    "text": "I'm",
+                    "offset": 147100,
+                    "duration": 80
+                },
+                {
+                    "text": "curious,",
+                    "offset": 147180,
+                    "duration": 320
+                },
+                {
+                    "text": "will",
+                    "offset": 147500,
+                    "duration": 120
+                },
+                {
+                    "text": "I",
+                    "offset": 147620,
+                    "duration": 40
+                },
+                {
+                    "text": "be",
+                    "offset": 147660,
+                    "duration": 120
+                },
+                {
+                    "text": "getting",
+                    "offset": 147780,
+                    "duration": 280
+                },
+                {
+                    "text": "a",
+                    "offset": 148060,
+                    "duration": 40
+                },
+                {
+                    "text": "physical",
+                    "offset": 148100,
+                    "duration": 360
+                },
+                {
+                    "text": "card",
+                    "offset": 148460,
+                    "duration": 480
+                },
+                {
+                    "text": "as",
+                    "offset": 148940,
+                    "duration": 80
+                },
+                {
+                    "text": "proof",
+                    "offset": 149020,
+                    "duration": 240
+                },
+                {
+                    "text": "of",
+                    "offset": 149260,
+                    "duration": 80
+                },
+                {
+                    "text": "coverage?",
+                    "offset": 149340,
+                    "duration": 560
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9038477
+        },
+        {
+            "channel": 1,
+            "offset": 157880,
+            "duration": 440,
+            "text": "uh Yes.",
+            "words": [
+                {
+                    "text": "uh",
+                    "offset": 157880,
+                    "duration": 40
+                },
+                {
+                    "text": "Yes.",
+                    "offset": 157920,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9040706
+        },
+        {
+            "channel": 1,
+            "offset": 158320,
+            "duration": 1440,
+            "text": "Could you please mail it to me when it's ready?",
+            "words": [
+                {
+                    "text": "Could",
+                    "offset": 158320,
+                    "duration": 160
+                },
+                {
+                    "text": "you",
+                    "offset": 158480,
+                    "duration": 80
+                },
+                {
+                    "text": "please",
+                    "offset": 158560,
+                    "duration": 240
+                },
+                {
+                    "text": "mail",
+                    "offset": 158800,
+                    "duration": 120
+                },
+                {
+                    "text": "it",
+                    "offset": 158920,
+                    "duration": 80
+                },
+                {
+                    "text": "to",
+                    "offset": 159000,
+                    "duration": 80
+                },
+                {
+                    "text": "me",
+                    "offset": 159080,
+                    "duration": 120
+                },
+                {
+                    "text": "when",
+                    "offset": 159200,
+                    "duration": 160
+                },
+                {
+                    "text": "it's",
+                    "offset": 159360,
+                    "duration": 120
+                },
+                {
+                    "text": "ready?",
+                    "offset": 159480,
+                    "duration": 280
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9040706
+        },
+        {
+            "channel": 1,
+            "offset": 159760,
+            "duration": 2560,
+            "text": "I'd like to have it shipped to, are you ready for my address?",
+            "words": [
+                {
+                    "text": "I'd",
+                    "offset": 159760,
+                    "duration": 160
+                },
+                {
+                    "text": "like",
+                    "offset": 159920,
+                    "duration": 160
+                },
+                {
+                    "text": "to",
+                    "offset": 160080,
+                    "duration": 80
+                },
+                {
+                    "text": "have",
+                    "offset": 160160,
+                    "duration": 160
+                },
+                {
+                    "text": "it",
+                    "offset": 160320,
+                    "duration": 80
+                },
+                {
+                    "text": "shipped",
+                    "offset": 160400,
+                    "duration": 200
+                },
+                {
+                    "text": "to,",
+                    "offset": 160600,
+                    "duration": 440
+                },
+                {
+                    "text": "are",
+                    "offset": 161040,
+                    "duration": 200
+                },
+                {
+                    "text": "you",
+                    "offset": 161440,
+                    "duration": 80
+                },
+                {
+                    "text": "ready",
+                    "offset": 161520,
+                    "duration": 160
+                },
+                {
+                    "text": "for",
+                    "offset": 161680,
+                    "duration": 160
+                },
+                {
+                    "text": "my",
+                    "offset": 161840,
+                    "duration": 80
+                },
+                {
+                    "text": "address?",
+                    "offset": 161920,
+                    "duration": 400
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9040706
+        },
+        {
+            "channel": 1,
+            "offset": 165200,
+            "duration": 9600,
+            "text": "So it's 2660 Unit A on Maple Avenue SE, Lansing, and then zip code is 48823.",
+            "words": [
+                {
+                    "text": "So",
+                    "offset": 165200,
+                    "duration": 200
+                },
+                {
+                    "text": "it's",
+                    "offset": 165400,
+                    "duration": 160
+                },
+                {
+                    "text": "2660",
+                    "offset": 165680,
+                    "duration": 1840
+                },
+                {
+                    "text": "Unit",
+                    "offset": 167760,
+                    "duration": 400
+                },
+                {
+                    "text": "A",
+                    "offset": 168240,
+                    "duration": 40
+                },
+                {
+                    "text": "on",
+                    "offset": 168880,
+                    "duration": 240
+                },
+                {
+                    "text": "Maple",
+                    "offset": 169120,
+                    "duration": 400
+                },
+                {
+                    "text": "Avenue",
+                    "offset": 169520,
+                    "duration": 480
+                },
+                {
+                    "text": "SE,",
+                    "offset": 170000,
+                    "duration": 760
+                },
+                {
+                    "text": "Lansing,",
+                    "offset": 170760,
+                    "duration": 680
+                },
+                {
+                    "text": "and",
+                    "offset": 171440,
+                    "duration": 160
+                },
+                {
+                    "text": "then",
+                    "offset": 171600,
+                    "duration": 160
+                },
+                {
+                    "text": "zip",
+                    "offset": 171760,
+                    "duration": 160
+                },
+                {
+                    "text": "code",
+                    "offset": 171920,
+                    "duration": 240
+                },
+                {
+                    "text": "is",
+                    "offset": 172160,
+                    "duration": 400
+                },
+                {
+                    "text": "48823.",
+                    "offset": 172960,
+                    "duration": 1840
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9040706
+        },
+        {
+            "channel": 1,
+            "offset": 179520,
+            "duration": 360,
+            "text": "Awesome.",
+            "words": [
+                {
+                    "text": "Awesome.",
+                    "offset": 179520,
+                    "duration": 360
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9040706
+        },
+        {
+            "channel": 1,
+            "offset": 179880,
+            "duration": 600,
+            "text": "Thanks so much.",
+            "words": [
+                {
+                    "text": "Thanks",
+                    "offset": 179880,
+                    "duration": 200
+                },
+                {
+                    "text": "so",
+                    "offset": 180080,
+                    "duration": 80
+                },
+                {
+                    "text": "much.",
+                    "offset": 180160,
+                    "duration": 320
+                }
+            ],
+            "locale": "en-US",
+            "confidence": 0.9040706
+        }
+    ]
+}
