@@ -11,8 +11,8 @@ from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
 from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
-from src.components.pymupdf import PyMuPDFConverter
 from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES
+from src.components.pymupdf import PyMuPDFConverter
 from src.helpers.common import MeasureRunTime, haystack_doc_to_string
 from src.helpers.image import (
     base64_to_pil_img,
@@ -20,10 +20,8 @@ from src.helpers.image import (
     pil_img_to_base64,
     resize_img_by_max,
 )
-from src.result_enrichment.doc_intelligence import (
-    find_matching_di_lines,
-    merge_confidence_scores,
-)
+from src.result_enrichment.common import merge_confidence_scores
+from src.result_enrichment.doc_intelligence import find_matching_di_lines
 from src.schema import LLMResponseBaseModel
 
 load_dotenv()
@@ -140,16 +138,32 @@ class ExtractedFieldsWithConfidenceModel(BaseModel):
     Defines the schema for all extracted fields, including useful metadata.
     """
 
-    account_no: FieldWithConfidenceModel = Field()
-    branch_ifsc: FieldWithConfidenceModel = Field()
-    title: FieldWithConfidenceModel = Field()
-    first_name: FieldWithConfidenceModel = Field()
-    last_name: FieldWithConfidenceModel = Field()
-    day_of_birth: FieldWithConfidenceModel = Field()
-    month_of_birth: FieldWithConfidenceModel = Field()
-    year_of_birth: FieldWithConfidenceModel = Field()
-    pan: FieldWithConfidenceModel = Field()
-    customer_id: FieldWithConfidenceModel = Field()
+    account_no: FieldWithConfidenceModel = Field(
+        description="The account number to be opened."
+    )
+    branch_ifsc: FieldWithConfidenceModel = Field(description="The branch IFSC.")
+    title: FieldWithConfidenceModel = Field(
+        description="The Title of the account holder."
+    )
+    first_name: FieldWithConfidenceModel = Field(
+        description="The first name of the account holder."
+    )
+    last_name: FieldWithConfidenceModel = Field(
+        description="The last name of the account holder."
+    )
+    day_of_birth: FieldWithConfidenceModel = Field(
+        description="The day of birth of the account holder."
+    )
+    month_of_birth: FieldWithConfidenceModel = Field(
+        description="The month of birth of the account holder."
+    )
+    year_of_birth: FieldWithConfidenceModel = Field(
+        description="The year of birth of the account holder."
+    )
+    pan: FieldWithConfidenceModel = Field(description="The PAN of the account holder.")
+    customer_id: FieldWithConfidenceModel = Field(
+        description="The Customer ID of the account holder."
+    )
 
 
 class FunctionReponseModel(BaseModel):
