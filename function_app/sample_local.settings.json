@@ -9,6 +9,7 @@
         "AOAI_API_KEY": "",
         "DOC_INTEL_ENDPOINT": "",
         "DOC_INTEL_API_KEY": "",
+        "SPEECH_ENDPOINT": "",
         "SPEECH_REGION": "",
         "SPEECH_API_KEY": ""
     },

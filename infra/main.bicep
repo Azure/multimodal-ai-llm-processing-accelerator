@@ -313,6 +313,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
       DOC_INTEL_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${docIntelKeyKvSecretName})'
       SPEECH_REGION: location
+      SPEECH_ENDPOINT: speech.properties.endpoint
       SPEECH_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${speechKeyKvSecretName})'
     }
   }
