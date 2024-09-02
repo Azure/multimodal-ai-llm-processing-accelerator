@@ -30,7 +30,7 @@ load_dotenv()
 
 bp_call_center_audio_analysis = func.Blueprint()
 
-SPEECH_ENDPOINT = os.getenv("SPEECH_ENDPOINT")
+SPEECH_REGION = os.getenv("SPEECH_REGION")
 SPEECH_API_KEY = os.getenv("SPEECH_API_KEY")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
 AOAI_WHISPER_DEPLOYMENT = os.getenv("AOAI_WHISPER_DEPLOYMENT")
@@ -47,7 +47,7 @@ aoai_whisper_async_client = AsyncAzureOpenAI(
     api_version="2024-06-01",
 )
 transcriber = AzureSpeechTranscriber(
-    speech_endpoint=SPEECH_ENDPOINT,
+    speech_region=SPEECH_REGION,
     speech_key=SPEECH_API_KEY,
     aoai_whisper_async_client=aoai_whisper_async_client,
 )

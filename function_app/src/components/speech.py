@@ -753,7 +753,7 @@ class AzureSpeechTranscriber:
 
     :param speech_key: The Azure Speech API key.
     :type speech_key: str
-    :param speech_endpoint: The Azure Speech API endpoint.
+    :param speech_region: The Azure Speech API resource region/location.
     :type speech_endpoint: str
     :param aoai_whisper_async_client: An optional Azure OpenAI client to use for
         making requests This is required in order to get transcriptions using
@@ -767,12 +767,12 @@ class AzureSpeechTranscriber:
     def __init__(
         self,
         speech_key: str,
-        speech_endpoint: str,
+        speech_region: str,
         aoai_whisper_async_client: Optional[AsyncAzureOpenAI] = None,
         httpx_async_client: Optional[AsyncClient] = None,
     ):
         self._speech_key = speech_key
-        self._speech_endpoint = speech_endpoint
+        self._speech_region = speech_region
         self._aoai_whisper_async_client = aoai_whisper_async_client
         self._httpx_async_client = httpx_async_client or AsyncClient(
             timeout=Timeout(60)
@@ -792,6 +792,10 @@ class AzureSpeechTranscriber:
             "Ocp-Apim-Subscription-Key": self._speech_key,
         }
 
+    def _get_regional_endpoint_url(self) -> str:
+        """Gets the regional endpoint URL for the Azure Speech API."""
+        return f"https://{self._speech_region}.api.cognitive.microsoft.com"
+
     async def get_fast_transcription_async(
         self,
         audio_file: Union[bytes, BytesIO],
@@ -806,13 +810,14 @@ class AzureSpeechTranscriber:
         :type audio_file: Union[bytes, BytesIO]
         :param definition: _description_, defaults to None
         :type definition: Optional[Dict[str, Any]], optional
-        :raises RuntimeError: _description_
-        :return: _description_
+        :raises RuntimeError: Raised in case an error occured during the request.
+        :return: A tuple of the processed transcription object and the raw API
+            response.
         :rtype: tuple[Transcription, dict]
         """
 
         url = os.path.join(
-            self._speech_endpoint,
+            self._get_regional_endpoint_url(),
             "speechtotext/transcriptions:transcribe?api-version=2024-05-15-preview",
         )
         headers = self._get_speech_headers()
