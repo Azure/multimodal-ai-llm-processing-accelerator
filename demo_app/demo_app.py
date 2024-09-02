@@ -274,28 +274,33 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
     # Define requesting function, which reshapes the input into the correct schema
     def cc_audio_upload(file: str, transcription_method: str):
         # Get response from the API
-        with open(file, "rb") as f:
-            payload = {"method": transcription_method}
-            files = {
-                "audio": (file, f, "audio/wav"),
-                "json": ("payload.json", json.dumps(payload), "application/json"),
-            }
-            # data = f.read()
-            # headers = {"Content-Type": mime_type}
-            request_outputs = send_request(
-                route="call_center_audio_analysis",
-                # data=data,
-                files=files,
-                # headers=headers,
-                force_json_content_type=True,  # JSON gradio block requires this
-            )
-        return request_outputs
+        try:
+            with open(file, "rb") as f:
+                payload = {"method": transcription_method}
+                files = {
+                    "audio": (file, f, "audio/wav"),
+                    "json": ("payload.json", json.dumps(payload), "application/json"),
+                }
+
+                request_outputs = send_request(
+                    route="call_center_audio_analysis",
+                    files=files,
+                    force_json_content_type=True,  # JSON gradio block requires this
+                )
+            return request_outputs
+        except TypeError as e:
+            if "expected str, bytes or os.PathLike object" in str(e):
+                gr.Error(
+                    "Audio selection/upload failed - please try again and wait until the preview is fully loaded prioer to clicking the 'Process Audio' button."
+                )
+            else:
+                raise e
 
     # Input components
     cc_audio_proc_instructions = gr.Markdown(
         (
             "This example transcribes call center audio records and extract key information "
-            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_call_center_audio_processing.py))."
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_call_center_audio_analytics.py))."
             "\n\nThe pipeline is as follows:\n"
             "1. Azure AI Speech or Azure OpenAI Whisper is used to transcribe a call center recording.\n"
             "2. The result is formatted into a more readable format (with timestamps, speaker IDs and the text).\n"
@@ -657,7 +662,11 @@ with gr.Blocks(analytics_enabled=False) as di_only_block:
     )
 
 
-with gr.Blocks(css="footer {visibility: hidden}", analytics_enabled=False) as demo:
+with gr.Blocks(
+    title="Multimodal AI & LLM Processing Accelerator",
+    css="footer {visibility: hidden}",
+    analytics_enabled=False,
+) as demo:
     gr.Markdown(
         (
             "## Azure AI Services + OpenAI Pipeline Demos\n"
@@ -668,10 +677,10 @@ with gr.Blocks(css="footer {visibility: hidden}", analytics_enabled=False) as de
         ),
         show_label=False,
     )
-    with gr.Tab("Call Center Audio Processing"):
-        call_center_audio_processing_block.render()
     with gr.Tab("Form Extraction with Confidence Scores"):
         form_extraction_with_confidence_block.render()
+    with gr.Tab("Call Center Audio Processing"):
+        call_center_audio_processing_block.render()
     with gr.Tab("Summarize Text"):
         sum_text_block.render()
     with gr.Tab("City Names Extraction (Doc Intelligence)"):
@@ -682,7 +691,7 @@ with gr.Blocks(css="footer {visibility: hidden}", analytics_enabled=False) as de
         di_only_block.render()
 
 if __name__ == "__main__":
-    # Start server by running: `gradio app.py`, then navigate to http://localhost:8000
+    # Start server by running: `gradio demo_app.py`, then navigate to http://localhost:8000
     demo.queue(default_concurrency_limit=4)
     demo.launch(
         server_name="0.0.0.0",
