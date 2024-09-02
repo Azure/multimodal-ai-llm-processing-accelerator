@@ -12,11 +12,8 @@ from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
 from src.components.pymupdf import PyMuPDFConverter
-from src.helpers.common import (
-    VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES,
-    MeasureRunTime,
-    haystack_doc_to_string,
-)
+from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES
+from src.helpers.common import MeasureRunTime, haystack_doc_to_string
 from src.helpers.image import (
     base64_to_pil_img,
     draw_polygon_on_pil_img,

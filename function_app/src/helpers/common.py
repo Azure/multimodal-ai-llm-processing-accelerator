@@ -4,16 +4,6 @@ from typing import Union
 from haystack import Document
 from haystack.dataclasses import ByteStream
 
-VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES = {
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/bmp",
-    "image/tiff",
-    "image/heif",
-}
-VALID_PYMUPDF_MIME_TYPES = {"application/pdf"}
-
 
 def prep_dataclass_for_chat_message(
     haystack_data: Union[Document, ByteStream]

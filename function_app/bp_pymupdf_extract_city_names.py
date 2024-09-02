@@ -10,9 +10,8 @@ from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
 from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
-from src.components.pymupdf import PyMuPDFConverter
+from src.components.pymupdf import PyMuPDFConverter, VALID_PYMUPDF_MIME_TYPES
 from src.helpers.common import (
-    VALID_PYMUPDF_MIME_TYPES,
     MeasureRunTime,
     clean_openai_msg,
     prep_dataclass_for_chat_message,
