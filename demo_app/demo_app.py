@@ -69,6 +69,14 @@ DEMO_VISION_FILES = DEMO_PDF_FILES + DEMO_IMG_FILES
 with open("demo_files/text_samples.json", "r") as json_file:
     TEXT_SAMPLES: dict[str, str] = json.load(json_file)
 
+FILE_EXAMPLES_LABEL = "You can upload your own file, or select one of the following examples and then click 'Process File'."
+AUDIO_EXAMPLES_LABEL = FILE_EXAMPLES_LABEL.replace("File", "Audio").replace(
+    "upload", "record or upload"
+)
+TEXT_EXAMPLES_LABEL = FILE_EXAMPLES_LABEL.replace("File", "Text").replace(
+    "upload your own file", "insert your own text"
+)
+
 
 def send_request(
     route: str,
@@ -147,8 +155,6 @@ def render_visual_media_input(file: str):
 with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block:
     # Define requesting function, which reshapes the input into the correct schema
     def form_ext_w_conf_upload(file: str):
-        # Render the input media
-        rendered_input = render_visual_media_input(file)
         # Get response from the API
         mime_type = mimetypes.guess_type(file)[0]
         with open(file, "rb") as f:
@@ -182,7 +188,6 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
         else:
             result_img = gr.Image(value=None, visible=False)
         return (
-            rendered_input,
             status_code,
             client_side_time_taken,
             result_img,
@@ -229,17 +234,13 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
     # Examples
     form_ext_w_conf_examples = gr.Examples(
         examples=DEMO_ACCOUNT_OPENING_FORM_FILES,
-        # example_labels=["unknown" for ex in DEMO_ACCOUNT_OPENING_FORM_FILES],
         inputs=[form_ext_w_conf_file_upload],
-        # outputs=[
-        #     form_ext_w_conf_input_thumbs,
-        #     form_ext_w_conf_status_code,
-        #     form_ext_w_conf_time_taken,
-        #     form_ext_w_conf_img_output,
-        #     form_ext_w_conf_output_json,
-        # ],
-        # fn=form_ext_w_conf_upload,
-        # run_on_click=True,
+        label=FILE_EXAMPLES_LABEL,
+        outputs=[
+            form_ext_w_conf_input_thumbs,
+        ],
+        fn=render_visual_media_input,
+        run_on_click=True,
     )
     form_ext_w_conf_process_btn = gr.Button("Process File")
     # Output components
@@ -263,7 +264,6 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
         fn=form_ext_w_conf_upload,
         inputs=[form_ext_w_conf_file_upload],
         outputs=[
-            form_ext_w_conf_input_thumbs,
             form_ext_w_conf_status_code,
             form_ext_w_conf_time_taken,
             form_ext_w_conf_img_output,
@@ -294,7 +294,7 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
         except TypeError as e:
             if "expected str, bytes or os.PathLike object" in str(e):
                 gr.Error(
-                    "Audio selection/upload failed - please try again and wait until the preview is fully loaded prioer to clicking the 'Process Audio' button."
+                    "Audio selection/upload failed - please try again and wait until the preview is fully loaded prior to clicking the 'Process Audio' button."
                 )
             else:
                 raise e
@@ -325,6 +325,7 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
         )
         # Examples
         cc_audio_proc_examples = gr.Examples(
+            label=AUDIO_EXAMPLES_LABEL,
             examples=DEMO_CALL_CENTER_AUDIO_FILES,
             inputs=[
                 cc_audio_proc_audio_input,
@@ -338,7 +339,7 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
                 ("Azure OpenAI Whisper", "aoai_whisper"),
             },
         )
-        cc_audio_proc_start_btn = gr.Button("Process Audio")
+        cc_audio_proc_start_btn = gr.Button("Process File")
     # Output components
     with gr.Column() as cc_audio_proc_output_row:
         cc_audio_proc_output_label = gr.Label(value="API Response", show_label=False)
@@ -404,7 +405,7 @@ with gr.Blocks(analytics_enabled=False) as sum_text_block:
         value="", lines=3, label="Enter the text to be summarized"
     )
     sum_text_example_dropdown = gr.Dropdown(
-        label="Select an example text from this Dropdown",
+        label=TEXT_EXAMPLES_LABEL,
         value=None,
         choices=TEXT_SAMPLES.items(),
     )
@@ -422,7 +423,7 @@ with gr.Blocks(analytics_enabled=False) as sum_text_block:
             )
             sum_text_time_taken = gr.Textbox(label="Time Taken", interactive=False)
         sum_text_output_text = gr.Textbox(label="API Response", interactive=False)
-    sum_text_get_response_btn = gr.Button("Get Response")
+    sum_text_get_response_btn = gr.Button("Process Text")
     sum_text_output_row.render()
     # Actions
     sum_text_get_response_btn.click(
@@ -439,20 +440,17 @@ with gr.Blocks(analytics_enabled=False) as sum_text_block:
 with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
     # Define requesting function, which reshapes the input into the correct schema
     def di_llm_ext_names_upload(file: str):
-        # Render the input media
-        rendered_input = render_visual_media_input(file)
         # Get response from the API
         mime_type = mimetypes.guess_type(file)[0]
         with open(file, "rb") as f:
             data = f.read()
             headers = {"Content-Type": mime_type}
-            request_outputs = send_request(
+            return send_request(
                 route="doc_intel_extract_city_names",
                 data=data,
                 headers=headers,
                 force_json_content_type=True,  # JSON gradio block requires this
             )
-        return (rendered_input,) + request_outputs
 
     # Input components
     di_llm_ext_names_instructions = gr.Markdown(
@@ -476,8 +474,20 @@ with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
         di_llm_ext_names_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
         )
+    # Examples
+    di_llm_ext_names_examples = gr.Examples(
+        examples=DEMO_VISION_FILES,
+        inputs=[di_llm_ext_names_file_upload],
+        label=FILE_EXAMPLES_LABEL,
+        outputs=[
+            di_llm_ext_names_input_thumbs,
+        ],
+        fn=render_visual_media_input,
+        run_on_click=True,
+    )
+    form_ext_w_conf_process_btn = gr.Button("Process File")
     # Output components
-    with gr.Column(render=False) as di_llm_ext_names_output_row:
+    with gr.Column() as di_llm_ext_names_output_row:
         di_llm_ext_names_output_label = gr.Label(value="API Response", show_label=False)
         with gr.Row():
             di_llm_ext_names_status_code = gr.Textbox(
@@ -487,26 +497,11 @@ with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
                 label="Time Taken", interactive=False
             )
         di_llm_ext_names_output_json = gr.JSON(label="API Response")
-    # Examples
-    di_llm_ext_names_examples = gr.Examples(
-        examples=DEMO_VISION_FILES,
-        inputs=[di_llm_ext_names_file_upload],
-        outputs=[
-            di_llm_ext_names_input_thumbs,
-            di_llm_ext_names_status_code,
-            di_llm_ext_names_time_taken,
-            di_llm_ext_names_output_json,
-        ],
-        fn=di_llm_ext_names_upload,
-        run_on_click=True,
-    )
-    di_llm_ext_names_output_row.render()
     # Actions
-    di_llm_ext_names_file_upload.upload(
+    form_ext_w_conf_process_btn.click(
         fn=di_llm_ext_names_upload,
         inputs=[di_llm_ext_names_file_upload],
         outputs=[
-            di_llm_ext_names_input_thumbs,
             di_llm_ext_names_status_code,
             di_llm_ext_names_time_taken,
             di_llm_ext_names_output_json,
@@ -518,20 +513,17 @@ with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
 with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
     # Define requesting function, which reshapes the input into the correct schema
     def local_pdf_process_upload(file: str):
-        # Render the input media
-        rendered_input = render_visual_media_input(file)
         # Get response from the API
         mime_type = mimetypes.guess_type(file)[0]
         with open(file, "rb") as f:
             data = f.read()
             headers = {"Content-Type": mime_type}
-            request_outputs = send_request(
+            return send_request(
                 route="pymupdf_extract_city_names",
                 data=data,
                 headers=headers,
                 force_json_content_type=True,  # JSON gradio block requires this
             )
-        return (rendered_input,) + request_outputs
 
     # Input components
     local_pdf_process_instructions = gr.Markdown(
@@ -554,8 +546,18 @@ with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
         local_pdf_process_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
         )
+    # Examples
+    local_pdf_process_examples = gr.Examples(
+        label=FILE_EXAMPLES_LABEL,
+        examples=DEMO_PDF_FILES,
+        inputs=[local_pdf_process_file_upload],
+        outputs=[local_pdf_process_input_thumbs],
+        fn=render_visual_media_input,
+        run_on_click=True,
+    )
+    local_pdf_process_process_btn = gr.Button("Process File")
     # Output components
-    with gr.Column(render=False) as local_pdf_process_output_row:
+    with gr.Column() as local_pdf_process_output_row:
         local_pdf_process_output_label = gr.Label(
             value="API Response", show_label=False
         )
@@ -567,26 +569,11 @@ with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
                 label="Time Taken", interactive=False
             )
         local_pdf_process_output_json = gr.JSON(label="API Response")
-    # Examples
-    local_pdf_process_examples = gr.Examples(
-        examples=DEMO_PDF_FILES,
-        inputs=[local_pdf_process_file_upload],
-        outputs=[
-            local_pdf_process_input_thumbs,
-            local_pdf_process_status_code,
-            local_pdf_process_time_taken,
-            local_pdf_process_output_json,
-        ],
-        fn=local_pdf_process_upload,
-        run_on_click=True,
-    )
-    local_pdf_process_output_row.render()
     # Actions
-    local_pdf_process_file_upload.upload(
+    local_pdf_process_process_btn.click(
         fn=local_pdf_process_upload,
         inputs=[local_pdf_process_file_upload],
         outputs=[
-            local_pdf_process_input_thumbs,
             local_pdf_process_status_code,
             local_pdf_process_time_taken,
             local_pdf_process_output_json,
@@ -597,20 +584,17 @@ with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
 with gr.Blocks(analytics_enabled=False) as di_only_block:
     # Define requesting function, which reshapes the input into the correct schema
     def di_only_process_upload(file: str):
-        # Render the input media
-        rendered_input = render_visual_media_input(file)
         # Get response from the API
         mime_type = mimetypes.guess_type(file)[0]
         with open(file, "rb") as f:
             data = f.read()
             headers = {"Content-Type": mime_type}
-            request_outputs = send_request(
+            return send_request(
                 route="doc_intel_only",
                 data=data,
                 headers=headers,
                 force_json_content_type=True,  # JSON gradio block requires this
             )
-        return (rendered_input,) + request_outputs
 
     # Input components
     di_only_instructions = gr.Markdown(
@@ -629,8 +613,18 @@ with gr.Blocks(analytics_enabled=False) as di_only_block:
         di_only_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
         )
+    # Examples
+    di_only_examples = gr.Examples(
+        label=FILE_EXAMPLES_LABEL,
+        examples=DEMO_VISION_FILES,
+        inputs=[di_only_file_upload],
+        outputs=[di_only_input_thumbs],
+        fn=render_visual_media_input,
+        run_on_click=True,
+    )
+    di_only_process_btn = gr.Button("Process File")
     # Output components
-    with gr.Column(render=False) as di_only_output_row:
+    with gr.Column() as di_only_output_row:
         di_only_output_label = gr.Label(value="API Response", show_label=False)
         with gr.Row():
             di_only_status_code = gr.Textbox(
@@ -638,26 +632,11 @@ with gr.Blocks(analytics_enabled=False) as di_only_block:
             )
             di_only_time_taken = gr.Textbox(label="Time Taken", interactive=False)
         di_only_output_text = gr.JSON(label="API Response")
-    # Examples
-    di_only_examples = gr.Examples(
-        examples=DEMO_VISION_FILES,
-        inputs=[di_only_file_upload],
-        outputs=[
-            di_only_input_thumbs,
-            di_only_status_code,
-            di_only_time_taken,
-            di_only_output_text,
-        ],
-        fn=di_only_process_upload,
-        run_on_click=True,
-    )
-    di_only_output_row.render()
     # Actions
-    di_only_file_upload.upload(
+    di_only_process_btn.click(
         fn=di_only_process_upload,
         inputs=[di_only_file_upload],
         outputs=[
-            di_only_input_thumbs,
             di_only_status_code,
             di_only_time_taken,
             di_only_output_text,
