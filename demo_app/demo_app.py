@@ -46,8 +46,8 @@ else:
 
 # Get list of various demo files
 DEMO_CALL_CENTER_AUDIO_FILES = [
-    os.path.join("demo_files/audio", fn)
-    for fn in os.listdir("demo_files/audio")
+    os.path.join("demo_files/call_center_audio", fn)
+    for fn in os.listdir("demo_files/call_center_audio")
     if fn.endswith((".wav"))
 ]
 DEMO_PDF_FILES = [
@@ -226,6 +226,22 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
         form_ext_w_conf_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
         )
+    # Examples
+    form_ext_w_conf_examples = gr.Examples(
+        examples=DEMO_ACCOUNT_OPENING_FORM_FILES,
+        # example_labels=["unknown" for ex in DEMO_ACCOUNT_OPENING_FORM_FILES],
+        inputs=[form_ext_w_conf_file_upload],
+        # outputs=[
+        #     form_ext_w_conf_input_thumbs,
+        #     form_ext_w_conf_status_code,
+        #     form_ext_w_conf_time_taken,
+        #     form_ext_w_conf_img_output,
+        #     form_ext_w_conf_output_json,
+        # ],
+        # fn=form_ext_w_conf_upload,
+        # run_on_click=True,
+    )
+    form_ext_w_conf_process_btn = gr.Button("Process File")
     # Output components
     with gr.Column(render=False) as form_ext_w_conf_output_row:
         form_ext_w_conf_output_label = gr.Label(value="API Response", show_label=False)
@@ -240,23 +256,10 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
             label="Extracted Field Locations", visible=False
         )
         form_ext_w_conf_output_json = gr.JSON(label="API Response")
-    # Examples
-    form_ext_w_conf_examples = gr.Examples(
-        examples=DEMO_ACCOUNT_OPENING_FORM_FILES,
-        inputs=[form_ext_w_conf_file_upload],
-        outputs=[
-            form_ext_w_conf_input_thumbs,
-            form_ext_w_conf_status_code,
-            form_ext_w_conf_time_taken,
-            form_ext_w_conf_img_output,
-            form_ext_w_conf_output_json,
-        ],
-        fn=form_ext_w_conf_upload,
-        run_on_click=True,
-    )
+
     form_ext_w_conf_output_row.render()
     # Actions
-    form_ext_w_conf_file_upload.upload(
+    form_ext_w_conf_process_btn.click(
         fn=form_ext_w_conf_upload,
         inputs=[form_ext_w_conf_file_upload],
         outputs=[

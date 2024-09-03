@@ -167,7 +167,7 @@ The demo pipelines are examples and require customization in order to have them 
     - It is critical with any AI system to ensure that the pipeline is evaluated on a representative sample of validation data.
     - Without this, it is impossible to know how accurate the solution is, or whether the solution fails under specific circumstances. This is often the time-consuming step of building and deployment an AI solution but is also the most important.
     - While more tools to help simplify this process are coming soon, you should take a look at the [evaluation tools within Azure AI Studio](https://learn.microsoft.com/en-us/azure/ai-studio/how-to/evaluate-generative-ai-app).
-1. Finally, its time to deploy your custom application to Azure.
+1. Finally, it's time to deploy your custom application to Azure.
     - Review and modify the infrastructure templates and parameters to ensure the solution is deployed to your requirements
     - Setup automated CI/CD deployment pipelines using Github Actions or Azure DevOps (base templates are coming to the repo soon).
 
