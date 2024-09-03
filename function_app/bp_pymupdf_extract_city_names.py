@@ -10,9 +10,8 @@ from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
 from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
-from src.components.pymupdf import PyMuPDFConverter
+from src.components.pymupdf import PyMuPDFConverter, VALID_PYMUPDF_MIME_TYPES
 from src.helpers.common import (
-    VALID_PYMUPDF_MIME_TYPES,
     MeasureRunTime,
     clean_openai_msg,
     prep_dataclass_for_chat_message,
@@ -27,7 +26,7 @@ bp_pymupdf_extract_city_names = func.Blueprint()
 
 # Load environment variables
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
-AOAI_DEPLOYMENT = os.getenv("AOAI_DEPLOYMENT")
+AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
 # Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
 AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
 
@@ -37,7 +36,7 @@ pymupdf_converter = PyMuPDFConverter(
 )
 azure_generator = AzureOpenAIChatGenerator(
     azure_endpoint=AOAI_ENDPOINT,
-    azure_deployment=AOAI_DEPLOYMENT,
+    azure_deployment=AOAI_LLM_DEPLOYMENT,
     api_key=AOAI_API_KEY_SECRET,
     api_version="2024-06-01",
     generation_kwargs={

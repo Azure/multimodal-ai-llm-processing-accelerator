@@ -7,11 +7,8 @@ from dotenv import load_dotenv
 from haystack.components.converters import AzureOCRDocumentConverter
 from haystack.dataclasses import ByteStream
 from haystack.utils import Secret
-from src.helpers.common import (
-    VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES,
-    MeasureRunTime,
-    haystack_doc_to_string,
-)
+from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES
+from src.helpers.common import MeasureRunTime, haystack_doc_to_string
 
 logger = logging.getLogger(__name__)
 

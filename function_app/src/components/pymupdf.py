@@ -22,6 +22,9 @@ with LazyImport("Run 'pip install fitz'") as fitz_import:
 logger = logging.getLogger(__name__)
 
 
+VALID_PYMUPDF_MIME_TYPES = {"application/pdf"}
+
+
 @component
 class PyMuPDFConverter:
     """

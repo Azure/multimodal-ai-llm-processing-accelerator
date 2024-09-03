@@ -11,22 +11,17 @@ from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
 from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
+from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES
 from src.components.pymupdf import PyMuPDFConverter
-from src.helpers.common import (
-    VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES,
-    MeasureRunTime,
-    haystack_doc_to_string,
-)
+from src.helpers.common import MeasureRunTime, haystack_doc_to_string
 from src.helpers.image import (
     base64_to_pil_img,
     draw_polygon_on_pil_img,
     pil_img_to_base64,
     resize_img_by_max,
 )
-from src.result_enrichment.doc_intelligence import (
-    find_matching_di_lines,
-    merge_confidence_scores,
-)
+from src.result_enrichment.common import merge_confidence_scores
+from src.result_enrichment.doc_intelligence import find_matching_di_lines
 from src.schema import LLMResponseBaseModel
 
 load_dotenv()
@@ -36,7 +31,7 @@ bp_form_extraction_with_confidence = func.Blueprint()
 # Load environment variables
 DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
-AOAI_DEPLOYMENT = os.getenv("AOAI_DEPLOYMENT")
+AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
 # Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
 DOC_INTEL_API_KEY_SECRET = Secret.from_env_var("DOC_INTEL_API_KEY")
 AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
@@ -49,6 +44,9 @@ pymupdf_converter = PyMuPDFConverter(
     to_img_dpi=200,
     correct_img_rotation=False,
 )
+# For now we will use Haystack's Azure OCR Document Converter, but in the near
+# future this will be replaced with a much better and more performant
+# implementation
 di_converter = AzureOCRDocumentConverter(
     endpoint=DOC_INTEL_ENDPOINT,
     api_key=DOC_INTEL_API_KEY_SECRET,
@@ -56,7 +54,7 @@ di_converter = AzureOCRDocumentConverter(
 )
 azure_generator = AzureOpenAIChatGenerator(
     azure_endpoint=AOAI_ENDPOINT,
-    azure_deployment=AOAI_DEPLOYMENT,
+    azure_deployment=AOAI_LLM_DEPLOYMENT,
     api_key=AOAI_API_KEY_SECRET,
     api_version="2024-06-01",
     generation_kwargs={
@@ -143,16 +141,32 @@ class ExtractedFieldsWithConfidenceModel(BaseModel):
     Defines the schema for all extracted fields, including useful metadata.
     """
 
-    account_no: FieldWithConfidenceModel = Field()
-    branch_ifsc: FieldWithConfidenceModel = Field()
-    title: FieldWithConfidenceModel = Field()
-    first_name: FieldWithConfidenceModel = Field()
-    last_name: FieldWithConfidenceModel = Field()
-    day_of_birth: FieldWithConfidenceModel = Field()
-    month_of_birth: FieldWithConfidenceModel = Field()
-    year_of_birth: FieldWithConfidenceModel = Field()
-    pan: FieldWithConfidenceModel = Field()
-    customer_id: FieldWithConfidenceModel = Field()
+    account_no: FieldWithConfidenceModel = Field(
+        description="The account number to be opened."
+    )
+    branch_ifsc: FieldWithConfidenceModel = Field(description="The branch IFSC.")
+    title: FieldWithConfidenceModel = Field(
+        description="The Title of the account holder."
+    )
+    first_name: FieldWithConfidenceModel = Field(
+        description="The first name of the account holder."
+    )
+    last_name: FieldWithConfidenceModel = Field(
+        description="The last name of the account holder."
+    )
+    day_of_birth: FieldWithConfidenceModel = Field(
+        description="The day of birth of the account holder."
+    )
+    month_of_birth: FieldWithConfidenceModel = Field(
+        description="The month of birth of the account holder."
+    )
+    year_of_birth: FieldWithConfidenceModel = Field(
+        description="The year of birth of the account holder."
+    )
+    pan: FieldWithConfidenceModel = Field(description="The PAN of the account holder.")
+    customer_id: FieldWithConfidenceModel = Field(
+        description="The Customer ID of the account holder."
+    )
 
 
 class FunctionReponseModel(BaseModel):
@@ -214,6 +228,11 @@ class FunctionReponseModel(BaseModel):
     )
 
 
+# Create the system prompt for the LLM, dynamically including the JSON schema
+# of the expected response so that any changes to the schema are automatically
+# reflected in the prompt, and in a JSON format that is similar in structure
+# to the training data on which the LLM was trained (increasing reliability of
+# the result).
 LLM_SYSTEM_PROMPT = (
     "You are a data extraction expert."
     "Your task is to review the following information and extract all of the information that appears in the form.\n"

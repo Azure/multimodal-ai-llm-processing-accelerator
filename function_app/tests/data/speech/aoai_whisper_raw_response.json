@@ -1,0 +1,3447 @@
+{
+    "text": "Good afternoon. This is Sam. Thank you for calling Contessa. How may I help? Hi there. My name is Mary. I'm currently living in Los Angeles, but I'm planning to move to Las Vegas. I would like to apply for a loan. Okay, I see you're currently living in California. Let me make sure I understand you correctly. You'd like to apply for a loan, even though you'll be moving soon. Is that right? Yes, exactly. So I'm planning to relocate soon, but I would like to apply for the loan first so that I can purchase a new home once I move there. And are you planning to sell your current home? Yes, I will be listing it on the market soon, and hopefully it'll sell quickly. That's why I'm applying for a loan now, so that I can purchase a new house in Nevada and close on it quickly as well, once my current home sells. I see. Would you mind holding for a moment while I take your information down? Yeah, no problem. Thank you for your help. Just one moment. All right. Thank you for your patience, ma'am. May I have your first and last name, please? Yes, my name is Mary Smith. Thank you, Ms. Smith. May I have your current address, please? Yes, so my address is 123 Main Street in Los Angeles, California, and the zip code is 90923. Sorry, that was a 90 what? 90923. 90923 on Main Street. Got it. Thank you. May I have your phone number as well, please? Yes, my phone number is 504-529-2351. Got it. And do you have an email address I can associate with this application? Yes, so my email address is mary.a.sm78 at gmail.com. mary.a. Was that a S N as in November or M as in Mike? M as in Mike. Mike 78. Got it. Thank you. Ms. Smith, do you currently have any other loans? Yes, so I currently have two other loans through Contoso. So my first one is my car loan and then my other is my student loan. They total about $1,400 per month combined and my interest rate is 8%. I see. And you're currently paying these loans off monthly, is that right? Yes, of course I do. Okay, thank you. Here's what I suggest we do. Let me put you on a brief hold again so I can talk with one of our loan officers and get this started for you immediately. In the meantime, it would be great if you could take a few minutes and complete the remainder of the secure application online at www.contosoloans.com. Yes, that sounds good. I can go ahead and get started. Thank you for your help. Thank you.",
+    "task": "transcribe",
+    "language": "english",
+    "duration": 182.42999267578125,
+    "segments": [
+        {
+            "id": 0,
+            "seek": 0,
+            "start": 1.0,
+            "end": 5.440000057220459,
+            "text": " Good afternoon. This is Sam. Thank you for calling Contessa. How may I help?",
+            "tokens": [
+                50364,
+                2205,
+                6499,
+                13,
+                639,
+                307,
+                4832,
+                13,
+                1044,
+                291,
+                337,
+                5141,
+                4839,
+                8391,
+                13,
+                1012,
+                815,
+                286,
+                854,
+                30,
+                50564
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22507689893245697,
+            "compression_ratio": 1.7664474248886108,
+            "no_speech_prob": 0.08146446943283081
+        },
+        {
+            "id": 1,
+            "seek": 0,
+            "start": 5.480000019073486,
+            "end": 13.5,
+            "text": " Hi there. My name is Mary. I'm currently living in Los Angeles, but I'm planning to move to Las Vegas. I would like to apply for a loan.",
+            "tokens": [
+                50564,
+                2421,
+                456,
+                13,
+                1222,
+                1315,
+                307,
+                6059,
+                13,
+                286,
+                478,
+                4362,
+                2647,
+                294,
+                7632,
+                12292,
+                11,
+                457,
+                286,
+                478,
+                5038,
+                281,
+                1286,
+                281,
+                10663,
+                15841,
+                13,
+                286,
+                576,
+                411,
+                281,
+                3079,
+                337,
+                257,
+                10529,
+                13,
+                50964
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22507689893245697,
+            "compression_ratio": 1.7664474248886108,
+            "no_speech_prob": 0.08146446943283081
+        },
+        {
+            "id": 2,
+            "seek": 0,
+            "start": 13.5,
+            "end": 22.780000686645508,
+            "text": " Okay, I see you're currently living in California. Let me make sure I understand you correctly. You'd like to apply for a loan, even though you'll be moving soon. Is that right?",
+            "tokens": [
+                50964,
+                1033,
+                11,
+                286,
+                536,
+                291,
+                434,
+                4362,
+                2647,
+                294,
+                5384,
+                13,
+                961,
+                385,
+                652,
+                988,
+                286,
+                1223,
+                291,
+                8944,
+                13,
+                509,
+                1116,
+                411,
+                281,
+                3079,
+                337,
+                257,
+                10529,
+                11,
+                754,
+                1673,
+                291,
+                603,
+                312,
+                2684,
+                2321,
+                13,
+                1119,
+                300,
+                558,
+                30,
+                51414
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22507689893245697,
+            "compression_ratio": 1.7664474248886108,
+            "no_speech_prob": 0.08146446943283081
+        },
+        {
+            "id": 3,
+            "seek": 0,
+            "start": 22.780000686645508,
+            "end": 27.260000228881836,
+            "text": " Yes, exactly. So I'm planning to relocate soon, but I would like to apply for the loan first so that I can purchase a new home once I move there.",
+            "tokens": [
+                51414,
+                1079,
+                11,
+                2293,
+                13,
+                407,
+                286,
+                478,
+                5038,
+                281,
+                26981,
+                473,
+                2321,
+                11,
+                457,
+                286,
+                576,
+                411,
+                281,
+                3079,
+                337,
+                264,
+                10529,
+                700,
+                370,
+                300,
+                286,
+                393,
+                8110,
+                257,
+                777,
+                1280,
+                1564,
+                286,
+                1286,
+                456,
+                13,
+                51764
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22507689893245697,
+            "compression_ratio": 1.7664474248886108,
+            "no_speech_prob": 0.08146446943283081
+        },
+        {
+            "id": 4,
+            "seek": 2726,
+            "start": 28.760000228881836,
+            "end": 32.439998626708984,
+            "text": " And are you planning to sell your current home?",
+            "tokens": [
+                50414,
+                400,
+                366,
+                291,
+                5038,
+                281,
+                3607,
+                428,
+                2190,
+                1280,
+                30,
+                50564
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.19614599645137787,
+            "compression_ratio": 1.5991902351379395,
+            "no_speech_prob": 0.012805004604160786
+        },
+        {
+            "id": 5,
+            "seek": 2726,
+            "start": 32.439998626708984,
+            "end": 43.86000061035156,
+            "text": " Yes, I will be listing it on the market soon, and hopefully it'll sell quickly. That's why I'm applying for a loan now, so that I can purchase a new house in Nevada and close on it quickly as well, once my current home sells.",
+            "tokens": [
+                50564,
+                1079,
+                11,
+                286,
+                486,
+                312,
+                22161,
+                309,
+                322,
+                264,
+                2142,
+                2321,
+                11,
+                293,
+                4696,
+                309,
+                603,
+                3607,
+                2661,
+                13,
+                663,
+                311,
+                983,
+                286,
+                478,
+                9275,
+                337,
+                257,
+                10529,
+                586,
+                11,
+                370,
+                300,
+                286,
+                393,
+                8110,
+                257,
+                777,
+                1782,
+                294,
+                25764,
+                293,
+                1998,
+                322,
+                309,
+                2661,
+                382,
+                731,
+                11,
+                1564,
+                452,
+                2190,
+                1280,
+                20897,
+                13,
+                51064
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.19614599645137787,
+            "compression_ratio": 1.5991902351379395,
+            "no_speech_prob": 0.012805004604160786
+        },
+        {
+            "id": 6,
+            "seek": 2726,
+            "start": 43.86000061035156,
+            "end": 48.18000030517578,
+            "text": " I see. Would you mind holding for a moment while I take your information down?",
+            "tokens": [
+                51064,
+                286,
+                536,
+                13,
+                6068,
+                291,
+                1575,
+                5061,
+                337,
+                257,
+                1623,
+                1339,
+                286,
+                747,
+                428,
+                1589,
+                760,
+                30,
+                51314
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.19614599645137787,
+            "compression_ratio": 1.5991902351379395,
+            "no_speech_prob": 0.012805004604160786
+        },
+        {
+            "id": 7,
+            "seek": 2726,
+            "start": 48.18000030517578,
+            "end": 48.79999923706055,
+            "text": " Yeah, no problem. Thank you for your help.",
+            "tokens": [
+                51314,
+                865,
+                11,
+                572,
+                1154,
+                13,
+                1044,
+                291,
+                337,
+                428,
+                854,
+                13,
+                51464
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.19614599645137787,
+            "compression_ratio": 1.5991902351379395,
+            "no_speech_prob": 0.012805004604160786
+        },
+        {
+            "id": 8,
+            "seek": 4880,
+            "start": 50.040000915527344,
+            "end": 59.13999938964844,
+            "text": " Just one moment.",
+            "tokens": [
+                50414,
+                1449,
+                472,
+                1623,
+                13,
+                50514
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.23181316256523132,
+            "compression_ratio": 1.431654691696167,
+            "no_speech_prob": 0.09001722931861877
+        },
+        {
+            "id": 9,
+            "seek": 4880,
+            "start": 59.13999938964844,
+            "end": 64.45999908447266,
+            "text": " All right. Thank you for your patience, ma'am. May I have your first and last name, please?",
+            "tokens": [
+                50814,
+                1057,
+                558,
+                13,
+                1044,
+                291,
+                337,
+                428,
+                14826,
+                11,
+                463,
+                6,
+                335,
+                13,
+                1891,
+                286,
+                362,
+                428,
+                700,
+                293,
+                1036,
+                1315,
+                11,
+                1767,
+                30,
+                51064
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.23181316256523132,
+            "compression_ratio": 1.431654691696167,
+            "no_speech_prob": 0.09001722931861877
+        },
+        {
+            "id": 10,
+            "seek": 4880,
+            "start": 64.45999908447266,
+            "end": 68.5999984741211,
+            "text": " Yes, my name is Mary Smith.",
+            "tokens": [
+                51064,
+                1079,
+                11,
+                452,
+                1315,
+                307,
+                6059,
+                8538,
+                13,
+                51214
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.23181316256523132,
+            "compression_ratio": 1.431654691696167,
+            "no_speech_prob": 0.09001722931861877
+        },
+        {
+            "id": 11,
+            "seek": 4880,
+            "start": 68.9800033569336,
+            "end": 70.41999816894531,
+            "text": " Thank you, Ms. Smith. May I have your current address, please?",
+            "tokens": [
+                51214,
+                1044,
+                291,
+                11,
+                7741,
+                13,
+                8538,
+                13,
+                1891,
+                286,
+                362,
+                428,
+                2190,
+                2985,
+                11,
+                1767,
+                30,
+                51464
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.23181316256523132,
+            "compression_ratio": 1.431654691696167,
+            "no_speech_prob": 0.09001722931861877
+        },
+        {
+            "id": 12,
+            "seek": 7042,
+            "start": 70.95999908447266,
+            "end": 80.69999694824219,
+            "text": " Yes, so my address is 123 Main Street in Los Angeles, California, and the zip code is 90923.",
+            "tokens": [
+                50364,
+                1079,
+                11,
+                370,
+                452,
+                2985,
+                307,
+                34466,
+                12383,
+                7638,
+                294,
+                7632,
+                12292,
+                11,
+                5384,
+                11,
+                293,
+                264,
+                20730,
+                3089,
+                307,
+                4289,
+                24,
+                9356,
+                13,
+                50764
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22890719771385193,
+            "compression_ratio": 1.322981357574463,
+            "no_speech_prob": 0.2093740999698639
+        },
+        {
+            "id": 13,
+            "seek": 7042,
+            "start": 80.83999633789062,
+            "end": 86.23999786376953,
+            "text": " Sorry, that was a 90 what?",
+            "tokens": [
+                50764,
+                4919,
+                11,
+                300,
+                390,
+                257,
+                4289,
+                437,
+                30,
+                50964
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22890719771385193,
+            "compression_ratio": 1.322981357574463,
+            "no_speech_prob": 0.2093740999698639
+        },
+        {
+            "id": 14,
+            "seek": 7042,
+            "start": 87.5199966430664,
+            "end": 90.72000122070312,
+            "text": " 90923.",
+            "tokens": [
+                50964,
+                4289,
+                24,
+                9356,
+                13,
+                51114
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22890719771385193,
+            "compression_ratio": 1.322981357574463,
+            "no_speech_prob": 0.2093740999698639
+        },
+        {
+            "id": 15,
+            "seek": 7042,
+            "start": 91.04000091552734,
+            "end": 93.66000366210938,
+            "text": " 90923 on Main Street. Got it. Thank you. May I have your phone number as well, please?",
+            "tokens": [
+                51114,
+                4289,
+                24,
+                9356,
+                322,
+                12383,
+                7638,
+                13,
+                5803,
+                309,
+                13,
+                1044,
+                291,
+                13,
+                1891,
+                286,
+                362,
+                428,
+                2593,
+                1230,
+                382,
+                731,
+                11,
+                1767,
+                30,
+                51514
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22890719771385193,
+            "compression_ratio": 1.322981357574463,
+            "no_speech_prob": 0.2093740999698639
+        },
+        {
+            "id": 16,
+            "seek": 9366,
+            "start": 94.0199966430664,
+            "end": 107.0,
+            "text": " Yes, my phone number is 504-529-2351.",
+            "tokens": [
+                50414,
+                1079,
+                11,
+                452,
+                2593,
+                1230,
+                307,
+                2625,
+                19,
+                12,
+                20,
+                11871,
+                12,
+                17,
+                8794,
+                16,
+                13,
+                50764
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.20033381879329681,
+            "compression_ratio": 1.2481751441955566,
+            "no_speech_prob": 0.1051800474524498
+        },
+        {
+            "id": 17,
+            "seek": 9366,
+            "start": 107.45999908447266,
+            "end": 114.26000213623047,
+            "text": " Got it. And do you have an email address I can associate with this application?",
+            "tokens": [
+                50764,
+                5803,
+                309,
+                13,
+                400,
+                360,
+                291,
+                362,
+                364,
+                3796,
+                2985,
+                286,
+                393,
+                14644,
+                365,
+                341,
+                3861,
+                30,
+                51314
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.20033381879329681,
+            "compression_ratio": 1.2481751441955566,
+            "no_speech_prob": 0.1051800474524498
+        },
+        {
+            "id": 18,
+            "seek": 9366,
+            "start": 114.26000213623047,
+            "end": 121.08000183105469,
+            "text": " Yes, so my email address is mary.a.sm78 at gmail.com.",
+            "tokens": [
+                51314,
+                1079,
+                11,
+                370,
+                452,
+                3796,
+                2985,
+                307,
+                275,
+                822,
+                13,
+                64,
+                13,
+                10817,
+                30693,
+                412,
+                290,
+                11799,
+                13,
+                1112,
+                13,
+                51714
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.20033381879329681,
+            "compression_ratio": 1.2481751441955566,
+            "no_speech_prob": 0.1051800474524498
+        },
+        {
+            "id": 19,
+            "seek": 12108,
+            "start": 123.05999755859375,
+            "end": 129.83999633789062,
+            "text": " mary.a. Was that a S N as in November or M as in Mike?",
+            "tokens": [
+                50414,
+                275,
+                822,
+                13,
+                64,
+                13,
+                3027,
+                300,
+                257,
+                318,
+                426,
+                382,
+                294,
+                7674,
+                420,
+                376,
+                382,
+                294,
+                6602,
+                30,
+                50764
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22464127838611603,
+            "compression_ratio": 1.426573395729065,
+            "no_speech_prob": 0.0016228462336584926
+        },
+        {
+            "id": 20,
+            "seek": 12108,
+            "start": 129.83999633789062,
+            "end": 133.52000427246094,
+            "text": " M as in Mike.",
+            "tokens": [
+                50764,
+                376,
+                382,
+                294,
+                6602,
+                13,
+                50864
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22464127838611603,
+            "compression_ratio": 1.426573395729065,
+            "no_speech_prob": 0.0016228462336584926
+        },
+        {
+            "id": 21,
+            "seek": 12108,
+            "start": 133.52000427246094,
+            "end": 136.4199981689453,
+            "text": " Mike 78. Got it. Thank you.",
+            "tokens": [
+                50864,
+                6602,
+                26369,
+                13,
+                5803,
+                309,
+                13,
+                1044,
+                291,
+                13,
+                51064
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22464127838611603,
+            "compression_ratio": 1.426573395729065,
+            "no_speech_prob": 0.0016228462336584926
+        },
+        {
+            "id": 22,
+            "seek": 12108,
+            "start": 136.4199981689453,
+            "end": 141.32000732421875,
+            "text": " Ms. Smith, do you currently have any other loans?",
+            "tokens": [
+                51064,
+                7741,
+                13,
+                8538,
+                11,
+                360,
+                291,
+                4362,
+                362,
+                604,
+                661,
+                15443,
+                30,
+                51264
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22464127838611603,
+            "compression_ratio": 1.426573395729065,
+            "no_speech_prob": 0.0016228462336584926
+        },
+        {
+            "id": 23,
+            "seek": 12108,
+            "start": 141.32000732421875,
+            "end": 142.02000427246094,
+            "text": " Yes, so I currently have two other loans through Contoso.",
+            "tokens": [
+                51264,
+                1079,
+                11,
+                370,
+                286,
+                4362,
+                362,
+                732,
+                661,
+                15443,
+                807,
+                4839,
+                9869,
+                13,
+                51414
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.22464127838611603,
+            "compression_ratio": 1.426573395729065,
+            "no_speech_prob": 0.0016228462336584926
+        },
+        {
+            "id": 24,
+            "seek": 14202,
+            "start": 142.17999267578125,
+            "end": 146.5800018310547,
+            "text": " So my first one is my car loan and then my other is my student loan.",
+            "tokens": [
+                50414,
+                407,
+                452,
+                700,
+                472,
+                307,
+                452,
+                1032,
+                10529,
+                293,
+                550,
+                452,
+                661,
+                307,
+                452,
+                3107,
+                10529,
+                13,
+                50564
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2388167679309845,
+            "compression_ratio": 1.507462739944458,
+            "no_speech_prob": 0.35921114683151245
+        },
+        {
+            "id": 25,
+            "seek": 14202,
+            "start": 146.5800018310547,
+            "end": 153.0399932861328,
+            "text": " They total about $1,400 per month combined and my interest rate is 8%.",
+            "tokens": [
+                50564,
+                814,
+                3217,
+                466,
+                1848,
+                16,
+                11,
+                13741,
+                680,
+                1618,
+                9354,
+                293,
+                452,
+                1179,
+                3314,
+                307,
+                1649,
+                6856,
+                50864
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2388167679309845,
+            "compression_ratio": 1.507462739944458,
+            "no_speech_prob": 0.35921114683151245
+        },
+        {
+            "id": 26,
+            "seek": 14202,
+            "start": 153.0399932861328,
+            "end": 157.25999450683594,
+            "text": " I see. And you're currently paying these loans off monthly, is that right?",
+            "tokens": [
+                50864,
+                286,
+                536,
+                13,
+                400,
+                291,
+                434,
+                4362,
+                6229,
+                613,
+                15443,
+                766,
+                12878,
+                11,
+                307,
+                300,
+                558,
+                30,
+                51064
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2388167679309845,
+            "compression_ratio": 1.507462739944458,
+            "no_speech_prob": 0.35921114683151245
+        },
+        {
+            "id": 27,
+            "seek": 14202,
+            "start": 158.5399932861328,
+            "end": 160.83999633789062,
+            "text": " Yes, of course I do.",
+            "tokens": [
+                51064,
+                1079,
+                11,
+                295,
+                1164,
+                286,
+                360,
+                13,
+                51214
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2388167679309845,
+            "compression_ratio": 1.507462739944458,
+            "no_speech_prob": 0.35921114683151245
+        },
+        {
+            "id": 28,
+            "seek": 14202,
+            "start": 160.83999633789062,
+            "end": 163.44000244140625,
+            "text": " Okay, thank you. Here's what I suggest we do.",
+            "tokens": [
+                51214,
+                1033,
+                11,
+                1309,
+                291,
+                13,
+                1692,
+                311,
+                437,
+                286,
+                3402,
+                321,
+                360,
+                13,
+                51364
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2388167679309845,
+            "compression_ratio": 1.507462739944458,
+            "no_speech_prob": 0.35921114683151245
+        },
+        {
+            "id": 29,
+            "seek": 14202,
+            "start": 163.44000244140625,
+            "end": 167.44000244140625,
+            "text": " Let me put you on a brief hold again so I can talk with one of our loan officers and get this started for you immediately.",
+            "tokens": [
+                51364,
+                961,
+                385,
+                829,
+                291,
+                322,
+                257,
+                5353,
+                1797,
+                797,
+                370,
+                286,
+                393,
+                751,
+                365,
+                472,
+                295,
+                527,
+                10529,
+                9199,
+                293,
+                483,
+                341,
+                1409,
+                337,
+                291,
+                4258,
+                13,
+                51664
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2388167679309845,
+            "compression_ratio": 1.507462739944458,
+            "no_speech_prob": 0.35921114683151245
+        },
+        {
+            "id": 30,
+            "seek": 16744,
+            "start": 167.74000549316406,
+            "end": 178.66000366210938,
+            "text": " In the meantime, it would be great if you could take a few minutes and complete the remainder of the secure application online at www.contosoloans.com.",
+            "tokens": [
+                50364,
+                682,
+                264,
+                14991,
+                11,
+                309,
+                576,
+                312,
+                869,
+                498,
+                291,
+                727,
+                747,
+                257,
+                1326,
+                2077,
+                293,
+                3566,
+                264,
+                29837,
+                295,
+                264,
+                7144,
+                3861,
+                2950,
+                412,
+                12520,
+                13,
+                9000,
+                329,
+                401,
+                78,
+                599,
+                13,
+                1112,
+                13,
+                50864
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2143920361995697,
+            "compression_ratio": 1.4666666984558105,
+            "no_speech_prob": 0.0665428414940834
+        },
+        {
+            "id": 31,
+            "seek": 16744,
+            "start": 178.66000366210938,
+            "end": 182.25999450683594,
+            "text": " Yes, that sounds good. I can go ahead and get started. Thank you for your help.",
+            "tokens": [
+                50864,
+                1079,
+                11,
+                300,
+                3263,
+                665,
+                13,
+                286,
+                393,
+                352,
+                2286,
+                293,
+                483,
+                1409,
+                13,
+                1044,
+                291,
+                337,
+                428,
+                854,
+                13,
+                51064
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2143920361995697,
+            "compression_ratio": 1.4666666984558105,
+            "no_speech_prob": 0.0665428414940834
+        },
+        {
+            "id": 32,
+            "seek": 16744,
+            "start": 181.44000244140625,
+            "end": 182.44000244140625,
+            "text": " Thank you.",
+            "tokens": [
+                51064,
+                1044,
+                291,
+                13,
+                51114
+            ],
+            "temperature": 0.0,
+            "avg_logprob": -0.2143920361995697,
+            "compression_ratio": 1.4666666984558105,
+            "no_speech_prob": 0.0665428414940834
+        }
+    ],
+    "words": [
+        {
+            "word": "Good",
+            "start": 1.0,
+            "end": 1.3600000143051147
+        },
+        {
+            "word": "afternoon",
+            "start": 1.3600000143051147,
+            "end": 1.5399999618530273
+        },
+        {
+            "word": "This",
+            "start": 1.7200000286102295,
+            "end": 1.840000033378601
+        },
+        {
+            "word": "is",
+            "start": 1.840000033378601,
+            "end": 2.1600000858306885
+        },
+        {
+            "word": "Sam",
+            "start": 2.1600000858306885,
+            "end": 2.2200000286102295
+        },
+        {
+            "word": "Thank",
+            "start": 2.4800000190734863,
+            "end": 2.4800000190734863
+        },
+        {
+            "word": "you",
+            "start": 2.4800000190734863,
+            "end": 2.5399999618530273
+        },
+        {
+            "word": "for",
+            "start": 2.5399999618530273,
+            "end": 2.680000066757202
+        },
+        {
+            "word": "calling",
+            "start": 2.680000066757202,
+            "end": 2.8399999141693115
+        },
+        {
+            "word": "Contessa",
+            "start": 2.8399999141693115,
+            "end": 3.119999885559082
+        },
+        {
+            "word": "How",
+            "start": 3.4800000190734863,
+            "end": 3.4800000190734863
+        },
+        {
+            "word": "may",
+            "start": 3.4800000190734863,
+            "end": 3.5799999237060547
+        },
+        {
+            "word": "I",
+            "start": 3.5799999237060547,
+            "end": 3.7799999713897705
+        },
+        {
+            "word": "help",
+            "start": 3.7799999713897705,
+            "end": 4.059999942779541
+        },
+        {
+            "word": "Hi",
+            "start": 5.260000228881836,
+            "end": 5.260000228881836
+        },
+        {
+            "word": "there",
+            "start": 5.260000228881836,
+            "end": 5.440000057220459
+        },
+        {
+            "word": "My",
+            "start": 5.480000019073486,
+            "end": 5.579999923706055
+        },
+        {
+            "word": "name",
+            "start": 5.579999923706055,
+            "end": 5.699999809265137
+        },
+        {
+            "word": "is",
+            "start": 5.699999809265137,
+            "end": 6.119999885559082
+        },
+        {
+            "word": "Mary",
+            "start": 6.119999885559082,
+            "end": 6.119999885559082
+        },
+        {
+            "word": "I'm",
+            "start": 6.300000190734863,
+            "end": 6.360000133514404
+        },
+        {
+            "word": "currently",
+            "start": 6.360000133514404,
+            "end": 6.78000020980835
+        },
+        {
+            "word": "living",
+            "start": 6.78000020980835,
+            "end": 6.920000076293945
+        },
+        {
+            "word": "in",
+            "start": 6.920000076293945,
+            "end": 7.199999809265137
+        },
+        {
+            "word": "Los",
+            "start": 7.199999809265137,
+            "end": 7.300000190734863
+        },
+        {
+            "word": "Angeles",
+            "start": 7.300000190734863,
+            "end": 7.619999885559082
+        },
+        {
+            "word": "but",
+            "start": 7.78000020980835,
+            "end": 7.880000114440918
+        },
+        {
+            "word": "I'm",
+            "start": 7.880000114440918,
+            "end": 8.260000228881836
+        },
+        {
+            "word": "planning",
+            "start": 8.260000228881836,
+            "end": 8.260000228881836
+        },
+        {
+            "word": "to",
+            "start": 8.260000228881836,
+            "end": 8.5
+        },
+        {
+            "word": "move",
+            "start": 8.5,
+            "end": 8.5600004196167
+        },
+        {
+            "word": "to",
+            "start": 8.5600004196167,
+            "end": 8.899999618530273
+        },
+        {
+            "word": "Las",
+            "start": 8.899999618530273,
+            "end": 9.020000457763672
+        },
+        {
+            "word": "Vegas",
+            "start": 9.020000457763672,
+            "end": 9.119999885559082
+        },
+        {
+            "word": "I",
+            "start": 9.279999732971191,
+            "end": 9.359999656677246
+        },
+        {
+            "word": "would",
+            "start": 9.359999656677246,
+            "end": 9.460000038146973
+        },
+        {
+            "word": "like",
+            "start": 9.460000038146973,
+            "end": 9.640000343322754
+        },
+        {
+            "word": "to",
+            "start": 9.640000343322754,
+            "end": 9.880000114440918
+        },
+        {
+            "word": "apply",
+            "start": 9.880000114440918,
+            "end": 9.9399995803833
+        },
+        {
+            "word": "for",
+            "start": 9.9399995803833,
+            "end": 10.199999809265137
+        },
+        {
+            "word": "a",
+            "start": 10.199999809265137,
+            "end": 10.5
+        },
+        {
+            "word": "loan",
+            "start": 10.5,
+            "end": 10.5
+        },
+        {
+            "word": "Okay",
+            "start": 12.4399995803833,
+            "end": 12.899999618530273
+        },
+        {
+            "word": "I",
+            "start": 12.899999618530273,
+            "end": 13.359999656677246
+        },
+        {
+            "word": "see",
+            "start": 13.359999656677246,
+            "end": 13.5
+        },
+        {
+            "word": "you're",
+            "start": 13.5,
+            "end": 13.640000343322754
+        },
+        {
+            "word": "currently",
+            "start": 13.640000343322754,
+            "end": 13.979999542236328
+        },
+        {
+            "word": "living",
+            "start": 13.979999542236328,
+            "end": 14.0600004196167
+        },
+        {
+            "word": "in",
+            "start": 14.0600004196167,
+            "end": 14.699999809265137
+        },
+        {
+            "word": "California",
+            "start": 14.699999809265137,
+            "end": 14.699999809265137
+        },
+        {
+            "word": "Let",
+            "start": 14.979999542236328,
+            "end": 15.140000343322754
+        },
+        {
+            "word": "me",
+            "start": 15.140000343322754,
+            "end": 15.199999809265137
+        },
+        {
+            "word": "make",
+            "start": 15.199999809265137,
+            "end": 15.399999618530273
+        },
+        {
+            "word": "sure",
+            "start": 15.399999618530273,
+            "end": 15.479999542236328
+        },
+        {
+            "word": "I",
+            "start": 15.479999542236328,
+            "end": 15.680000305175781
+        },
+        {
+            "word": "understand",
+            "start": 15.680000305175781,
+            "end": 15.979999542236328
+        },
+        {
+            "word": "you",
+            "start": 15.979999542236328,
+            "end": 16.15999984741211
+        },
+        {
+            "word": "correctly",
+            "start": 16.15999984741211,
+            "end": 16.420000076293945
+        },
+        {
+            "word": "You'd",
+            "start": 16.68000030517578,
+            "end": 17.360000610351562
+        },
+        {
+            "word": "like",
+            "start": 17.360000610351562,
+            "end": 17.459999084472656
+        },
+        {
+            "word": "to",
+            "start": 17.459999084472656,
+            "end": 17.760000228881836
+        },
+        {
+            "word": "apply",
+            "start": 17.760000228881836,
+            "end": 17.760000228881836
+        },
+        {
+            "word": "for",
+            "start": 17.760000228881836,
+            "end": 18.020000457763672
+        },
+        {
+            "word": "a",
+            "start": 18.020000457763672,
+            "end": 18.31999969482422
+        },
+        {
+            "word": "loan",
+            "start": 18.31999969482422,
+            "end": 18.31999969482422
+        },
+        {
+            "word": "even",
+            "start": 18.420000076293945,
+            "end": 18.719999313354492
+        },
+        {
+            "word": "though",
+            "start": 18.719999313354492,
+            "end": 18.8799991607666
+        },
+        {
+            "word": "you'll",
+            "start": 18.8799991607666,
+            "end": 19.139999389648438
+        },
+        {
+            "word": "be",
+            "start": 19.139999389648438,
+            "end": 19.280000686645508
+        },
+        {
+            "word": "moving",
+            "start": 19.280000686645508,
+            "end": 19.420000076293945
+        },
+        {
+            "word": "soon",
+            "start": 19.420000076293945,
+            "end": 19.719999313354492
+        },
+        {
+            "word": "Is",
+            "start": 19.719999313354492,
+            "end": 19.84000015258789
+        },
+        {
+            "word": "that",
+            "start": 19.84000015258789,
+            "end": 19.979999542236328
+        },
+        {
+            "word": "right",
+            "start": 19.979999542236328,
+            "end": 20.18000030517578
+        },
+        {
+            "word": "Yes",
+            "start": 21.139999389648438,
+            "end": 21.760000228881836
+        },
+        {
+            "word": "exactly",
+            "start": 21.81999969482422,
+            "end": 22.219999313354492
+        },
+        {
+            "word": "So",
+            "start": 22.360000610351562,
+            "end": 22.760000228881836
+        },
+        {
+            "word": "I'm",
+            "start": 22.760000228881836,
+            "end": 22.780000686645508
+        },
+        {
+            "word": "planning",
+            "start": 22.780000686645508,
+            "end": 22.979999542236328
+        },
+        {
+            "word": "to",
+            "start": 22.979999542236328,
+            "end": 23.239999771118164
+        },
+        {
+            "word": "relocate",
+            "start": 23.239999771118164,
+            "end": 23.520000457763672
+        },
+        {
+            "word": "soon",
+            "start": 23.520000457763672,
+            "end": 23.799999237060547
+        },
+        {
+            "word": "but",
+            "start": 23.81999969482422,
+            "end": 23.899999618530273
+        },
+        {
+            "word": "I",
+            "start": 23.899999618530273,
+            "end": 24.0
+        },
+        {
+            "word": "would",
+            "start": 24.0,
+            "end": 24.100000381469727
+        },
+        {
+            "word": "like",
+            "start": 24.100000381469727,
+            "end": 24.239999771118164
+        },
+        {
+            "word": "to",
+            "start": 24.239999771118164,
+            "end": 24.579999923706055
+        },
+        {
+            "word": "apply",
+            "start": 24.579999923706055,
+            "end": 24.579999923706055
+        },
+        {
+            "word": "for",
+            "start": 24.579999923706055,
+            "end": 24.799999237060547
+        },
+        {
+            "word": "the",
+            "start": 24.799999237060547,
+            "end": 25.0
+        },
+        {
+            "word": "loan",
+            "start": 25.0,
+            "end": 25.079999923706055
+        },
+        {
+            "word": "first",
+            "start": 25.079999923706055,
+            "end": 25.420000076293945
+        },
+        {
+            "word": "so",
+            "start": 25.420000076293945,
+            "end": 25.559999465942383
+        },
+        {
+            "word": "that",
+            "start": 25.559999465942383,
+            "end": 25.6200008392334
+        },
+        {
+            "word": "I",
+            "start": 25.6200008392334,
+            "end": 25.700000762939453
+        },
+        {
+            "word": "can",
+            "start": 25.700000762939453,
+            "end": 25.920000076293945
+        },
+        {
+            "word": "purchase",
+            "start": 25.920000076293945,
+            "end": 26.100000381469727
+        },
+        {
+            "word": "a",
+            "start": 26.100000381469727,
+            "end": 26.34000015258789
+        },
+        {
+            "word": "new",
+            "start": 26.34000015258789,
+            "end": 26.479999542236328
+        },
+        {
+            "word": "home",
+            "start": 26.479999542236328,
+            "end": 26.6200008392334
+        },
+        {
+            "word": "once",
+            "start": 26.6200008392334,
+            "end": 26.84000015258789
+        },
+        {
+            "word": "I",
+            "start": 26.84000015258789,
+            "end": 26.979999542236328
+        },
+        {
+            "word": "move",
+            "start": 26.979999542236328,
+            "end": 27.079999923706055
+        },
+        {
+            "word": "there",
+            "start": 27.079999923706055,
+            "end": 27.260000228881836
+        },
+        {
+            "word": "And",
+            "start": 28.760000228881836,
+            "end": 29.15999984741211
+        },
+        {
+            "word": "are",
+            "start": 29.15999984741211,
+            "end": 29.3799991607666
+        },
+        {
+            "word": "you",
+            "start": 29.3799991607666,
+            "end": 29.540000915527344
+        },
+        {
+            "word": "planning",
+            "start": 29.540000915527344,
+            "end": 29.739999771118164
+        },
+        {
+            "word": "to",
+            "start": 29.739999771118164,
+            "end": 30.139999389648438
+        },
+        {
+            "word": "sell",
+            "start": 30.139999389648438,
+            "end": 30.139999389648438
+        },
+        {
+            "word": "your",
+            "start": 30.139999389648438,
+            "end": 30.34000015258789
+        },
+        {
+            "word": "current",
+            "start": 30.34000015258789,
+            "end": 30.600000381469727
+        },
+        {
+            "word": "home",
+            "start": 30.600000381469727,
+            "end": 30.799999237060547
+        },
+        {
+            "word": "Yes",
+            "start": 32.15999984741211,
+            "end": 32.439998626708984
+        },
+        {
+            "word": "I",
+            "start": 32.439998626708984,
+            "end": 32.939998626708984
+        },
+        {
+            "word": "will",
+            "start": 32.939998626708984,
+            "end": 33.08000183105469
+        },
+        {
+            "word": "be",
+            "start": 33.08000183105469,
+            "end": 33.18000030517578
+        },
+        {
+            "word": "listing",
+            "start": 33.18000030517578,
+            "end": 33.459999084472656
+        },
+        {
+            "word": "it",
+            "start": 33.459999084472656,
+            "end": 33.619998931884766
+        },
+        {
+            "word": "on",
+            "start": 33.619998931884766,
+            "end": 33.63999938964844
+        },
+        {
+            "word": "the",
+            "start": 33.63999938964844,
+            "end": 33.7599983215332
+        },
+        {
+            "word": "market",
+            "start": 33.7599983215332,
+            "end": 33.959999084472656
+        },
+        {
+            "word": "soon",
+            "start": 33.959999084472656,
+            "end": 34.2400016784668
+        },
+        {
+            "word": "and",
+            "start": 34.2400016784668,
+            "end": 34.439998626708984
+        },
+        {
+            "word": "hopefully",
+            "start": 34.439998626708984,
+            "end": 34.63999938964844
+        },
+        {
+            "word": "it'll",
+            "start": 34.63999938964844,
+            "end": 34.880001068115234
+        },
+        {
+            "word": "sell",
+            "start": 34.880001068115234,
+            "end": 35.040000915527344
+        },
+        {
+            "word": "quickly",
+            "start": 35.040000915527344,
+            "end": 35.31999969482422
+        },
+        {
+            "word": "That's",
+            "start": 35.779998779296875,
+            "end": 36.040000915527344
+        },
+        {
+            "word": "why",
+            "start": 36.040000915527344,
+            "end": 36.13999938964844
+        },
+        {
+            "word": "I'm",
+            "start": 36.13999938964844,
+            "end": 36.220001220703125
+        },
+        {
+            "word": "applying",
+            "start": 36.220001220703125,
+            "end": 36.400001525878906
+        },
+        {
+            "word": "for",
+            "start": 36.400001525878906,
+            "end": 36.63999938964844
+        },
+        {
+            "word": "a",
+            "start": 36.63999938964844,
+            "end": 36.720001220703125
+        },
+        {
+            "word": "loan",
+            "start": 36.720001220703125,
+            "end": 36.7599983215332
+        },
+        {
+            "word": "now",
+            "start": 36.7599983215332,
+            "end": 37.02000045776367
+        },
+        {
+            "word": "so",
+            "start": 37.02000045776367,
+            "end": 37.099998474121094
+        },
+        {
+            "word": "that",
+            "start": 37.099998474121094,
+            "end": 37.18000030517578
+        },
+        {
+            "word": "I",
+            "start": 37.18000030517578,
+            "end": 37.279998779296875
+        },
+        {
+            "word": "can",
+            "start": 37.279998779296875,
+            "end": 37.439998626708984
+        },
+        {
+            "word": "purchase",
+            "start": 37.439998626708984,
+            "end": 37.70000076293945
+        },
+        {
+            "word": "a",
+            "start": 37.70000076293945,
+            "end": 38.040000915527344
+        },
+        {
+            "word": "new",
+            "start": 38.040000915527344,
+            "end": 38.20000076293945
+        },
+        {
+            "word": "house",
+            "start": 38.20000076293945,
+            "end": 38.2599983215332
+        },
+        {
+            "word": "in",
+            "start": 38.2599983215332,
+            "end": 38.70000076293945
+        },
+        {
+            "word": "Nevada",
+            "start": 38.70000076293945,
+            "end": 38.70000076293945
+        },
+        {
+            "word": "and",
+            "start": 38.70000076293945,
+            "end": 38.91999816894531
+        },
+        {
+            "word": "close",
+            "start": 38.91999816894531,
+            "end": 39.099998474121094
+        },
+        {
+            "word": "on",
+            "start": 39.099998474121094,
+            "end": 39.220001220703125
+        },
+        {
+            "word": "it",
+            "start": 39.220001220703125,
+            "end": 39.31999969482422
+        },
+        {
+            "word": "quickly",
+            "start": 39.31999969482422,
+            "end": 39.5
+        },
+        {
+            "word": "as",
+            "start": 39.5,
+            "end": 39.7400016784668
+        },
+        {
+            "word": "well",
+            "start": 39.7400016784668,
+            "end": 39.91999816894531
+        },
+        {
+            "word": "once",
+            "start": 39.939998626708984,
+            "end": 40.099998474121094
+        },
+        {
+            "word": "my",
+            "start": 40.099998474121094,
+            "end": 40.34000015258789
+        },
+        {
+            "word": "current",
+            "start": 40.34000015258789,
+            "end": 40.459999084472656
+        },
+        {
+            "word": "home",
+            "start": 40.459999084472656,
+            "end": 40.720001220703125
+        },
+        {
+            "word": "sells",
+            "start": 40.720001220703125,
+            "end": 41.02000045776367
+        },
+        {
+            "word": "I",
+            "start": 42.599998474121094,
+            "end": 42.779998779296875
+        },
+        {
+            "word": "see",
+            "start": 42.779998779296875,
+            "end": 43.040000915527344
+        },
+        {
+            "word": "Would",
+            "start": 43.34000015258789,
+            "end": 43.86000061035156
+        },
+        {
+            "word": "you",
+            "start": 43.86000061035156,
+            "end": 44.099998474121094
+        },
+        {
+            "word": "mind",
+            "start": 44.099998474121094,
+            "end": 44.15999984741211
+        },
+        {
+            "word": "holding",
+            "start": 44.15999984741211,
+            "end": 44.400001525878906
+        },
+        {
+            "word": "for",
+            "start": 44.400001525878906,
+            "end": 44.68000030517578
+        },
+        {
+            "word": "a",
+            "start": 44.68000030517578,
+            "end": 44.939998626708984
+        },
+        {
+            "word": "moment",
+            "start": 44.939998626708984,
+            "end": 44.939998626708984
+        },
+        {
+            "word": "while",
+            "start": 44.939998626708984,
+            "end": 45.2400016784668
+        },
+        {
+            "word": "I",
+            "start": 45.2400016784668,
+            "end": 45.459999084472656
+        },
+        {
+            "word": "take",
+            "start": 45.459999084472656,
+            "end": 45.599998474121094
+        },
+        {
+            "word": "your",
+            "start": 45.599998474121094,
+            "end": 45.7599983215332
+        },
+        {
+            "word": "information",
+            "start": 45.7599983215332,
+            "end": 46.0
+        },
+        {
+            "word": "down",
+            "start": 46.0,
+            "end": 46.2599983215332
+        },
+        {
+            "word": "Yeah",
+            "start": 46.619998931884766,
+            "end": 47.5
+        },
+        {
+            "word": "no",
+            "start": 47.5,
+            "end": 47.70000076293945
+        },
+        {
+            "word": "problem",
+            "start": 47.70000076293945,
+            "end": 47.86000061035156
+        },
+        {
+            "word": "Thank",
+            "start": 48.060001373291016,
+            "end": 48.18000030517578
+        },
+        {
+            "word": "you",
+            "start": 48.18000030517578,
+            "end": 48.2599983215332
+        },
+        {
+            "word": "for",
+            "start": 48.2599983215332,
+            "end": 48.41999816894531
+        },
+        {
+            "word": "your",
+            "start": 48.41999816894531,
+            "end": 48.58000183105469
+        },
+        {
+            "word": "help",
+            "start": 48.58000183105469,
+            "end": 48.79999923706055
+        },
+        {
+            "word": "Just",
+            "start": 50.040000915527344,
+            "end": 50.47999954223633
+        },
+        {
+            "word": "one",
+            "start": 50.47999954223633,
+            "end": 50.900001525878906
+        },
+        {
+            "word": "moment",
+            "start": 50.900001525878906,
+            "end": 51.58000183105469
+        },
+        {
+            "word": "All",
+            "start": 55.91999816894531,
+            "end": 59.13999938964844
+        },
+        {
+            "word": "right",
+            "start": 59.13999938964844,
+            "end": 59.13999938964844
+        },
+        {
+            "word": "Thank",
+            "start": 59.13999938964844,
+            "end": 59.279998779296875
+        },
+        {
+            "word": "you",
+            "start": 59.279998779296875,
+            "end": 59.36000061035156
+        },
+        {
+            "word": "for",
+            "start": 59.36000061035156,
+            "end": 59.47999954223633
+        },
+        {
+            "word": "your",
+            "start": 59.47999954223633,
+            "end": 59.65999984741211
+        },
+        {
+            "word": "patience",
+            "start": 59.65999984741211,
+            "end": 59.81999969482422
+        },
+        {
+            "word": "ma",
+            "start": 60.02000045776367,
+            "end": 60.099998474121094
+        },
+        {
+            "word": "am",
+            "start": 60.099998474121094,
+            "end": 60.119998931884766
+        },
+        {
+            "word": "May",
+            "start": 60.58000183105469,
+            "end": 60.63999938964844
+        },
+        {
+            "word": "I",
+            "start": 60.63999938964844,
+            "end": 60.70000076293945
+        },
+        {
+            "word": "have",
+            "start": 60.70000076293945,
+            "end": 60.880001068115234
+        },
+        {
+            "word": "your",
+            "start": 60.880001068115234,
+            "end": 61.099998474121094
+        },
+        {
+            "word": "first",
+            "start": 61.099998474121094,
+            "end": 61.540000915527344
+        },
+        {
+            "word": "and",
+            "start": 61.540000915527344,
+            "end": 62.040000915527344
+        },
+        {
+            "word": "last",
+            "start": 62.040000915527344,
+            "end": 62.040000915527344
+        },
+        {
+            "word": "name",
+            "start": 62.040000915527344,
+            "end": 62.220001220703125
+        },
+        {
+            "word": "please",
+            "start": 62.279998779296875,
+            "end": 62.5
+        },
+        {
+            "word": "Yes",
+            "start": 63.70000076293945,
+            "end": 63.900001525878906
+        },
+        {
+            "word": "my",
+            "start": 63.900001525878906,
+            "end": 64.4000015258789
+        },
+        {
+            "word": "name",
+            "start": 64.4000015258789,
+            "end": 64.45999908447266
+        },
+        {
+            "word": "is",
+            "start": 64.45999908447266,
+            "end": 64.95999908447266
+        },
+        {
+            "word": "Mary",
+            "start": 64.95999908447266,
+            "end": 64.95999908447266
+        },
+        {
+            "word": "Smith",
+            "start": 64.95999908447266,
+            "end": 65.37999725341797
+        },
+        {
+            "word": "Thank",
+            "start": 66.66000366210938,
+            "end": 67.83999633789062
+        },
+        {
+            "word": "you",
+            "start": 67.83999633789062,
+            "end": 68.0999984741211
+        },
+        {
+            "word": "Ms",
+            "start": 68.22000122070312,
+            "end": 68.41999816894531
+        },
+        {
+            "word": "Smith",
+            "start": 68.41999816894531,
+            "end": 68.5999984741211
+        },
+        {
+            "word": "May",
+            "start": 68.9800033569336,
+            "end": 69.0999984741211
+        },
+        {
+            "word": "I",
+            "start": 69.0999984741211,
+            "end": 69.18000030517578
+        },
+        {
+            "word": "have",
+            "start": 69.18000030517578,
+            "end": 69.30000305175781
+        },
+        {
+            "word": "your",
+            "start": 69.30000305175781,
+            "end": 69.55999755859375
+        },
+        {
+            "word": "current",
+            "start": 69.55999755859375,
+            "end": 69.83999633789062
+        },
+        {
+            "word": "address",
+            "start": 69.83999633789062,
+            "end": 70.0999984741211
+        },
+        {
+            "word": "please",
+            "start": 70.41999816894531,
+            "end": 70.41999816894531
+        },
+        {
+            "word": "Yes",
+            "start": 70.95999908447266,
+            "end": 71.4800033569336
+        },
+        {
+            "word": "so",
+            "start": 71.30000305175781,
+            "end": 72.0
+        },
+        {
+            "word": "my",
+            "start": 72.0,
+            "end": 72.13999938964844
+        },
+        {
+            "word": "address",
+            "start": 72.13999938964844,
+            "end": 72.5
+        },
+        {
+            "word": "is",
+            "start": 72.5,
+            "end": 72.9000015258789
+        },
+        {
+            "word": "123",
+            "start": 72.9000015258789,
+            "end": 73.77999877929688
+        },
+        {
+            "word": "Main",
+            "start": 73.77999877929688,
+            "end": 74.30000305175781
+        },
+        {
+            "word": "Street",
+            "start": 74.30000305175781,
+            "end": 74.44000244140625
+        },
+        {
+            "word": "in",
+            "start": 74.44000244140625,
+            "end": 74.80000305175781
+        },
+        {
+            "word": "Los",
+            "start": 74.80000305175781,
+            "end": 75.26000213623047
+        },
+        {
+            "word": "Angeles",
+            "start": 75.26000213623047,
+            "end": 75.26000213623047
+        },
+        {
+            "word": "California",
+            "start": 75.5199966430664,
+            "end": 75.87999725341797
+        },
+        {
+            "word": "and",
+            "start": 75.91999816894531,
+            "end": 76.12000274658203
+        },
+        {
+            "word": "the",
+            "start": 76.12000274658203,
+            "end": 76.30000305175781
+        },
+        {
+            "word": "zip",
+            "start": 76.30000305175781,
+            "end": 76.4800033569336
+        },
+        {
+            "word": "code",
+            "start": 76.4800033569336,
+            "end": 76.55999755859375
+        },
+        {
+            "word": "is",
+            "start": 76.55999755859375,
+            "end": 77.0999984741211
+        },
+        {
+            "word": "90923",
+            "start": 77.0999984741211,
+            "end": 78.66000366210938
+        },
+        {
+            "word": "Sorry",
+            "start": 79.94000244140625,
+            "end": 80.69999694824219
+        },
+        {
+            "word": "that",
+            "start": 80.83999633789062,
+            "end": 80.94000244140625
+        },
+        {
+            "word": "was",
+            "start": 80.94000244140625,
+            "end": 80.95999908447266
+        },
+        {
+            "word": "a",
+            "start": 80.95999908447266,
+            "end": 81.16000366210938
+        },
+        {
+            "word": "90",
+            "start": 81.16000366210938,
+            "end": 81.9800033569336
+        },
+        {
+            "word": "what",
+            "start": 81.9800033569336,
+            "end": 83.5999984741211
+        },
+        {
+            "word": "90923",
+            "start": 83.73999786376953,
+            "end": 86.23999786376953
+        },
+        {
+            "word": "90923",
+            "start": 87.5199966430664,
+            "end": 89.5
+        },
+        {
+            "word": "on",
+            "start": 89.5,
+            "end": 90.33999633789062
+        },
+        {
+            "word": "Main",
+            "start": 90.33999633789062,
+            "end": 90.5199966430664
+        },
+        {
+            "word": "Street",
+            "start": 90.5199966430664,
+            "end": 90.72000122070312
+        },
+        {
+            "word": "Got",
+            "start": 91.04000091552734,
+            "end": 91.04000091552734
+        },
+        {
+            "word": "it",
+            "start": 91.04000091552734,
+            "end": 91.5199966430664
+        },
+        {
+            "word": "Thank",
+            "start": 91.5199966430664,
+            "end": 91.77999877929688
+        },
+        {
+            "word": "you",
+            "start": 91.77999877929688,
+            "end": 92.0
+        },
+        {
+            "word": "May",
+            "start": 92.0999984741211,
+            "end": 92.45999908447266
+        },
+        {
+            "word": "I",
+            "start": 92.45999908447266,
+            "end": 92.55999755859375
+        },
+        {
+            "word": "have",
+            "start": 92.55999755859375,
+            "end": 92.63999938964844
+        },
+        {
+            "word": "your",
+            "start": 92.63999938964844,
+            "end": 92.81999969482422
+        },
+        {
+            "word": "phone",
+            "start": 92.81999969482422,
+            "end": 93.0
+        },
+        {
+            "word": "number",
+            "start": 93.0,
+            "end": 93.19999694824219
+        },
+        {
+            "word": "as",
+            "start": 93.19999694824219,
+            "end": 93.36000061035156
+        },
+        {
+            "word": "well",
+            "start": 93.36000061035156,
+            "end": 93.5199966430664
+        },
+        {
+            "word": "please",
+            "start": 93.5199966430664,
+            "end": 93.66000366210938
+        },
+        {
+            "word": "Yes",
+            "start": 94.0199966430664,
+            "end": 95.12000274658203
+        },
+        {
+            "word": "my",
+            "start": 95.12000274658203,
+            "end": 95.37999725341797
+        },
+        {
+            "word": "phone",
+            "start": 95.37999725341797,
+            "end": 95.5999984741211
+        },
+        {
+            "word": "number",
+            "start": 95.5999984741211,
+            "end": 95.80000305175781
+        },
+        {
+            "word": "is",
+            "start": 95.80000305175781,
+            "end": 96.44000244140625
+        },
+        {
+            "word": "504",
+            "start": 96.44000244140625,
+            "end": 97.68000030517578
+        },
+        {
+            "word": "529",
+            "start": 97.68000030517578,
+            "end": 99.44000244140625
+        },
+        {
+            "word": "2351",
+            "start": 99.44000244140625,
+            "end": 101.72000122070312
+        },
+        {
+            "word": "Got",
+            "start": 102.91999816894531,
+            "end": 104.5199966430664
+        },
+        {
+            "word": "it",
+            "start": 104.5199966430664,
+            "end": 107.0
+        },
+        {
+            "word": "And",
+            "start": 107.45999908447266,
+            "end": 107.91999816894531
+        },
+        {
+            "word": "do",
+            "start": 107.91999816894531,
+            "end": 108.86000061035156
+        },
+        {
+            "word": "you",
+            "start": 108.86000061035156,
+            "end": 108.86000061035156
+        },
+        {
+            "word": "have",
+            "start": 108.86000061035156,
+            "end": 108.9800033569336
+        },
+        {
+            "word": "an",
+            "start": 108.9800033569336,
+            "end": 109.4000015258789
+        },
+        {
+            "word": "email",
+            "start": 109.4000015258789,
+            "end": 109.4000015258789
+        },
+        {
+            "word": "address",
+            "start": 109.4000015258789,
+            "end": 109.83999633789062
+        },
+        {
+            "word": "I",
+            "start": 109.83999633789062,
+            "end": 111.13999938964844
+        },
+        {
+            "word": "can",
+            "start": 111.13999938964844,
+            "end": 111.31999969482422
+        },
+        {
+            "word": "associate",
+            "start": 111.31999969482422,
+            "end": 111.5999984741211
+        },
+        {
+            "word": "with",
+            "start": 111.5999984741211,
+            "end": 111.81999969482422
+        },
+        {
+            "word": "this",
+            "start": 111.81999969482422,
+            "end": 112.05999755859375
+        },
+        {
+            "word": "application",
+            "start": 112.05999755859375,
+            "end": 112.30000305175781
+        },
+        {
+            "word": "Yes",
+            "start": 113.19999694824219,
+            "end": 113.91999816894531
+        },
+        {
+            "word": "so",
+            "start": 113.91999816894531,
+            "end": 114.13999938964844
+        },
+        {
+            "word": "my",
+            "start": 114.13999938964844,
+            "end": 114.26000213623047
+        },
+        {
+            "word": "email",
+            "start": 114.26000213623047,
+            "end": 114.4800033569336
+        },
+        {
+            "word": "address",
+            "start": 114.4800033569336,
+            "end": 114.87999725341797
+        },
+        {
+            "word": "is",
+            "start": 114.87999725341797,
+            "end": 115.73999786376953
+        },
+        {
+            "word": "mary",
+            "start": 115.73999786376953,
+            "end": 115.73999786376953
+        },
+        {
+            "word": "a",
+            "start": 115.73999786376953,
+            "end": 116.54000091552734
+        },
+        {
+            "word": "sm78",
+            "start": 116.54000091552734,
+            "end": 119.23999786376953
+        },
+        {
+            "word": "at",
+            "start": 119.23999786376953,
+            "end": 120.0
+        },
+        {
+            "word": "gmail",
+            "start": 120.0,
+            "end": 120.26000213623047
+        },
+        {
+            "word": "com",
+            "start": 120.26000213623047,
+            "end": 121.08000183105469
+        },
+        {
+            "word": "mary",
+            "start": 123.05999755859375,
+            "end": 123.69999694824219
+        },
+        {
+            "word": "a",
+            "start": 123.69999694824219,
+            "end": 124.0999984741211
+        },
+        {
+            "word": "Was",
+            "start": 124.33999633789062,
+            "end": 124.66000366210938
+        },
+        {
+            "word": "that",
+            "start": 124.66000366210938,
+            "end": 124.9800033569336
+        },
+        {
+            "word": "a",
+            "start": 124.9800033569336,
+            "end": 125.5999984741211
+        },
+        {
+            "word": "S",
+            "start": 125.5999984741211,
+            "end": 125.77999877929688
+        },
+        {
+            "word": "N",
+            "start": 125.77999877929688,
+            "end": 126.12000274658203
+        },
+        {
+            "word": "as",
+            "start": 126.12000274658203,
+            "end": 126.31999969482422
+        },
+        {
+            "word": "in",
+            "start": 126.31999969482422,
+            "end": 126.5
+        },
+        {
+            "word": "November",
+            "start": 126.5,
+            "end": 126.86000061035156
+        },
+        {
+            "word": "or",
+            "start": 126.86000061035156,
+            "end": 127.30000305175781
+        },
+        {
+            "word": "M",
+            "start": 127.30000305175781,
+            "end": 127.54000091552734
+        },
+        {
+            "word": "as",
+            "start": 127.54000091552734,
+            "end": 127.72000122070312
+        },
+        {
+            "word": "in",
+            "start": 127.72000122070312,
+            "end": 128.36000061035156
+        },
+        {
+            "word": "Mike",
+            "start": 128.36000061035156,
+            "end": 128.5399932861328
+        },
+        {
+            "word": "M",
+            "start": 129.22000122070312,
+            "end": 129.67999267578125
+        },
+        {
+            "word": "as",
+            "start": 129.67999267578125,
+            "end": 129.83999633789062
+        },
+        {
+            "word": "in",
+            "start": 129.83999633789062,
+            "end": 130.17999267578125
+        },
+        {
+            "word": "Mike",
+            "start": 130.17999267578125,
+            "end": 130.25999450683594
+        },
+        {
+            "word": "Mike",
+            "start": 131.33999633789062,
+            "end": 131.9199981689453
+        },
+        {
+            "word": "78",
+            "start": 131.9199981689453,
+            "end": 132.75999450683594
+        },
+        {
+            "word": "Got",
+            "start": 133.52000427246094,
+            "end": 133.52000427246094
+        },
+        {
+            "word": "it",
+            "start": 133.52000427246094,
+            "end": 134.10000610351562
+        },
+        {
+            "word": "Thank",
+            "start": 134.24000549316406,
+            "end": 134.75999450683594
+        },
+        {
+            "word": "you",
+            "start": 134.75999450683594,
+            "end": 135.0800018310547
+        },
+        {
+            "word": "Ms",
+            "start": 135.16000366210938,
+            "end": 135.5800018310547
+        },
+        {
+            "word": "Smith",
+            "start": 135.5800018310547,
+            "end": 135.5800018310547
+        },
+        {
+            "word": "do",
+            "start": 135.74000549316406,
+            "end": 136.32000732421875
+        },
+        {
+            "word": "you",
+            "start": 136.32000732421875,
+            "end": 136.4199981689453
+        },
+        {
+            "word": "currently",
+            "start": 136.4199981689453,
+            "end": 136.6199951171875
+        },
+        {
+            "word": "have",
+            "start": 136.6199951171875,
+            "end": 136.94000244140625
+        },
+        {
+            "word": "any",
+            "start": 136.94000244140625,
+            "end": 137.1999969482422
+        },
+        {
+            "word": "other",
+            "start": 137.1999969482422,
+            "end": 137.47999572753906
+        },
+        {
+            "word": "loans",
+            "start": 137.47999572753906,
+            "end": 137.66000366210938
+        },
+        {
+            "word": "Yes",
+            "start": 138.8000030517578,
+            "end": 139.75999450683594
+        },
+        {
+            "word": "so",
+            "start": 139.75999450683594,
+            "end": 139.97999572753906
+        },
+        {
+            "word": "I",
+            "start": 139.97999572753906,
+            "end": 140.10000610351562
+        },
+        {
+            "word": "currently",
+            "start": 140.10000610351562,
+            "end": 140.33999633789062
+        },
+        {
+            "word": "have",
+            "start": 140.33999633789062,
+            "end": 140.6999969482422
+        },
+        {
+            "word": "two",
+            "start": 140.6999969482422,
+            "end": 140.9199981689453
+        },
+        {
+            "word": "other",
+            "start": 140.9199981689453,
+            "end": 141.32000732421875
+        },
+        {
+            "word": "loans",
+            "start": 141.32000732421875,
+            "end": 141.36000061035156
+        },
+        {
+            "word": "through",
+            "start": 141.36000061035156,
+            "end": 141.6199951171875
+        },
+        {
+            "word": "Contoso",
+            "start": 141.6199951171875,
+            "end": 142.02000427246094
+        },
+        {
+            "word": "So",
+            "start": 142.17999267578125,
+            "end": 142.66000366210938
+        },
+        {
+            "word": "my",
+            "start": 142.66000366210938,
+            "end": 142.9600067138672
+        },
+        {
+            "word": "first",
+            "start": 142.9600067138672,
+            "end": 143.13999938964844
+        },
+        {
+            "word": "one",
+            "start": 143.13999938964844,
+            "end": 143.24000549316406
+        },
+        {
+            "word": "is",
+            "start": 143.24000549316406,
+            "end": 143.36000061035156
+        },
+        {
+            "word": "my",
+            "start": 143.36000061035156,
+            "end": 143.52000427246094
+        },
+        {
+            "word": "car",
+            "start": 143.52000427246094,
+            "end": 143.8800048828125
+        },
+        {
+            "word": "loan",
+            "start": 143.8800048828125,
+            "end": 144.0
+        },
+        {
+            "word": "and",
+            "start": 144.0,
+            "end": 144.13999938964844
+        },
+        {
+            "word": "then",
+            "start": 144.13999938964844,
+            "end": 144.25999450683594
+        },
+        {
+            "word": "my",
+            "start": 144.25999450683594,
+            "end": 144.44000244140625
+        },
+        {
+            "word": "other",
+            "start": 144.44000244140625,
+            "end": 144.5800018310547
+        },
+        {
+            "word": "is",
+            "start": 144.5800018310547,
+            "end": 144.82000732421875
+        },
+        {
+            "word": "my",
+            "start": 144.82000732421875,
+            "end": 145.1199951171875
+        },
+        {
+            "word": "student",
+            "start": 145.1199951171875,
+            "end": 145.39999389648438
+        },
+        {
+            "word": "loan",
+            "start": 145.39999389648438,
+            "end": 145.82000732421875
+        },
+        {
+            "word": "They",
+            "start": 146.33999633789062,
+            "end": 146.33999633789062
+        },
+        {
+            "word": "total",
+            "start": 146.33999633789062,
+            "end": 146.5800018310547
+        },
+        {
+            "word": "about",
+            "start": 146.5800018310547,
+            "end": 146.97999572753906
+        },
+        {
+            "word": "1",
+            "start": 146.97999572753906,
+            "end": 147.52000427246094
+        },
+        {
+            "word": "400",
+            "start": 147.52000427246094,
+            "end": 147.52000427246094
+        },
+        {
+            "word": "per",
+            "start": 147.52000427246094,
+            "end": 148.1199951171875
+        },
+        {
+            "word": "month",
+            "start": 148.1199951171875,
+            "end": 148.22000122070312
+        },
+        {
+            "word": "combined",
+            "start": 148.22000122070312,
+            "end": 148.77999877929688
+        },
+        {
+            "word": "and",
+            "start": 148.77999877929688,
+            "end": 149.4199981689453
+        },
+        {
+            "word": "my",
+            "start": 149.4199981689453,
+            "end": 149.74000549316406
+        },
+        {
+            "word": "interest",
+            "start": 149.74000549316406,
+            "end": 149.94000244140625
+        },
+        {
+            "word": "rate",
+            "start": 149.94000244140625,
+            "end": 150.1999969482422
+        },
+        {
+            "word": "is",
+            "start": 150.1999969482422,
+            "end": 150.4600067138672
+        },
+        {
+            "word": "8",
+            "start": 150.4600067138672,
+            "end": 151.32000732421875
+        },
+        {
+            "word": "I",
+            "start": 151.32000732421875,
+            "end": 152.66000366210938
+        },
+        {
+            "word": "see",
+            "start": 152.66000366210938,
+            "end": 152.86000061035156
+        },
+        {
+            "word": "And",
+            "start": 152.86000061035156,
+            "end": 153.0399932861328
+        },
+        {
+            "word": "you're",
+            "start": 153.0399932861328,
+            "end": 153.17999267578125
+        },
+        {
+            "word": "currently",
+            "start": 153.17999267578125,
+            "end": 153.44000244140625
+        },
+        {
+            "word": "paying",
+            "start": 153.44000244140625,
+            "end": 153.83999633789062
+        },
+        {
+            "word": "these",
+            "start": 153.83999633789062,
+            "end": 154.24000549316406
+        },
+        {
+            "word": "loans",
+            "start": 154.24000549316406,
+            "end": 154.3800048828125
+        },
+        {
+            "word": "off",
+            "start": 154.3800048828125,
+            "end": 154.66000366210938
+        },
+        {
+            "word": "monthly",
+            "start": 154.66000366210938,
+            "end": 154.8800048828125
+        },
+        {
+            "word": "is",
+            "start": 154.8800048828125,
+            "end": 155.0800018310547
+        },
+        {
+            "word": "that",
+            "start": 155.0800018310547,
+            "end": 155.17999267578125
+        },
+        {
+            "word": "right",
+            "start": 155.17999267578125,
+            "end": 155.36000061035156
+        },
+        {
+            "word": "Yes",
+            "start": 156.05999755859375,
+            "end": 156.67999267578125
+        },
+        {
+            "word": "of",
+            "start": 156.67999267578125,
+            "end": 156.9600067138672
+        },
+        {
+            "word": "course",
+            "start": 156.9600067138672,
+            "end": 156.9600067138672
+        },
+        {
+            "word": "I",
+            "start": 156.9600067138672,
+            "end": 157.10000610351562
+        },
+        {
+            "word": "do",
+            "start": 157.10000610351562,
+            "end": 157.25999450683594
+        },
+        {
+            "word": "Okay",
+            "start": 158.5399932861328,
+            "end": 159.52000427246094
+        },
+        {
+            "word": "thank",
+            "start": 159.55999755859375,
+            "end": 159.82000732421875
+        },
+        {
+            "word": "you",
+            "start": 159.82000732421875,
+            "end": 160.0
+        },
+        {
+            "word": "Here's",
+            "start": 160.33999633789062,
+            "end": 160.67999267578125
+        },
+        {
+            "word": "what",
+            "start": 160.67999267578125,
+            "end": 160.83999633789062
+        },
+        {
+            "word": "I",
+            "start": 160.83999633789062,
+            "end": 161.1999969482422
+        },
+        {
+            "word": "suggest",
+            "start": 161.1999969482422,
+            "end": 161.1999969482422
+        },
+        {
+            "word": "we",
+            "start": 161.1999969482422,
+            "end": 161.4600067138672
+        },
+        {
+            "word": "do",
+            "start": 161.4600067138672,
+            "end": 161.6999969482422
+        },
+        {
+            "word": "Let",
+            "start": 162.05999755859375,
+            "end": 162.16000366210938
+        },
+        {
+            "word": "me",
+            "start": 162.16000366210938,
+            "end": 162.25999450683594
+        },
+        {
+            "word": "put",
+            "start": 162.25999450683594,
+            "end": 162.39999389648438
+        },
+        {
+            "word": "you",
+            "start": 162.39999389648438,
+            "end": 162.52000427246094
+        },
+        {
+            "word": "on",
+            "start": 162.52000427246094,
+            "end": 162.5800018310547
+        },
+        {
+            "word": "a",
+            "start": 162.5800018310547,
+            "end": 162.72000122070312
+        },
+        {
+            "word": "brief",
+            "start": 162.72000122070312,
+            "end": 162.86000061035156
+        },
+        {
+            "word": "hold",
+            "start": 162.86000061035156,
+            "end": 163.02000427246094
+        },
+        {
+            "word": "again",
+            "start": 163.02000427246094,
+            "end": 163.3000030517578
+        },
+        {
+            "word": "so",
+            "start": 163.3000030517578,
+            "end": 163.44000244140625
+        },
+        {
+            "word": "I",
+            "start": 163.44000244140625,
+            "end": 163.55999755859375
+        },
+        {
+            "word": "can",
+            "start": 163.55999755859375,
+            "end": 163.72000122070312
+        },
+        {
+            "word": "talk",
+            "start": 163.72000122070312,
+            "end": 163.9199981689453
+        },
+        {
+            "word": "with",
+            "start": 163.9199981689453,
+            "end": 164.10000610351562
+        },
+        {
+            "word": "one",
+            "start": 164.10000610351562,
+            "end": 164.17999267578125
+        },
+        {
+            "word": "of",
+            "start": 164.17999267578125,
+            "end": 164.27999877929688
+        },
+        {
+            "word": "our",
+            "start": 164.27999877929688,
+            "end": 164.55999755859375
+        },
+        {
+            "word": "loan",
+            "start": 164.55999755859375,
+            "end": 164.94000244140625
+        },
+        {
+            "word": "officers",
+            "start": 164.94000244140625,
+            "end": 165.33999633789062
+        },
+        {
+            "word": "and",
+            "start": 165.33999633789062,
+            "end": 166.1999969482422
+        },
+        {
+            "word": "get",
+            "start": 166.1999969482422,
+            "end": 166.4600067138672
+        },
+        {
+            "word": "this",
+            "start": 166.4600067138672,
+            "end": 166.67999267578125
+        },
+        {
+            "word": "started",
+            "start": 166.67999267578125,
+            "end": 166.83999633789062
+        },
+        {
+            "word": "for",
+            "start": 166.83999633789062,
+            "end": 167.16000366210938
+        },
+        {
+            "word": "you",
+            "start": 167.16000366210938,
+            "end": 167.16000366210938
+        },
+        {
+            "word": "immediately",
+            "start": 167.16000366210938,
+            "end": 167.44000244140625
+        },
+        {
+            "word": "In",
+            "start": 167.74000549316406,
+            "end": 168.10000610351562
+        },
+        {
+            "word": "the",
+            "start": 168.10000610351562,
+            "end": 168.3000030517578
+        },
+        {
+            "word": "meantime",
+            "start": 168.3000030517578,
+            "end": 168.8000030517578
+        },
+        {
+            "word": "it",
+            "start": 169.33999633789062,
+            "end": 169.33999633789062
+        },
+        {
+            "word": "would",
+            "start": 169.33999633789062,
+            "end": 169.4199981689453
+        },
+        {
+            "word": "be",
+            "start": 169.4199981689453,
+            "end": 169.5800018310547
+        },
+        {
+            "word": "great",
+            "start": 169.5800018310547,
+            "end": 169.63999938964844
+        },
+        {
+            "word": "if",
+            "start": 169.63999938964844,
+            "end": 169.74000549316406
+        },
+        {
+            "word": "you",
+            "start": 169.74000549316406,
+            "end": 169.8000030517578
+        },
+        {
+            "word": "could",
+            "start": 169.8000030517578,
+            "end": 169.94000244140625
+        },
+        {
+            "word": "take",
+            "start": 169.94000244140625,
+            "end": 170.0800018310547
+        },
+        {
+            "word": "a",
+            "start": 170.0800018310547,
+            "end": 170.4600067138672
+        },
+        {
+            "word": "few",
+            "start": 170.4600067138672,
+            "end": 170.89999389648438
+        },
+        {
+            "word": "minutes",
+            "start": 170.89999389648438,
+            "end": 170.89999389648438
+        },
+        {
+            "word": "and",
+            "start": 170.89999389648438,
+            "end": 171.5800018310547
+        },
+        {
+            "word": "complete",
+            "start": 171.5800018310547,
+            "end": 171.94000244140625
+        },
+        {
+            "word": "the",
+            "start": 171.94000244140625,
+            "end": 172.27999877929688
+        },
+        {
+            "word": "remainder",
+            "start": 172.27999877929688,
+            "end": 172.5800018310547
+        },
+        {
+            "word": "of",
+            "start": 172.5800018310547,
+            "end": 172.67999267578125
+        },
+        {
+            "word": "the",
+            "start": 172.67999267578125,
+            "end": 172.82000732421875
+        },
+        {
+            "word": "secure",
+            "start": 172.82000732421875,
+            "end": 173.05999755859375
+        },
+        {
+            "word": "application",
+            "start": 173.05999755859375,
+            "end": 173.52000427246094
+        },
+        {
+            "word": "online",
+            "start": 173.52000427246094,
+            "end": 174.02000427246094
+        },
+        {
+            "word": "at",
+            "start": 174.02000427246094,
+            "end": 174.47999572753906
+        },
+        {
+            "word": "www",
+            "start": 174.47999572753906,
+            "end": 175.17999267578125
+        },
+        {
+            "word": "contosoloans",
+            "start": 175.17999267578125,
+            "end": 176.8000030517578
+        },
+        {
+            "word": "com",
+            "start": 176.8000030517578,
+            "end": 178.02000427246094
+        },
+        {
+            "word": "Yes",
+            "start": 178.52000427246094,
+            "end": 178.66000366210938
+        },
+        {
+            "word": "that",
+            "start": 178.66000366210938,
+            "end": 179.0
+        },
+        {
+            "word": "sounds",
+            "start": 179.0,
+            "end": 179.0800018310547
+        },
+        {
+            "word": "good",
+            "start": 179.0800018310547,
+            "end": 179.25999450683594
+        },
+        {
+            "word": "I",
+            "start": 179.27999877929688,
+            "end": 179.36000061035156
+        },
+        {
+            "word": "can",
+            "start": 179.36000061035156,
+            "end": 179.52000427246094
+        },
+        {
+            "word": "go",
+            "start": 179.52000427246094,
+            "end": 179.6199951171875
+        },
+        {
+            "word": "ahead",
+            "start": 179.6199951171875,
+            "end": 179.6999969482422
+        },
+        {
+            "word": "and",
+            "start": 179.6999969482422,
+            "end": 179.83999633789062
+        },
+        {
+            "word": "get",
+            "start": 179.83999633789062,
+            "end": 179.9600067138672
+        },
+        {
+            "word": "started",
+            "start": 179.9600067138672,
+            "end": 180.17999267578125
+        },
+        {
+            "word": "Thank",
+            "start": 180.4600067138672,
+            "end": 180.5399932861328
+        },
+        {
+            "word": "you",
+            "start": 180.5399932861328,
+            "end": 180.60000610351562
+        },
+        {
+            "word": "for",
+            "start": 180.60000610351562,
+            "end": 180.72000122070312
+        },
+        {
+            "word": "your",
+            "start": 180.72000122070312,
+            "end": 180.8800048828125
+        },
+        {
+            "word": "help",
+            "start": 180.8800048828125,
+            "end": 181.0800018310547
+        },
+        {
+            "word": "Thank",
+            "start": 181.4600067138672,
+            "end": 182.16000366210938
+        },
+        {
+            "word": "you",
+            "start": 182.16000366210938,
+            "end": 182.25999450683594
+        }
+    ]
+}
