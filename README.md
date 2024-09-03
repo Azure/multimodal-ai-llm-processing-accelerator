@@ -61,7 +61,7 @@ It is recommended to review the main repo before pulling new changes, as work is
 - **Front-end demo app:** A simple demo web app to enable internal testing of the backend APIs via a UI, and make it easier to collaborate with non-technical users.
 - **Data converters and processors:** Many of the core components required for multimodal processing are included, such as [Azure Document Intelligence](https://azure.microsoft.com/en-us/products/ai-services/ai-document-intelligence), [Azure AI Speech](https://azure.microsoft.com/en-us/products/ai-services/ai-speech), [Azure OpenAI](https://azure.microsoft.com/en-us/products/ai-services/openai-service) and more. These help you easily convert your data into the format expected by LLMs, and the blueprints are built in an open way so that you can easily incorporate custom-built components.
 - **Enriched outputs & confidence scores:** A number of components are included for combining the outputs of pre-processing steps with the LLM outputs. For example, adding confidence scores, bounding boxes, writing styles to the values extracted by the LLM. This allows for reliable automation of tasks instead of having to trust that the LLM is correct (or reviewing every result).
-- **Data validation & intermediate outputs:** All pipelines are built to return not just the final result, but all intermediate outputs. This lets you reuse the data in other downstream tasks.
+- **Data validation & intermediate outputs:** All pipelines are built to return not just the final result but all intermediate outputs. This lets you reuse the data in other downstream tasks.
 - **Powerful and flexible:** The application is built in a way that supports both simple and complicated pipelines. This allows you to build pipelines for <u>all of your use cases</u> without needing to start from scratch with a new code base when you need to something a little more complex. A single deployment can support all of your backend processing pipelines.
 - **Infrastructure-as-code:** An Azure Bicep template to deploy the solution and its required components using `azd`.
 
@@ -69,7 +69,7 @@ It is recommended to review the main repo before pulling new changes, as work is
 
 Most organisations have a huge number of simple and tasks and processes that consume large amounts of time and energy. These could be things like classifying and extracting information from documents, summarizing and triaging customer emails, or transcribing and running compliance tasks on contact centre call recordings. While some of these tasks can be automated with existing tools and services, they often require a lot of up-front investment to fully configure and customize in order to have a reliable, working solution. They can also be perform poorly when dealing with input data that is slightly different than expected, and may never be the right fit for scenarios that require the solution to be flexible or adaptable.
 
-On the other hand, Large Language Models have emerged as a powerful and general-purpose approach that is able to handle these complex and varied situations. And more recently, with the move from text-only models to multimodal models that can incorporate text, audio and video, they are a powerful tool that we can use to automate a wide variety of everyday tasks. But while LLMs are powerful and flexible, they have their own short-comings when it comes to providing precise and reliable outputs, and they too can be sensitive to the quality of raw and unprocessed input data.
+On the other hand, Large Language Models have emerged as a powerful and general-purpose approach that is able to handle these complex and varied situations. And more recently, with the move from text-only models to multimodal models that can incorporate text, audio and video, they are a powerful tool that we can use to automate a wide variety of everyday tasks. But while LLMs are powerful and flexible, they have their own shortcomings when it comes to providing precise and reliable outputs, and they too can be sensitive to the quality of raw and unprocessed input data.
 
 | Approach + Examples  | Strengths | Weaknesses |
 | ---------|---------|---------|
@@ -101,7 +101,7 @@ The accelerator comes with these pre-built pipeline examples to help you get sta
 
 | Example  | Description & Pipeline Steps|
 | ---------|---------|
-|**Form Field Extraction with Confidence Scores & Bboxes**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form, and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing:<br><ul>- Match LLM field values with Document Intelligence extracted lines<br>- Merge Confidence scores and bounding boxes<br>- Determine whether to human review is required</ul>- Return structured JSON |
+|**Form Field Extraction with Confidence Scores & Bboxes**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing:<br><ul>- Match LLM field values with Document Intelligence extracted lines<br>- Merge Confidence scores and bounding boxes<br>- Determine whether to human review is required</ul>- Return structured JSON |
 |**Call Center Analysis with Confidence Scores & Timestamps**<br>[Code](/function_app/bp_call_center_audio_analysis.py)| Processes a call center recording, classifying customer sentiment & satisfaction, summarizing the call and next best action, and extracting any keywords mentioned. Returns the response with timestamps, confidence scores and the full sentence text for the next best action and each of the keywords mentioned.<br>- Azure AI Speech (Speech -> Text)<br>- GPT-4o (text input)<br>- Post-processing:<br><ul>- Match LLM timestamps to transcribed phrases<br>- Merge sentence info & confidence scores</ul>- Return structured JSON |
 |**Summarize Text**<br>[Code](/function_app/bp_summarize_text.py)| Summarizes text input into a desired style and number of output sentences.<br>- GPT-4o (text input + style/length instructions)<br>- Return raw text |
 |**City Names Extraction (Doc Intelligence)**<br>[Code](/function_app/bp_doc_intel_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF (using text extracted by Document Intelligence).<br>- Document Intelligence (PDF/image -> text)<br>- GPT-4o (text input)<br>- Return JSON array of city names |
@@ -112,7 +112,7 @@ These pipelines can be duplicated and customized to your specific use case, and 
 
 ### Demo web app
 
-The accelerator comes with an included web app for demo and testing purposes. This webapp is built with [Gradio](https://www.gradio.app/), a lightweight Python UI library, to enable interaction with the backend pipelines from within the browser. The app comes prebuilt with a tab for each of the prebuilt pipelines, along with a few examples files for use with each pipeline. The demo app also
+The accelerator comes with an included web app for demo and testing purposes. This webapp is built with [Gradio](https://www.gradio.app/), a lightweight Python UI library, to enable interaction with the backend pipelines from within the browser. The app comes prebuilt with a tab for each of the prebuilt pipelines, along with a few example files for use with each pipeline. The demo app also
 
 ### Common scenarios & use cases
 
@@ -126,7 +126,7 @@ The accelerator comes with an included web app for demo and testing purposes. Th
 
 This accelerator is in active development, with a list of upcoming features including:
 
-- **Additional Azure AI Services components:** Expand the number of pre-built Azure AI Services components (e.g. Speech, Language, Translation and more), while removing dependencies on external libraries where possible.
+- **Additional Azure AI Services components:** Expand the number of pre-built Azure AI Services components (e.g. Language, Translation and more), while removing dependencies on external libraries where possible.
 - **Additional pipeline examples:** A number of additional pipeline examples showcasing other data types/use cases and more advanced pipeline approaches.
 - **Evaluation pipelines:** Example evaluation pipelines to evaluate overall performance, making it easy to iterate and improve your processing pipelines and help you select the right production thresholds for accepting a result or escalating to human review.
 - **Async processing:** Ensure all included pipeline components have async versions for maximum performance & concurrency.
@@ -140,9 +140,10 @@ To help prioritise these features or request new ones, please head to the Issues
 
 **How can I get started with a solution for my own use case?**
 
-The demo piipelines are examples and require customization in order to have them work accurately in production. The best strategy to get started is to clone one of the existing demo pipelines and modify them for your own purpose. The following steps are recommended:
+The demo pipelines are examples and require customization in order to have them work accurately in production. The best strategy to get started is to clone one of the existing demo pipelines and modify them for your own purpose. The following steps are recommended:
 
-1. Clone the repository and walk through the local & cloud deployment instructions. Deploy the application to Azure and then test out some of the demo pipelines to understand how they work.
+1. Fork this repository into your own Github account/organization, then clone the repository to your local machine.
+1. Follow the instructions in the [deployment section](#deployment) to setup and deploy the code, then test out some of the demo pipelines to understand how they work.
 1. Walk through the code for the pipelines that are the most similar to what you would like to build, or which have the different components that you want to use.
     - For example, if you want to build a document extraction pipeline, start with the pipelines that use Azure Document Intelligence.
     - If you want to then combine this with AI Speech or with a different kind of trigger, look through the other pipelines for examples of those.
@@ -164,7 +165,7 @@ The demo piipelines are examples and require customization in order to have them
     - Once you have these working together, you can easily iterate and test your pipelines quickly with the demo web app via the UI.
 1. When your pipeline is working end-to-end, it's time to think about testing & evaluating the accuracy and reliability of your solution.
     - It is critical with any AI system to ensure that the pipeline is evaluated on a representative sample of validation data.
-    - Without this, it is impossible to know how accurate the solution is, or whether the solution fails under specific circumstances. This is often the time-consuming step of building and deployment an AI solution, but is also the most important.
+    - Without this, it is impossible to know how accurate the solution is, or whether the solution fails under specific circumstances. This is often the time-consuming step of building and deployment an AI solution but is also the most important.
     - While more tools to help simplify this process are coming soon, you should take a look at the [evaluation tools within Azure AI Studio](https://learn.microsoft.com/en-us/azure/ai-studio/how-to/evaluate-generative-ai-app).
 1. Finally, its time to deploy your custom application to Azure.
     - Review and modify the infrastructure templates and parameters to ensure the solution is deployed to your requirements
@@ -224,10 +225,8 @@ To customize and develop the app locally, you will need to install the following
 Execute the following command, if you don't have any pre-existing Azure services and want to start from a fresh deployment.
 
 1. Run `azd auth login`
-1. Make a copy of `infra/main.bicepparam` and rename it to the name of your test environment - e.g. `infra/main.dev.bicepparam`.
-    - Note that the `.gitignore` includes an entry that automatically excludes files matching `infra/main.*.bicepparam` - if you want your env-specific bicep files to be included in your git history, remove this entry.
-1. Review the default parameters in the bicep file and update as required.
-1. Run `azd up` - This will provision the Azure resources and deploy the services. Make sure to name your environment to the same name as your bicep params file (e.g. `dev`)
+1. Review the default parameters in `infra/main.bicepparam` and update as required.
+1. Run `azd up` - This will provision the Azure resources and deploy the services.
     - Note: When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. If this error occurs, simple rerun `azd deploy` after 1-2 minutes.
 1. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
 It will look like the following:
@@ -261,7 +260,7 @@ To run the solution locally, you will need to create the necessary resources for
 
 #### Function app local instructions
 
-The `function_app` folder contains the backend Azure Functions App. By default it includes a number of Azure Function Python Blueprints that showcase different types of processing pipelines.
+The `function_app` folder contains the backend Azure Functions App. By default, it includes a number of Azure Function Python Blueprints that showcase different types of processing pipelines.
 
 - Open a new terminal window with a Python 3.11 environment active
 - Navigate to the function app directory: `cd function_app`
