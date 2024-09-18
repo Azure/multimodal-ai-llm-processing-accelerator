@@ -93,12 +93,8 @@ var blobStorageAccountTokenName = toLower('${blobStorageAccountName}${resourceTo
 var functionAppPlanTokenName = toLower('${functionAppName}-plan-${resourceToken}')
 var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
 var openAITokenName = toLower('${resourcePrefix}-aoai-${location}-${resourceToken}')
-var openAILLMDeploymentName = (deployOpenAILLMModel
-  ? toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
-  : 'LLM_IS_NOT_DEPLOYED')
-var openAIWhisperDeploymentName = (deployOpenAIWhisperModel
-  ? toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
-  : 'WHISPER_IS_NOT_DEPLOYED')
+var openAILLMDeploymentName = toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
+var openAIWhisperDeploymentName = toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
 var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${resourceToken}')
 var speechTokenName = toLower('${resourcePrefix}-speech-${resourceToken}')
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
