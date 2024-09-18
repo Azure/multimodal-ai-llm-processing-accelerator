@@ -26,6 +26,9 @@ param resourcePrefix string = 'llm-proc'
 @description('The name of the Blob Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
 param blobStorageAccountName string = 'llmprocstorage'
 
+@description('The name of the default blob storage container')
+param blobContainerName string = 'llm-proc-container'
+
 @description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
 param speechLocation string = 'eastus'
 
@@ -102,7 +105,7 @@ var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToke
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
 
 //
-// Blob Storage
+// Blob Storage (the storage account is required for the Function App)
 //
 resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: blobStorageAccountTokenName
@@ -115,6 +118,20 @@ resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
     allowBlobPublicAccess: false
+  }
+}
+
+// Container for storing files
+resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  parent: blobStorageAccount
+  name: 'default'
+}
+
+resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  name: blobContainerName
+  parent: blobServices
+  properties: {
+    publicAccess: 'None'
   }
 }
 
