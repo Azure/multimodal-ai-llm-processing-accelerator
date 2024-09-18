@@ -29,6 +29,12 @@ param blobStorageAccountName string = 'llmprocstorage'
 @description('The name of the default blob storage container')
 param blobContainerName string = 'llm-proc-container'
 
+@description('The name of the default CosmosDB Database')
+param cosmosDbDatabaseName string = 'llm-proc-database'
+
+@description('The name of the default CosmosDB container')
+param cosmosDbContainerName string = 'llm-proc-container'
+
 @description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
 param speechLocation string = 'eastus'
 
@@ -93,13 +99,14 @@ var functionAppTokenName = appendUniqueUrlSuffix
   : toLower(functionAppName)
 var webAppTokenName = appendUniqueUrlSuffix ? toLower('${webAppName}-${resourceToken}') : toLower(webAppName)
 var blobStorageAccountTokenName = toLower('${blobStorageAccountName}${resourceToken}')
+var cosmosDbAccountTokenName = toLower('${resourcePrefix}-cosmosdb-${resourceToken}')
 var functionAppPlanTokenName = toLower('${functionAppName}-plan-${resourceToken}')
 var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
-var openAITokenName = toLower('${resourcePrefix}-aoai-${location}-${resourceToken}')
+var openAITokenName = toLower('${resourcePrefix}-aoai-${openAILocation}-${resourceToken}')
 var openAILLMDeploymentName = toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
 var openAIWhisperDeploymentName = toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
 var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${resourceToken}')
-var speechTokenName = toLower('${resourcePrefix}-speech-${resourceToken}')
+var speechTokenName = toLower('${resourcePrefix}-speech-${speechLocation}-${resourceToken}')
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
 var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToken}')
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
@@ -121,7 +128,7 @@ resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-// Container for storing files
+// Optional blob container for storing files
 resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: blobStorageAccount
   name: 'default'
@@ -136,6 +143,67 @@ resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/co
 }
 
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${blobStorageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${blobStorageAccount.listKeys().keys[0].value}'
+
+//
+// CosmosDB
+//
+
+// Default configuration is based on: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-bicep#free-tier
+resource cosmodDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
+  name: cosmosDbAccountTokenName
+  location: location
+  properties: {
+    enableFreeTier: true
+    databaseAccountOfferType: 'Standard'
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    locations: [
+      {
+        locationName: location
+      }
+    ]
+  }
+}
+
+resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = {
+  parent: cosmodDbAccount
+  name: cosmosDbDatabaseName
+  properties: {
+    resource: {
+      id: cosmosDbDatabaseName
+    }
+  }
+}
+
+resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-11-15' = {
+  parent: cosmosDbDatabase
+  name: cosmosDbContainerName
+  properties: {
+    resource: {
+      id: cosmosDbContainerName
+      partitionKey: {
+        paths: [
+          '/myPartitionKey'
+        ]
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/_etag/?'
+          }
+        ]
+      }
+    }
+  }
+}
 
 // Cognitive services resources
 
