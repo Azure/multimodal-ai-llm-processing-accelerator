@@ -1,6 +1,9 @@
 @description('The name of the Function App. This will become part of the URL (e.g. https://{functionAppName}.azurewebsites.net) and must be unique across Azure.')
 param functionAppName string = 'ai-llm-processing-func'
 
+@description('Whether to use a premium or consumption SKU for the function\'s app service plan.')
+param functionAppUsePremiumSku bool = false
+
 @description('The name of the Web App. This will become part of the URL (e.g. https://{webAppName}.azurewebsites.net) and must be unique across Azure.')
 param webAppName string = 'ai-llm-processing-demo'
 
@@ -20,7 +23,7 @@ param webAppPassword string
 @description('The prefix to use for all resources except the function and web apps')
 param resourcePrefix string = 'llm-proc'
 
-@description('The name of the Blob Storage account. This should be only lowercase letters and numbers')
+@description('The name of the Blob Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
 param blobStorageAccountName string = 'llmprocstorage'
 
 @description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
@@ -28,6 +31,9 @@ param speechLocation string = 'eastus'
 
 @description('The location of the OpenAI Azure resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)')
 param openAILocation string = 'eastus2'
+
+@description('The max TPM of the deployed OpenAI LLM model, in thousands. `30` = 30k max TPM. If set to 0, the OpenAI LLM model will not be deployed.')
+param openAILLMDeploymentCapacity int = 30
 
 @description('The OpenAI LLM model to be deployed')
 param openAILLMModel string = 'gpt-4o'
@@ -38,8 +44,8 @@ param openAILLMModelVersion string = '2024-05-13'
 @description('The OpenAI LLM model deployment SKU')
 param openAILLMDeploymentSku string = 'Standard'
 
-@description('The max TPM of the deployed OpenAI LLM model, in thousands. `30` = 30k max TPM.')
-param openAILLMDeploymentCapacity int = 30
+@description('The max TPM of the deployed OpenAI Whisper model, in thousands. `3` = 3k max TPM. If set to 0, the Whisper model will not be deployed.')
+param openAIWhisperDeploymentCapacity int = 3
 
 @description('The OpenAI Whisper model to be deployed')
 param openAIWhisperModel string = 'whisper'
@@ -50,9 +56,6 @@ param openAIWhisperModelVersion string = '001'
 @description('The OpenAI LLM model deployment SKU')
 param openAIWhisperDeploymentSku string = 'Standard'
 
-@description('The max TPM of the deployed OpenAI Whisper model, in thousands. `3` = 3k max TPM.')
-param openAIWhisperDeploymentCapacity int = 3
-
 param location string = resourceGroup().location
 param resourceToken string = take(toLower(uniqueString(subscription().id, resourceGroup().id, location)), 5)
 param tags object = {}
@@ -62,6 +65,25 @@ param aoaiKeyKvSecretName string = 'aoai-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
 param speechKeyKvSecretName string = 'speech-api-key'
 param funcKeyKvSecretName string = 'func-api-key'
+
+var functionAppSkuProperties = functionAppUsePremiumSku
+  ? {
+      name: 'P0v3'
+      tier: 'Premium0V3'
+      size: 'P0v3'
+      family: 'Pv3'
+      capacity: 1
+    }
+  : {
+      name: 'Y1'
+      tier: 'Dynamic'
+      size: 'Y1'
+      family: 'Y'
+      capacity: 0
+    }
+
+var deployOpenAILLMModel = (openAILLMDeploymentCapacity > 0)
+var deployOpenAIWhisperModel = (openAIWhisperDeploymentCapacity > 0)
 
 var functionAppTokenName = appendUniqueUrlSuffix
   ? toLower('${functionAppName}-${resourceToken}')
@@ -139,7 +161,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAILLMModel) {
   parent: azureopenai
   name: openAILLMDeploymentName
   properties: {
@@ -155,7 +177,7 @@ resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05
   }
 }
 
-resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIWhisperModel) {
   parent: azureopenai
   dependsOn: [llmdeployment] // Ensure one model deployment at a time
   name: openAIWhisperDeploymentName
@@ -266,14 +288,11 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   name: functionAppPlanTokenName
   location: location
-  kind: 'linux'
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-  }
   properties: {
     reserved: true
   }
+  sku: functionAppSkuProperties
+  kind: 'linux'
 }
 
 resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
@@ -301,6 +320,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   resource functionSettings 'config@2022-09-01' = {
     name: 'appsettings'
     properties: {
+      SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage: storageAccountConnectionString
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
@@ -347,6 +367,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   tags: union(tags, { 'azd-service-name': webAppServiceName })
   kind: 'app,linux'
   properties: {
+    clientAffinityEnabled: true // If app plan capacity > 1, set this to True to ensure gradio works correctly.
     serverFarmId: webAppPlan.id
     siteConfig: {
       alwaysOn: true
@@ -361,7 +382,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
     type: 'SystemAssigned'
   }
 
-  resource appSettings 'config' = {
+  resource appSettings 'config@2022-09-01' = {
     name: 'appsettings'
     properties: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
