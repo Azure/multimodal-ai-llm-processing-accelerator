@@ -1,6 +1,9 @@
 @description('The name of the Function App. This will become part of the URL (e.g. https://{functionAppName}.azurewebsites.net) and must be unique across Azure.')
 param functionAppName string = 'ai-llm-processing-func'
 
+@description('Whether to use a premium or consumption SKU for the function\'s app service plan.')
+param functionAppUsePremiumSku bool = false
+
 @description('The name of the Web App. This will become part of the URL (e.g. https://{webAppName}.azurewebsites.net) and must be unique across Azure.')
 param webAppName string = 'ai-llm-processing-demo'
 
@@ -20,7 +23,7 @@ param webAppPassword string
 @description('The prefix to use for all resources except the function and web apps')
 param resourcePrefix string = 'llm-proc'
 
-@description('The name of the Blob Storage account. This should be only lowercase letters and numbers')
+@description('The name of the Blob Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
 param blobStorageAccountName string = 'llmprocstorage'
 
 @description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
@@ -62,6 +65,22 @@ param aoaiKeyKvSecretName string = 'aoai-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
 param speechKeyKvSecretName string = 'speech-api-key'
 param funcKeyKvSecretName string = 'func-api-key'
+
+var functionAppSkuProperties = functionAppUsePremiumSku
+  ? {
+      name: 'P0v3'
+      tier: 'Premium0V3'
+      size: 'P0v3'
+      family: 'Pv3'
+      capacity: 1
+    }
+  : {
+      name: 'Y1'
+      tier: 'Dynamic'
+      size: 'Y1'
+      family: 'Y'
+      capacity: 0
+    }
 
 var deployOpenAILLMModel = (openAILLMDeploymentCapacity > 0)
 var deployOpenAIWhisperModel = (openAIWhisperDeploymentCapacity > 0)
@@ -276,13 +295,7 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   properties: {
     reserved: true
   }
-  sku: {
-    name: 'P0v3'
-    tier: 'Premium0V3'
-    size: 'P0v3'
-    family: 'Pv3'
-    capacity: 1
-  }
+  sku: functionAppSkuProperties
   kind: 'linux'
 }
 

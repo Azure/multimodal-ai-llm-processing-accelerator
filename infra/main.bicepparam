@@ -1,6 +1,7 @@
 using 'main.bicep'
 
 param functionAppName = 'ai-llm-processing-func'
+param functionAppUsePremiumSku = false
 param webAppName = 'ai-llm-processing-demo'
 param appendUniqueUrlSuffix = true
 param webAppUsePasswordAuth = true
