@@ -29,6 +29,9 @@ param speechLocation string = 'eastus'
 @description('The location of the OpenAI Azure resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)')
 param openAILocation string = 'eastus2'
 
+@description('The max TPM of the deployed OpenAI LLM model, in thousands. `30` = 30k max TPM. If set to 0, the OpenAI LLM model will not be deployed.')
+param openAILLMDeploymentCapacity int = 30
+
 @description('The OpenAI LLM model to be deployed')
 param openAILLMModel string = 'gpt-4o'
 
@@ -38,8 +41,8 @@ param openAILLMModelVersion string = '2024-05-13'
 @description('The OpenAI LLM model deployment SKU')
 param openAILLMDeploymentSku string = 'Standard'
 
-@description('The max TPM of the deployed OpenAI LLM model, in thousands. `30` = 30k max TPM.')
-param openAILLMDeploymentCapacity int = 30
+@description('The max TPM of the deployed OpenAI Whisper model, in thousands. `3` = 3k max TPM. If set to 0, the Whisper model will not be deployed.')
+param openAIWhisperDeploymentCapacity int = 3
 
 @description('The OpenAI Whisper model to be deployed')
 param openAIWhisperModel string = 'whisper'
@@ -49,9 +52,6 @@ param openAIWhisperModelVersion string = '001'
 
 @description('The OpenAI LLM model deployment SKU')
 param openAIWhisperDeploymentSku string = 'Standard'
-
-@description('The max TPM of the deployed OpenAI Whisper model, in thousands. `3` = 3k max TPM.')
-param openAIWhisperDeploymentCapacity int = 3
 
 param location string = resourceGroup().location
 param resourceToken string = take(toLower(uniqueString(subscription().id, resourceGroup().id, location)), 5)
@@ -63,6 +63,9 @@ param docIntelKeyKvSecretName string = 'doc-intel-api-key'
 param speechKeyKvSecretName string = 'speech-api-key'
 param funcKeyKvSecretName string = 'func-api-key'
 
+var deployOpenAILLMModel = (openAILLMDeploymentCapacity > 0)
+var deployOpenAIWhisperModel = (openAIWhisperDeploymentCapacity > 0)
+
 var functionAppTokenName = appendUniqueUrlSuffix
   ? toLower('${functionAppName}-${resourceToken}')
   : toLower(functionAppName)
@@ -71,8 +74,12 @@ var blobStorageAccountTokenName = toLower('${blobStorageAccountName}${resourceTo
 var functionAppPlanTokenName = toLower('${functionAppName}-plan-${resourceToken}')
 var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
 var openAITokenName = toLower('${resourcePrefix}-aoai-${location}-${resourceToken}')
-var openAILLMDeploymentName = toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
-var openAIWhisperDeploymentName = toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
+var openAILLMDeploymentName = (deployOpenAILLMModel
+  ? toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
+  : 'LLM_IS_NOT_DEPLOYED')
+var openAIWhisperDeploymentName = (deployOpenAIWhisperModel
+  ? toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
+  : 'WHISPER_IS_NOT_DEPLOYED')
 var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${resourceToken}')
 var speechTokenName = toLower('${resourcePrefix}-speech-${resourceToken}')
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
@@ -139,7 +146,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAILLMModel) {
   parent: azureopenai
   name: openAILLMDeploymentName
   properties: {
@@ -155,7 +162,7 @@ resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05
   }
 }
 
-resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIWhisperModel) {
   parent: azureopenai
   dependsOn: [llmdeployment] // Ensure one model deployment at a time
   name: openAIWhisperDeploymentName
@@ -266,14 +273,17 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   name: functionAppPlanTokenName
   location: location
-  kind: 'linux'
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-  }
   properties: {
     reserved: true
   }
+  sku: {
+    name: 'P0v3'
+    tier: 'Premium0V3'
+    size: 'P0v3'
+    family: 'Pv3'
+    capacity: 1
+  }
+  kind: 'linux'
 }
 
 resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
@@ -301,6 +311,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   resource functionSettings 'config@2022-09-01' = {
     name: 'appsettings'
     properties: {
+      SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage: storageAccountConnectionString
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
@@ -347,6 +358,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   tags: union(tags, { 'azd-service-name': webAppServiceName })
   kind: 'app,linux'
   properties: {
+    clientAffinityEnabled: true // If app plan capacity > 1, set this to True to ensure gradio works correctly.
     serverFarmId: webAppPlan.id
     siteConfig: {
       alwaysOn: true
@@ -361,7 +373,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
     type: 'SystemAssigned'
   }
 
-  resource appSettings 'config' = {
+  resource appSettings 'config@2022-09-01' = {
     name: 'appsettings'
     properties: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
