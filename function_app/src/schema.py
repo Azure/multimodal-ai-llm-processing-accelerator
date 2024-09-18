@@ -25,7 +25,12 @@ class LLMResponseBaseModel(PydanticBaseModel):
         # Add the JSON object example
         example_response_str = example_response_str + "{\n"
         for field, details in model_json_schema["properties"].items():
-            line_str = f""""{field}": {json.dumps(details['examples'][0])}, # {details['description']}"""
-            example_response_str += "  " + line_str + "\n"
+            try:
+                line_str = f""""{field}": {json.dumps(details['examples'][0])}, # {details['description']}"""
+                example_response_str += "  " + line_str + "\n"
+            except Exception as e:
+                raise RuntimeError(
+                    f"Error occurred when generating prompt-friendly text for field `{field}`"
+                ) from e
         example_response_str += "}"
         return example_response_str
