@@ -3,6 +3,7 @@
     "Values": {
         "FUNCTIONS_WORKER_RUNTIME": "python",
         "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
         "AOAI_ENDPOINT": "",
         "AOAI_LLM_DEPLOYMENT": "",
         "AOAI_WHISPER_DEPLOYMENT": "",
@@ -11,7 +12,10 @@
         "DOC_INTEL_API_KEY": "",
         "SPEECH_ENDPOINT": "",
         "SPEECH_REGION": "",
-        "SPEECH_API_KEY": ""
+        "SPEECH_API_KEY": "",
+        "COSMOSDB_ACCOUNT": "",
+        "COSMOSDB_DATABASE_NAME": "",
+        "CosmosDbConnectionSetting": ""
     },
     "Host": {
         "LocalHttpPort": 7071,

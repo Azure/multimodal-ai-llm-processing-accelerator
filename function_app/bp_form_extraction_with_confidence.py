@@ -234,7 +234,7 @@ class FunctionReponseModel(BaseModel):
 # to the training data on which the LLM was trained (increasing reliability of
 # the result).
 LLM_SYSTEM_PROMPT = (
-    "You are a data extraction expert."
+    "You are a data extraction expert. "
     "Your task is to review the following information and extract all of the information that appears in the form.\n"
     f"{LLMExtractedFieldsModel.get_prompt_json_example(include_preceding_json_instructions=True)}"
 )
