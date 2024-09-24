@@ -3,7 +3,7 @@ import json
 import logging
 import mimetypes
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import uuid4
 
 import azure.functions as func
@@ -125,6 +125,10 @@ class FunctionReponseModel(LLMExtractedFieldsModel):
     blobname: str = Field(
         description="The name of the blob that was processed.",
     )
+    ttl: Optional[int] = Field(
+        description="The time-to-live of the item in seconds.",
+        default=None,
+    )
     date_processed: str = Field(
         description="The date and time that the file was processed.",
         default_factory=lambda: datetime.datetime.now(
@@ -218,6 +222,7 @@ def get_structured_extraction_func_outputs(
             success=True,
             filename=os.path.basename(input_blob.name),
             blobname=input_blob.name,
+            ttl=300,  # Set time-to-live - item will expire in 5 minutes if container is configured to use TTL
             **llm_structured_response.dict(),
         )
         result = output_model.model_dump(mode="python")

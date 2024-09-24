@@ -192,8 +192,10 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
           kind: 'Hash'
         }
         indexingPolicy: {
-          indexingMode: 'none'
+          indexingMode: 'lazy'
+          automatic: true
         }
+        defaultTtl: -1
       }
     }
   }
