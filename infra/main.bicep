@@ -1,7 +1,7 @@
 @description('The name of the Function App. This will become part of the URL (e.g. https://{functionAppName}.azurewebsites.net) and must be unique across Azure.')
 param functionAppName string = 'ai-llm-processing-func'
 
-@description('Whether to use a premium or consumption SKU for the function\'s app service plan.')
+@description('Whether to use a premium or consumption SKU for the function\'s app service plan. Premium plans are recommended for production workloads, especially non-HTTP-triggered functions.')
 param functionAppUsePremiumSku bool = false
 
 @description('The name of the Web App. This will become part of the URL (e.g. https://{webAppName}.azurewebsites.net) and must be unique across Azure.')
