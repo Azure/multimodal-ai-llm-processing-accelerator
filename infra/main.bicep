@@ -26,14 +26,14 @@ param resourcePrefix string = 'llm-proc'
 @description('The name of the Blob Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
 param blobStorageAccountName string = 'llmprocstorage'
 
-@description('The name of the default blob storage container')
-param blobContainerName string = 'llm-proc-container'
+@description('The name of the default blob storage containers to be created')
+param blobContainerNames array = ['blob-form-to-cosmosdb-blobs']
 
-@description('The name of the default CosmosDB Database')
-param cosmosDbDatabaseName string = 'llm-proc-database'
+@description('The name of the default CosmosDB database')
+param cosmosDbDatabaseName string = 'default'
 
-@description('The name of the default CosmosDB container')
-param cosmosDbContainerName string = 'llm-proc-container'
+@description('The name of the default CosmosDB containers to be created')
+param cosmosDbContainerNames array = ['blob-form-to-cosmosdb-container']
 
 @description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
 param speechLocation string = 'eastus'
@@ -70,6 +70,8 @@ param resourceToken string = take(toLower(uniqueString(subscription().id, resour
 param tags object = {}
 param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
+param cosmosDbConnectionStringSecretName string = 'cosmosdb-connection-string'
+param blobStorageConnectionStringSecretName string = 'blob-storage-connection-string'
 param aoaiKeyKvSecretName string = 'aoai-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
 param speechKeyKvSecretName string = 'speech-api-key'
@@ -134,15 +136,15 @@ resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01
   name: 'default'
 }
 
-resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: blobContainerName
-  parent: blobServices
-  properties: {
-    publicAccess: 'None'
+resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = [
+  for containerName in blobContainerNames: {
+    name: containerName
+    parent: blobServices
+    properties: {
+      publicAccess: 'None'
+    }
   }
-}
-
-var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${blobStorageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${blobStorageAccount.listKeys().keys[0].value}'
+]
 
 //
 // CosmosDB
@@ -153,7 +155,7 @@ resource cosmodDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
   name: cosmosDbAccountTokenName
   location: location
   properties: {
-    enableFreeTier: true
+    enableFreeTier: false
     databaseAccountOfferType: 'Standard'
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
@@ -176,34 +178,26 @@ resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
   }
 }
 
-resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-11-15' = {
-  parent: cosmosDbDatabase
-  name: cosmosDbContainerName
-  properties: {
-    resource: {
-      id: cosmosDbContainerName
-      partitionKey: {
-        paths: [
-          '/myPartitionKey'
-        ]
-        kind: 'Hash'
-      }
-      indexingPolicy: {
-        indexingMode: 'consistent'
-        includedPaths: [
-          {
-            path: '/*'
-          }
-        ]
-        excludedPaths: [
-          {
-            path: '/_etag/?'
-          }
-        ]
+resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-11-15' = [
+  for containerName in cosmosDbContainerNames: {
+    parent: cosmosDbDatabase
+    name: containerName
+    properties: {
+      resource: {
+        id: containerName
+        partitionKey: {
+          paths: [
+            '/id'
+          ]
+          kind: 'Hash'
+        }
+        indexingPolicy: {
+          indexingMode: 'none'
+        }
       }
     }
   }
-}
+]
 
 // Cognitive services resources
 
@@ -318,6 +312,22 @@ resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-
   }
 }
 
+resource cosmosDbConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: cosmosDbConnectionStringSecretName
+  parent: keyVault
+  properties: {
+    value: cosmodDbAccount.listConnectionStrings().connectionStrings[0].connectionString
+  }
+}
+
+resource blobStorageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: blobStorageConnectionStringSecretName
+  parent: keyVault
+  properties: {
+    value: 'DefaultEndpointsProtocol=https;AccountName=${blobStorageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${blobStorageAccount.listKeys().keys[0].value}'
+  }
+}
+
 resource openAIKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: aoaiKeyKvSecretName
   parent: keyVault
@@ -407,13 +417,14 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
     properties: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
-      AzureWebJobsStorage: storageAccountConnectionString
+      AzureWebJobsStorage: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${blobStorageConnectionStringSecretName})'
+      CosmosDbConnectionSetting: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${cosmosDbConnectionStringSecretName})'
+      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
       FUNCTIONS_EXTENSION_VERSION: '~4'
       FUNCTIONS_WORKER_RUNTIME: 'python'
       WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
-      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString
-      BLOB_STORAGE_CONNECTION_STRING: storageAccountConnectionString
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${blobStorageConnectionStringSecretName})'
       AOAI_ENDPOINT: azureopenai.properties.endpoint
       AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
       AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
@@ -473,6 +484,9 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       FUNCTION_HOSTNAME: 'https://${functionApp.properties.defaultHostName}'
       FUNCTION_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${funcKeyKvSecretName})'
+      BLOB_STORAGE_ACCOUNT_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${blobStorageConnectionStringSecretName})'
+      COSMOSDB_ACCOUNT_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${cosmosDbConnectionStringSecretName})'
+      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       WEB_APP_USE_PASSWORD_AUTH: string(webAppUsePasswordAuth)
       WEB_APP_USERNAME: webAppUsername // Demo app username, no need for key vault storage
       WEB_APP_PASSWORD: webAppPassword // Demo app password, no need for key vault storage

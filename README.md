@@ -36,8 +36,7 @@ urlFragment: multimodal-ai-llm-processing-accelerator
     - [FAQ](#faq)
   - [Deployment](#deployment)
     - [Pricing Considerations](#pricing-considerations)
-    - [Option 1: One-Click Deployment](#option-1-one-click-deployment)
-    - [Option 2: Deploying to Azure with azd](#option-2-deploying-to-azure-with-azd)
+    - [Deploying to Azure with azd](#deploying-to-azure-with-azd)
     - [Running the solution locally](#running-the-solution-locally)
   - [Credits](#credits)
   - [Contributing](#contributing)
@@ -101,12 +100,13 @@ The accelerator comes with these pre-built pipeline examples to help you get sta
 
 | Example  | Description & Pipeline Steps|
 | ---------|---------|
-|**Form Field Extraction with Confidence Scores & Bboxes**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing:<br><ul>- Match LLM field values with Document Intelligence extracted lines<br>- Merge Confidence scores and bounding boxes<br>- Determine whether to human review is required</ul>- Return structured JSON |
-|**Call Center Analysis with Confidence Scores & Timestamps**<br>[Code](/function_app/bp_call_center_audio_analysis.py)| Processes a call center recording, classifying customer sentiment & satisfaction, summarizing the call and next best action, and extracting any keywords mentioned. Returns the response with timestamps, confidence scores and the full sentence text for the next best action and each of the keywords mentioned.<br>- Azure AI Speech (Speech -> Text)<br>- GPT-4o (text input)<br>- Post-processing:<br><ul>- Match LLM timestamps to transcribed phrases<br>- Merge sentence info & confidence scores</ul>- Return structured JSON |
-|**Summarize Text**<br>[Code](/function_app/bp_summarize_text.py)| Summarizes text input into a desired style and number of output sentences.<br>- GPT-4o (text input + style/length instructions)<br>- Return raw text |
-|**City Names Extraction (Doc Intelligence)**<br>[Code](/function_app/bp_doc_intel_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF (using text extracted by Document Intelligence).<br>- Document Intelligence (PDF/image -> text)<br>- GPT-4o (text input)<br>- Return JSON array of city names |
-|**City Names Extraction (PyMuPDF)**<br>[Code](/function_app/bp_pymupdf_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF/image + text (extracted locally by PyMuPDF).<br>- PyMuPDF (PDF/image -> text & images)<br>- GPT-4o (text + image input)<br>- Return JSON array of city names |
-|**Doc Intelligence Only**<br>[Code](/function_app/bp_doc_intel_only.py)| A simple pipeline that calls Document Intelligence and returns the full response and raw text content.<br>- Document Intelligence (PDF/image -> text)<br>- Return structured JSON object |
+|**Form Field Extraction with Confidence Scores & bboxes**<br>**(HTTP)**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing:<br><ul>- Match LLM field values with Document Intelligence extracted lines<br>- Merge Confidence scores and bounding boxes<br>- Determine whether to human review is required</ul>- Return structured JSON |
+|**Call Center Analysis with Confidence Scores & Timestamps**<br>**(HTTP)**<br>[Code](/function_app/bp_call_center_audio_analysis.py)| Processes a call center recording, classifying customer sentiment & satisfaction, summarizing the call and next best action, and extracting any keywords mentioned. Returns the response with timestamps, confidence scores and the full sentence text for the next best action and each of the keywords mentioned.<br>- Azure AI Speech (Speech -> Text)<br>- GPT-4o (text input)<br>- Post-processing:<br><ul>- Match LLM timestamps to transcribed phrases<br>- Merge sentence info & confidence scores</ul>- Return structured JSON |
+|**Form Field Extraction**<br>**(Blob -> CosmosDB)**<br>Code: [Func](/function_app/function_app.py#L19.py), [Pipeline](/function_app/extract_blob_field_info_to_cosmosdb.py)| Summarizes text input into a desired style and number of output sentences.<br>- Pipeline triggered by blob storage event<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Write structured JSON result to CosmosDB container. |
+|**Summarize Text**<br>**(HTTP)**<br>[Code](/function_app/bp_summarize_text.py)| Summarizes text input into a desired style and number of output sentences.<br>- GPT-4o (text input + style/length instructions)<br>- Return raw text |
+|**City Names Extraction, Doc Intelligence**<br>**(HTTP)**<br>[Code](/function_app/bp_doc_intel_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF (using text extracted by Document Intelligence).<br>- Document Intelligence (PDF/image -> text)<br>- GPT-4o (text input)<br>- Return JSON array of city names |
+|**City Names Extraction, PyMuPDF**<br>**(HTTP)**<br>[Code](/function_app/bp_pymupdf_extract_city_names.py)| Uses GPT-4o to extract all city names from a given PDF/image + text (extracted locally by PyMuPDF).<br>- PyMuPDF (PDF/image -> text & images)<br>- GPT-4o (text + image input)<br>- Return JSON array of city names |
+|**Doc Intelligence Only**<br>**(HTTP)**<br>[Code](/function_app/bp_doc_intel_only.py)| A simple pipeline that calls Document Intelligence and returns the full response and raw text content.<br>- Document Intelligence (PDF/image -> text)<br>- Return structured JSON object |
 
 These pipelines can be duplicated and customized to your specific use case, and should be modified as required. The pipelines all return a large amount of additional information (such as intermediate outputs from each component, time taken for each step, and the raw source code) which will usually not be required in production use cases. Make sure to review the code thoroughly prior to deployment.
 
@@ -130,7 +130,7 @@ This accelerator is in active development, with a list of upcoming features incl
 - **Additional pipeline examples:** A number of additional pipeline examples showcasing other data types/use cases and more advanced pipeline approaches.
 - **Evaluation pipelines:** Example evaluation pipelines to evaluate overall performance, making it easy to iterate and improve your processing pipelines and help you select the right production thresholds for accepting a result or escalating to human review.
 - **Async processing:** Ensure all included pipeline components have async versions for maximum performance & concurrency.
-- **Other input/output bindings:** Extra examples beyond HTTP requests, including blob and CosmosDB bindings.
+- **Other input/output options:** Additional pipelines using streaming and websockets.
 - **Infrastructure options:** Include options for identity-based authentication between services, private VNets & endpoints etc.
 - **Deployment pipeline:** An example deployment pipeline for automated deployments.
 
@@ -264,7 +264,7 @@ The `function_app` folder contains the backend Azure Functions App. By default, 
 
 - Open a new terminal window with a Python 3.11 environment active
 - Navigate to the function app directory: `cd function_app`
-- Make a local settings file by duplicating the sample file: `cp sample_local.settings.json local.settings.json`
+- Make a local settings file to populate the necessary app settings and environment variables. You can automatically import the same app settings as the Azure deployment by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local#synchronize-settings), and then compare the values to the the sample file: `sample_local.settings.json`. More info on local function development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
 - Open the newly created `local.settings.json` file and populate the values for all environment variables (these are usually capitalized, e.g. `DOC_INTEL_API_KEY` or `AOAI_ENDPOINT`). You may need to go setup new resources within Azure.
 - Run the environment setup script to setup a new virtual Python environment with all required dependencies for running the example: `sh setup_env.sh`.
 - Activate the new environment: `source .venv/bin/activate`
