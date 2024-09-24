@@ -135,41 +135,6 @@ def send_request(
     )
 
 
-# def upload_file_to_blob(
-#     file: str,
-#     container_name: str,
-#     blob_name: str,
-#     blob_service_client: BlobServiceClient,
-# ):
-#     """Uploads a file to an Azure Blob Storage container."""
-#     blob_client = blob_service_client.get_blob_client(
-#         container=container_name, blob=blob_name
-#     )
-#     with open(file, "rb") as f:
-#         data = f.read()
-#         blob_client.upload_blob(data)
-
-
-# def get_cosmosdb_record(
-#     id: str, database_name: str, container_name: str, cosmos_client: CosmosClient
-# ) -> dict[str, Any]:
-#     """Retrieves a record from a CosmosDB container."""
-#     container = cosmos_client.get_database_client(database_name).get_container_client(
-#         container_name
-#     )
-#     return container.read_item(item=id, partition_key=id)
-
-
-# def query_cosmosdb_items(
-#     query: str, database_name: str, container_name: str, cosmos_client: CosmosClient
-# ) -> dict[str, Any]:
-#     """Queries a CosmosDB container."""
-#     container = cosmos_client.get_database_client(database_name).get_container_client(
-#         container_name
-#     )
-#     return container.query_items(query=query)
-
-
 def fitz_pdf_to_images(file: str) -> list[Image.Image]:
     """Converts a PDF to images using PyMuPDF."""
     fitz_pdf = fitz.open(file)
