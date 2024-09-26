@@ -310,6 +310,9 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
                 data = f.read()
                 blob_client.upload_blob(data)
             # Query the CosmosDB container until a result is found
+            gr.Info(
+                "File uploaded to Blob Storage. Polling CosmosDB until the result appears..."
+            )
             cosmos_timeout_secs = 30
             query = "SELECT * FROM c WHERE c.filename = @filename"
             parameters = [{"name": "@filename", "value": blob_name}]
@@ -335,12 +338,14 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
             client_side_time_taken = f"{round(time.time() - start_time, 1)} seconds"
             # Delete the blob from storage
             blob_client.delete_blob()
+            gr.Info("Task complete. Deleting the file from blob storage...")
             # Return status code, time taken and the first item from the list (it should only have one item)
             return (200, client_side_time_taken, items[0])
         except Exception as e:
             # Ensure the blob is deleted from storage if an error occurs
             try:
                 blob_client.delete_blob()
+                gr.Error("Error occurred. Deleting the file from blob storage...")
             except Exception as _e:
                 pass
             # Return the result including the error.
