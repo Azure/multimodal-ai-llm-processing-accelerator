@@ -32,7 +32,7 @@ COSMOSDB_DATABASE_NAME = os.getenv("COSMOSDB_DATABASE_NAME")
 
 # Create clients for Azure services
 blob_service_client = BlobServiceClient.from_connection_string(
-    conn_str=os.getenv("BLOB_STORAGE_ACCOUNT_CONNECTION_STRING")
+    conn_str=os.getenv("STORAGE_ACCOUNT_CONNECTION_STRING")
 )
 cosmos_client = CosmosClient.from_connection_string(
     conn_str=os.getenv("COSMOSDB_ACCOUNT_CONNECTION_STRING")
