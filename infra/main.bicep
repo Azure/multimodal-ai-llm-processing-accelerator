@@ -127,6 +127,7 @@ resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
+    allowSharedKeyAccess: true
     allowBlobPublicAccess: false
   }
 }
