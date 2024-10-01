@@ -13,8 +13,10 @@ from typing import IO, Any, Callable, Dict, List, Literal, Optional, Union
 import fitz
 import networkx as nx
 import pandas as pd
+import PIL
 import PIL.Image as Image
 import requests
+from azure.ai.documentintelligence._model_base import Model as DocumentModelBase
 from azure.ai.documentintelligence._model_base import rest_field
 from azure.ai.documentintelligence.models import (
     AnalyzeResult,
@@ -40,8 +42,8 @@ from fitz import Page as PyMuPDFPage
 from haystack.dataclasses import ByteStream as HaystackByteStream
 from haystack.dataclasses import Document as HaystackDocument
 from pydantic import BaseModel, Field
-from src.components.pymupdf import pymupdf_pdf_page_to_img_pil
-from src.helpers.image import pil_img_to_base64
+from src.components.pymupdf import load_fitz_pdf, pymupdf_pdf_page_to_img_pil
+from src.helpers.image import base64_to_pil_img, pil_img_to_base64
 
 logger = logging.getLogger(__name__)
 
@@ -55,128 +57,32 @@ VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES = {
 }
 
 
-class EnhancedDocumentContentBase(BaseModel):
-    ordered_idx: Optional[str] = Field(
-        None,
-        description="Index of the content in relation to all other content. This is used to order the content logically.",
-    )
-    page_number: int = Field(..., description="Page number of the content")
-
-    class Config:
-        arbitrary_types_allowed = True
-
-
-class EnhancedDocumentParagraph(EnhancedDocumentContentBase):
-    text: str = Field(description="Text content in the paragraph")
-    role: Optional[ParagraphRole] = Field(
-        description="Role of the paragraph in the document"
-    )
-    di_document_paragraph: DocumentParagraph = Field(
-        description="Base Paragraph extracted from the document"
-    )
-
-
-class EnhancedDocumentTable(EnhancedDocumentContentBase):
-    table_md: str = Field(description="Markdown representation of the table")
-    table_df: Optional[pd.DataFrame] = Field(
-        None, description="Pandas Dataframe representation of the table"
-    )
-    di_document_table: DocumentTable = Field(
-        description="Base DI table extracted from the document"
-    )
-
-
-# class EnhancedDocumentFigure(EnhancedDocumentContentBase):
-#     figure: Image.Image = Field(description="Figure extracted from the document")
-#     caption: Optional[str] = Field(
-#         None, description="Caption of the figure extracted from the document"
-#     )
-#     footnotes: Optional[List[DocumentFootnote]] = Field(
-#         None, description="Footnote of the figure extracted from the document"
-#     )
-#     di_document_table: DocumentTable = Field(
-#         description="Base DI table extracted from the document"
-#     )
-
-
-def camel_to_snake(name):
-    return "".join(["_" + c.lower() if c.isupper() else c for c in name]).lstrip("_")
-
-
-class EnhancedDocumentMixin:
-    def _get_passthrough_fields(self, orig_obj: Any) -> dict[str:Any]:
-        return {
-            camel_to_snake(k): v
-            for k, v in orig_obj.as_dict().items()
-            if camel_to_snake(k) in orig_obj.__class__.__dict__["_attr_to_rest_field"]
-        }
-
-
-class EnhancedDocumentFigure(DocumentFigure, EnhancedDocumentMixin):
-    """
-    An object representing a figure in the document, enhanced with additional
-     useful fields.
-
-    :ivar base_figure: The original figure object as returned by the
-     Document Intelligence API. Required.
-    :vartype image: ~azure.ai.documentintelligence.models.DocumentFigure
-    :ivar image: PIL Image. Required.
-    :vartype image: Image.Image
-    """
-
-    image: Optional[Image.Image] = rest_field(type=Image.Image, name="image")
-
-    def __init__(self, base_figure: DocumentFigure, image: Optional[Image.Image]):
-        # Pass through fields from original object
-        passthrough_fields = self._get_passthrough_fields(base_figure)
-        super().__init__(**passthrough_fields)
-        # Add new enhanced fields
-        self.image = image
-
-    @property
-    def base64_img(self) -> bytes:
-        if not self.image:
-            raise ValueError("Image not set")
-        return self.image.tobytes()
-
-
-class EnhancedAnalyzeResult(AnalyzeResult, EnhancedDocumentMixin):
-    """
-    An object representing a figure in the document, enhanced with additional
-     useful fields.
-
-    :ivar base_obj: The original figure object as returned by the
-     Document Intelligence API. Required.
-    :vartype image: ~azure.ai.documentintelligence.models.DocumentFigure
-    :ivar image: PIL Image. Required.
-    :vartype image: Image.Image
-    """
-
-    def __init__(
-        self,
-        base_obj: AnalyzeResult,
-        paragraphs: Optional[List[EnhancedDocumentParagraph]] = None,
-        tables: Optional[List[EnhancedDocumentTable]] = None,
-        figures: Optional[List[EnhancedDocumentFigure]] = None,
-    ):
-        # Pass through fields from original object, excluding the new enhanced fields
-        passthrough_fields = self._get_passthrough_fields(
-            base_obj, exclude_fields=["paragraphs", "tables", "figures"]
-        )
-        super().__init__(**passthrough_fields)
-        # Add new enhanced fields
-        self.paragraphs = paragraphs
-        self.tables = tables
-        self.figures = figures
-
-
 def is_span_in_span(span: DocumentSpan, parent_span: DocumentSpan) -> bool:
+    """
+    Checks if a given span is contained by a parent span.
+
+    :param span: Span to check.
+    :type span: DocumentSpan
+    :param parent_span: Parent span to check against.
+    :type parent_span: DocumentSpan
+    :return: Whether the span is contained by the parent span.
+    :rtype: bool
+    """
     return span.offset >= parent_span.offset and (span.offset + span.length) <= (
         parent_span.offset + parent_span.length
     )
 
 
 def get_all_formulas(result: AnalyzeResult) -> List[DocumentFormula]:
+    """
+    Returns all formulas from the Document Intelligence result.
+
+    :param result: AnalyzeResult object returned by the `begin_analyze_document`
+        method.
+    :type result: AnalyzeResult
+    :return: A list of all formulas in the result.
+    :rtype: List[DocumentFormula]
+    """
     return list(
         itertools.chain.from_iterable(
             page.formulas for page in result.pages if page.formulas
@@ -187,6 +93,19 @@ def get_all_formulas(result: AnalyzeResult) -> List[DocumentFormula]:
 def get_formula(
     all_formulas: List[DocumentFormula], span: dict[str, int]
 ) -> DocumentFormula:
+    """
+    Get the formula that matches the given span.
+
+    :param all_formulas: A list of all formulas in the document.
+    :type all_formulas: List[DocumentFormula]
+    :param span: The span to match.
+    :type span: dict[str, int]
+    :raises ValueError: If no formula is found for the given span.
+    :raises NotImplementedError: If multiple formulas are found for the given
+        span.
+    :return: The formula that matches the given span.
+    :rtype: DocumentFormula
+    """
     matching_formulas = [
         formula for formula in all_formulas if is_span_in_span(formula.span, span)
     ]
@@ -199,7 +118,17 @@ def get_formula(
     return matching_formulas[0]
 
 
-def crop_img(img: Image.Image, crop_poly: list[float]):
+def crop_img(img: PIL.Image.Image, crop_poly: list[float]) -> PIL.Image.Image:
+    """
+    Crops an image based on the coordinates of an [x0, y0, x1, y1, ...] polygon.
+
+    :param img: Image to crop.
+    :type img: PIL.Image.Image
+    :param crop_poly: List of coordinates of the polygon (x0, y0, x1, y1, etc.)
+    :type crop_poly: list[float]
+    :return: The cropped image.
+    :rtype: PIL.Image.Image
+    """
     top_left = (min(crop_poly[::2]), min(crop_poly[1::2]))
     bottom_right = (max(crop_poly[::2]), max(crop_poly[1::2]))
     return img.crop((top_left[0], top_left[1], bottom_right[0], bottom_right[1]))
@@ -258,7 +187,17 @@ def get_section_heirarchy(
 def _get_section_heirarchy(
     section_direct_children_mapper: dict, current_id: int
 ) -> dict:
-    """Recursive function to get the heirarchy of a section"""
+    """
+    Recursive function to get the heirarchy of a section.
+
+    :param section_direct_children_mapper: Mapper of section ID to a list of all
+        direct children, including the section itself.
+    :type section_direct_children_mapper: dict
+    :param current_id: The ID of the current section to get the heirarchy for.
+    :type current_id: int
+    :return: A dictionary containing the heirarchy of the current section.
+    :rtype: dict
+    """
     output = {current_id: (current_id,)}
     for child_id in section_direct_children_mapper[current_id]:
         if current_id != child_id:
@@ -382,7 +321,7 @@ def _convert_section_heirarchy_to_incremental_numbering(
 
 def convert_element_heirarchy_to_incremental_numbering(
     elem_heirarchy_mapper: dict[str, Dict[int, tuple[int]]]
-) -> dict[str, Dict[int, tuple[int]]]:
+) -> Dict[str, Dict[int, tuple[int]]]:
     """
     Converts a mapping of elements to their parent sections to an incremental
     numbering scheme.
@@ -421,42 +360,69 @@ def convert_element_heirarchy_to_incremental_numbering(
     return dict(element_to_incremental_id_mapper)
 
 
-# def get_element_heirarchy_mapping(sections: List[DocumentSection]) -> Dict[str, tuple[int]]:
-#     # Get section mapper, mapping sections to their direct children
-#     section_direct_children_mapper = {section_id + 1: [section_id + 1] for section_id in range(len(sections) - 1)}
-#     for section_id, section in enumerate(sections[1:]):
-#         for elem in section.elements:
-#             if "section" in elem:
-#                 child_id = int(elem.split("/")[-1])
-#                 if child_id != section_id:
-#                     section_direct_children_mapper[section_id].append(child_id)
-#     # print(section_direct_children_mapper)
+def get_document_element_spans(
+    document_element: DocumentModelBase,
+) -> list[DocumentSpan]:
+    """
+    Get the spans of a document element.
 
-#     # Now recursively work through the mapping to develop a multi-level heirarchy for every section
-#     section_heirarchy = get_section_heirarchy(section_direct_children_mapper)
-#     # print(section_heirarchy)
-
-#     # Now map each element to the section parents
-#     elem_to_section_parent_mapper = defaultdict(dict)
-#     for section_id, section in enumerate(sections):
-#         for elem in section.elements:
-#             if "section" not in elem:
-#                 _, elem_type, elem_type_id = elem.split("/")
-#                 elem_to_section_parent_mapper[elem_type][int(elem_type_id)] = section_heirarchy.get(section_id, ())    # Return sorted dict
-#     return dict(sorted(elem_to_section_parent_mapper.items()))
+    :param document_element: The document element to get the spans of.
+    :type document_element: DocumentModelBase
+    :raises NotImplementedError: Raised when the document element does not
+        contain a span field.
+    :return: The spans of the document element.
+    :rtype: list[DocumentSpan]
+    """
+    if hasattr(document_element, "span"):
+        return [document_element.span] or list()
+    elif hasattr(document_element, "spans"):
+        return document_element.spans or list()
+    else:
+        raise NotImplementedError(
+            f"Class {document_element.__class__.__name__} does not contain span field."
+        )
 
 
-def get_span_to_ordered_idx_mapper(
+@dataclass
+class SpanBounds:
+    """
+    Dataclass representing the outer bounds of a span.
+    """
+
+    offset: int
+    end: int
+
+    def __hash__(self):
+        return hash((self.offset, self.end))
+
+
+def span_bounds_to_document_span(span_bounds: SpanBounds) -> DocumentSpan:
+    """Converts a SpanBounds object to a DocumentSpan object."""
+    return DocumentSpan(
+        offset=span_bounds.offset, length=span_bounds.end - span_bounds.offset
+    )
+
+
+def document_span_to_span_bounds(span: DocumentSpan) -> SpanBounds:
+    """Converts a DocumentSpan object to a SpanBounds object."""
+    return SpanBounds(span.offset, span.offset + span.length)
+
+
+def get_span_bounds_to_ordered_idx_mapper(
     result: "AnalyzeResult",
-) -> Dict[tuple[int, int], int]:
+) -> Dict[SpanBounds, int]:
     """
     Create a mapping of each span start location to the overall position of
     the content. This is used to order the content logically.
 
-    :param result: The AnalyzeResult object returned by the `begin_analyze_document` method.
-    :returns: A dictionary with the element ID as key and the order as value.
+    :param result: The AnalyzeResult object returned by the
+        `begin_analyze_document` method.
+    :type result: AnalyzeResult
+    :returns: A dictionary mapping span bounds to the ordered index within the
+        document.
+    :rtype: dict
     """
-    all_spans = list()
+    all_spans: List[SpanBounds] = list()
     for attr in [
         "pages",
         "paragraphs",
@@ -467,252 +433,735 @@ def get_span_to_ordered_idx_mapper(
         "documents",
     ]:
         elements = getattr(result, attr) or list()
-        all_spans.extend(
-            [get_min_and_max_span_offsets(elem.spans) for elem in elements]
-        )
+        all_spans.extend([get_min_and_max_span_bounds(elem.spans) for elem in elements])
     for page in result.pages:
         for attr in ["barcodes", "lines", "words", "selection_marks"]:
             elements = getattr(page, attr) or list()
             for elem in elements:
                 if hasattr(elem, "spans"):
-                    all_spans.append(get_min_and_max_span_offsets(elem.spans))
+                    all_spans.append(get_min_and_max_span_bounds(elem.spans))
                 elif hasattr(elem, "span"):
-                    all_spans.append(get_min_and_max_span_offsets([elem.span]))
+                    all_spans.append(get_min_and_max_span_bounds([elem.span]))
 
     # Sort by lowest start offset, then largest end offset
-    all_spans = sorted(all_spans, key=lambda x: (x[0], 0 - x[1]))
+    all_spans = sorted(all_spans, key=lambda x: (x.offset, 0 - x.end))
 
-    span_to_ordered_idx_mapper: Dict[str, int] = {
+    span_bounds_to_ordered_idx_mapper: Dict[SpanBounds, int] = {
         full_span: idx for idx, full_span in enumerate(all_spans)
     }
-    return span_to_ordered_idx_mapper
+    return span_bounds_to_ordered_idx_mapper
 
 
-def get_min_and_max_span_offsets(spans: List[DocumentSpan]) -> tuple[int, int]:
+class PageSpanCalculator:
+    """
+    Calculator for determining the page number of a span based on its position.
+
+    :param di_result: The AnalyzeResult object returned by the
+        `begin_analyze_document` method.
+    """
+
+    def __init__(self, di_result: AnalyzeResult):
+        self.page_span_bounds: Dict[int, SpanBounds] = self._get_page_span_bounds(
+            di_result
+        )
+        self._doc_end_span = self.page_span_bounds[max(self.page_span_bounds)].end
+
+    def determine_span_start_page(self, span_start_offset: int) -> int:
+        """
+        Determines the page on which a span starts.
+
+        :param span_start_offset: Span starting offset.
+        :type span_position: int
+        :raises ValueError: Raised when the span_start_offset is greater than
+            the last page's end span.
+        :return: The page number on which the span starts.
+        :rtype: int
+        """
+        if span_start_offset > self._doc_end_span:
+            raise ValueError(
+                f"span_start_offset {span_start_offset} is greater than the last page's end span ({self._doc_end_span})."
+            )
+        page_numbers = [
+            k
+            for k, v in self.page_span_bounds.items()
+            if v.offset <= span_start_offset and v.end >= span_start_offset
+        ]
+        return min(page_numbers)
+
+    def _get_page_span_bounds(self, di_result: AnalyzeResult) -> Dict[int, SpanBounds]:
+        """
+        Gets the span bounds for each page.
+
+        :param di_result: AnalyzeResult object.
+        :type di_result: AnalyzeResult
+        :raises ValueError: Raised when a gap exists between the span bounds of
+            two pages.
+        :return: Dictionary with page number as key and tuple of start and end.
+        :rtype: Dict[int, SpanBounds]
+        """
+        page_span_bounds: Dict[int, SpanBounds] = dict()
+        page_start_span = 0  # Set first page start to 0
+        for page in di_result.pages:
+            max_page_bound = get_min_and_max_span_bounds(page.spans).end
+            max_word_bound = (
+                get_min_and_max_span_bounds([page.words[-1].span]).end
+                if page.words
+                else -1
+            )
+            max_bound_across_elements = max(max_page_bound, max_word_bound)
+            page_span_bounds[page.page_number] = SpanBounds(
+                offset=page_start_span,
+                end=max_bound_across_elements,
+            )
+            page_start_span = max_bound_across_elements + 1
+        # Check no spans are missed
+        last_end_span = -1
+        for page_num, span_bounds in page_span_bounds.items():
+            if span_bounds.offset != last_end_span + 1:
+                raise ValueError(
+                    f"Gap exists between span bounds of pages {page_num-1} and {page_num}"
+                )
+            last_end_span = span_bounds.end
+
+        return page_span_bounds
+
+
+def get_min_and_max_span_bounds(spans: List[DocumentSpan]) -> SpanBounds:
+    """
+    Get the minimum and maximum offsets of a list of spans.
+
+    :param spans: List of spans to get the offsets for.
+    :type spans: List[DocumentSpan]
+    :return: Tuple containing the minimum and maximum offsets.
+    :rtype: SpanBounds
+    """
     min_offset = min([span.offset for span in spans])
     max_offset = max([span.offset + span.length for span in spans])
-    return (min_offset, max_offset)
+    return SpanBounds(offset=min_offset, end=max_offset)
 
 
-class AzureDocumentIntelligenceResultProcessor:
+## TODO: Create mapper of section ID to section heirarchy, containing more info about the section
+# @dataclass
+# class SectionHeirarchyInfo:
+#     section_id: int
+#     section: DocumentSection
+#     section_heirarchy: tuple[int]
+#     section_heirarchy_incremental_id: tuple[int]
+
+# def get_section_heirarchy_mapper(sections: List[DocumentSection]) -> Dict[int, SectionHeirarchyInfo]:
+#     section_span_info_mapper = dict()
+#     for section_id, section in enumerate(sections):
+#         span_bounds = get_min_and_max_span_bounds(section.spans)
+#         section_span_info_mapper[span_bounds] = SectionHeirarchyInfo(
+#             section_id=section_id,
+#             section=section,
+#             section_heirarchy=elem_heirarchy_mapper["sections"].get(section_id, tuple()),
+#             section_heirarchy_incremental_id=section_to_incremental_id_mapper.get(section_id, tuple())
+#         )
+#     return section_span_info_mapper
+
+# For Example usage: section_heirarchy_mapper = get_section_heirarchy_mapper(di_result.sections)
+
+
+@dataclass
+class ElementInfo:
     """
-    Convert files to documents using Azure's Document Intelligence service.
-
-    Supported file formats are: PDF, JPEG, PNG, BMP, TIFF, DOCX, XLSX, PPTX, and HTML.
-
-    In order to be able to use this component, you need an active Azure account
-    and a Document Intelligence or Cognitive Services resource. Follow the steps described in the [Azure documentation]
-    (https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api)
-    to set up your resource.
-
-    Usage example:
-    ```python
-    from haystack.components.converters import AzureOCRDocumentConverter
-    from haystack.utils import Secret
-
-    converter = AzureOCRDocumentConverter(endpoint="<url>", api_key=Secret.from_token("<your-api-key>"))
-    results = converter.run(sources=["path/to/doc_with_images.pdf"], meta={"date_added": datetime.now().isoformat()})
-    documents = results["documents"]
-    print(documents[0].content)
-    # 'This is a text from the PDF file.'
-    ```
+    Dataclass containing information about a document element.
     """
+
+    element_id: str
+    element: Union[
+        DocumentSection,
+        DocumentPage,
+        DocumentParagraph,
+        DocumentLine,
+        DocumentWord,
+        DocumentFigure,
+        DocumentTable,
+        DocumentFormula,
+        DocumentBarcode,
+        DocumentKeyValueElement,
+        Document,
+        DocumentSelectionMark,
+    ]
+    full_span_bounds: SpanBounds
+    spans: List[DocumentSpan]
+    start_page_number: int
+    section_heirarchy_incremental_id: tuple[int]
+
+
+def get_element_page_number(
+    element: Union[
+        DocumentPage,
+        DocumentSection,
+        DocumentParagraph,
+        DocumentTable,
+        DocumentFigure,
+        DocumentList,
+        DocumentKeyValueElement,
+        Document,
+    ]
+) -> int:
+    """
+    Get the page number of a document element.
+
+    :param element: The document element to get the page number of.
+    :type element: Union[DocumentPage, DocumentSection, DocumentParagraph, DocumentTable, DocumentFigure, DocumentList, DocumentKeyValueElement, Document]
+    :return: The page number of the document element.
+    :rtype: int
+    """
+    if isinstance(element, DocumentPage):
+        return element.page_number
+    return element.bounding_regions[0].page_number
+
+
+def get_element_span_info_list(
+    result: "AnalyzeResult",
+    page_span_calculator: PageSpanCalculator,
+    section_to_incremental_id_mapper: Dict[int, tuple[int]],
+) -> Dict[DocumentSpan, ElementInfo]:
+    """
+    Create a mapping of each span start location to the overall position of
+    the content. This is used to order the content logically.
+
+    :param result: The AnalyzeResult object returned by the `begin_analyze_document` method.
+    :type result: AnalyzeResult
+    :param page_span_calculator: The PageSpanCalculator object to determine the
+        page location of a span.
+    :type page_span_calculator: PageSpanCalculator
+    :param section_to_incremental_id_mapper: A dict containing a mapping of span
+        to section heirarchical ID for each object type.
+    :type section_to_incremental_id_mapper: Dict[int, tuple[int]]
+    :returns: A dictionary with the element ID as key and the order as value.
+    """
+    # Get info for every unique element
+    element_span_info_list = list()
+    for attr in [
+        "pages",
+        "sections",
+        "paragraphs",
+        "tables",
+        "figures",
+        "lists",
+        "key_value_pairs",
+        "documents",
+    ]:
+        elements: List[
+            DocumentPage,
+            DocumentSection,
+            DocumentParagraph,
+            DocumentTable,
+            DocumentFigure,
+            DocumentList,
+            DocumentKeyValueElement,
+            Document,
+        ] = (
+            getattr(result, attr) or list()
+        )
+        for elem_idx, element in enumerate(elements):
+            spans = get_document_element_spans(element)
+            full_span_bounds = get_min_and_max_span_bounds(spans)
+            element_span_info_list.append(
+                ElementInfo(
+                    element_id=f"/{attr}/{elem_idx}",
+                    element=element,
+                    full_span_bounds=full_span_bounds,
+                    spans=spans,
+                    start_page_number=page_span_calculator.determine_span_start_page(
+                        full_span_bounds.offset
+                    ),
+                    section_heirarchy_incremental_id=section_to_incremental_id_mapper.get(
+                        attr, {}
+                    ).get(
+                        elem_idx, None
+                    ),
+                )
+            )
+    page_sub_element_counter = defaultdict(int)
+    for page in result.pages:
+        for attr in ["barcodes", "lines", "words", "selection_marks"]:
+            elements: List[
+                DocumentBarcode, DocumentLine, DocumentWord, DocumentSelectionMark
+            ] = (getattr(page, attr) or list())
+            for element in elements:
+                element_idx = page_sub_element_counter[attr]
+                page_sub_element_counter[attr] += 1
+                spans = get_document_element_spans(element)
+                full_span_bounds = get_min_and_max_span_bounds(spans)
+                element_span_info_list.append(
+                    ElementInfo(
+                        element_id=f"/{attr}/{element_idx}",
+                        element=element,
+                        full_span_bounds=full_span_bounds,
+                        spans=spans,
+                        start_page_number=page.page_number,
+                        section_heirarchy_incremental_id=None,  # page elements are not referred to by sections
+                    )
+                )
+
+    return element_span_info_list
+
+
+def order_element_info_list(
+    element_span_info_list: List[ElementInfo],
+) -> List[ElementInfo]:
+    """
+    Returns an ordered list of element spans based on the element type, page
+    number and the start and end of the span. Ordering is done so that higher
+    priority elements have their content processed first, ensuring that any
+    lower priority elements are ignored if their content is already contained.
+
+    For example, captions, footnotes and text content of a figure should be
+    processed before the raw lines/words (to provide more logical outputs and
+    avoid duplication of the content).
+
+    :param element_span_info_list: List of ElementInfo objects to order.
+    :type element_span_info_list: List[ElementInfo]
+    :return: A reordered list of ElementInfo objects.
+    :rtype: List[ElementInfo]
+    """
+    # Assign a priority to each element type so that higher priority elements are ordered first
+    # e.g. pages should appear before any contained content, and paragraphs should always be processed before lines or words
+    priority_mapper = {
+        DocumentPage: 0,
+        DocumentSection: 1,
+        DocumentTable: 2,
+        DocumentFigure: 2,
+        DocumentFormula: 2,
+        DocumentBarcode: 2,
+        Document: 2,
+        DocumentKeyValueElement: 2,
+        DocumentParagraph: 3,
+        DocumentLine: 4,
+        DocumentSelectionMark: 4,
+        DocumentWord: 5,
+    }
+
+    return sorted(
+        element_span_info_list,
+        key=lambda x: (
+            x.start_page_number,
+            x.full_span_bounds.offset,
+            priority_mapper[type(x.element)],
+            0 - x.full_span_bounds.end,
+        ),
+    )
+
+
+class DocumentElementExporterBase(ABC):
+
+    expected_element = None
+
+    def _validate_element_type(self, element_info: ElementInfo):
+        if not self.expected_element:
+            raise ValueError("expected_element has not been set for this exporter.")
+
+        if not isinstance(element_info.element, self.expected_element):
+            raise ValueError(
+                f"Element is incorrect type - {type(element_info.element)}. It should be of `{type(self.expected_element)}` type"
+            )
+
+    def _format_str_contains_placeholders(
+        self, format_str: str, expected_placeholders: List[str]
+    ) -> bool:
+        """
+        Returns True if the format string contains any of the expected placeholders.
+
+        :param format_str: Formatting string to check.
+        :type format_str: str
+        :param expected_placeholders: A list of expected placeholders.
+        :type expected_placeholders: List[str]
+        :return: Whether the string contains any of the expected placeholders.
+        :rtype: bool
+        """
+        return any([placeholder in format_str for placeholder in expected_placeholders])
+
+
+class DocumentPageExporterBase(DocumentElementExporterBase):
+
+    expected_element = DocumentPage
+
+    @abstractmethod
+    def convert_page_start(
+        self, element_info: ElementInfo, page_img: Image.Image
+    ) -> List[HaystackDocument]:
+        """
+        Method for exporting element for the beginning of the page.
+        """
+        pass
+
+    @abstractmethod
+    def convert_page_end(
+        self, element_info: ElementInfo, page_img: Image.Image
+    ) -> List[HaystackDocument]:
+        """
+        Method for exporting element for the beginning of the page.
+        """
+        pass
+
+
+class DefaultDocumentPageExporter(DocumentPageExporterBase):
+
+    expected_format_placeholders = ["{page_number}"]
 
     def __init__(
         self,
-        preceding_context_len: int = 3,
-        following_context_len: int = 3,
-        merge_multiple_column_headers: bool = True,
-        include_imgs: bool = True,
-        img_dpi: int = 200,
+        page_start_text_formats: Optional[List[str]] = [
+            "Page: {page_number} content\n"
+        ],
+        page_end_text_formats: Optional[str] = ["Footer: {page_number}"],
+        page_img_order: Optional[Literal["before", "after"]] = "after",
+        page_img_text_intro: Optional[str] = "\nPage {page_number} Image:",
+        img_dpi: int = 100,
     ):
-        """
-        Create an AzureDocumentIntelligenceResultProcessor component.
-
-        :param preceding_context_len: Number of lines before a table to extract as preceding context
-            (will be returned as part of metadata).
-        :param following_context_len: Number of lines after a table to extract as subsequent context (
-            will be returned as part of metadata).
-        :param merge_multiple_column_headers: Some tables contain more than one row as a column header
-            (i.e., column description).
-            This parameter lets you choose, whether to merge multiple column header rows to a single row.
-        TODO
-        """
-        self.preceding_context_len = preceding_context_len
-        self.following_context_len = following_context_len
-        self.merge_multiple_column_headers = merge_multiple_column_headers
-        self.include_imgs = include_imgs
+        self.page_start_text_formats = page_start_text_formats
+        self.page_end_text_formats = page_end_text_formats
+        self.page_img_order = page_img_order
+        self.page_img_text_intro = page_img_text_intro
         self.img_dpi = img_dpi
 
-    def _load_fitz_pdf(
-        self,
-        pdf_path: Optional[Union[str, os.PathLike]] = None,
-        pdf_url: Optional[str] = None,
-    ) -> "fitz.Document":
-        """
-        _summary_
-
-        :param pdf_path: Path to local PDF, defaults to None
-        :type pdf_path: Optional[Union[str, os.PathLike]], optional
-        :param pdf_url: URL path to PDF, defaults to None
-        :type pdf_url: Optional[str], optional
-        :raises ValueError: Raised when neither `pdf_path` nor `pdf_url` are
-         provided
-        :return: The loaded fitz/PyMuPDF Document object
-        :rtype: fitz.Document
-        """
-        if pdf_path and pdf_url:
-            raise ValueError(
-                "Both `pdf_path` and `pdf_url` cannot be provided at the same time."
+    def convert_page_start(
+        self, element_info: ElementInfo, page_img: Image.Image
+    ) -> List[HaystackDocument]:
+        self._validate_element_type(element_info)
+        outputs: List[HaystackDocument] = list()
+        meta = {
+            "element_id": element_info.element_id,
+            "page_number": element_info.start_page_number,
+            "page_location": "start",
+        }
+        if self.page_img_order == "before":
+            outputs.extend(self._export_page_img_docs(element_info, page_img, meta))
+        if self.page_start_text_formats:
+            outputs.extend(
+                self._export_page_text_docs(
+                    element_info, self.page_start_text_formats, meta
+                )
             )
-        if pdf_path is not None:
-            return fitz.open(pdf_path)
-        elif pdf_url is not None:
-            r = requests.get(pdf_url)
-            data = r.content
-            return fitz.open(stream=data, filetype="pdf")
-        else:
-            raise ValueError("Either `pdf_path` or `pdf_url` must be provided.")
+        return outputs
 
-    def process_analyze_result(
+    def convert_page_end(
+        self, element_info: ElementInfo, page_img: Image.Image
+    ) -> List[Document]:
+        outputs: List[HaystackDocument] = list()
+        meta = {
+            "element_id": element_info.element_id,
+            "page_number": element_info.start_page_number,
+            "page_location": "end",
+        }
+        if self.page_end_text_formats:
+            outputs.extend(
+                self._export_page_text_docs(
+                    element_info, self.page_end_text_formats, meta
+                )
+            )
+        if self.page_img_order == "after":
+            outputs.extend(self._export_page_img_docs(element_info, page_img, meta))
+        return outputs
+
+    def export_page_img(self, pdf_page: PyMuPDFPage) -> Image.Image:
+        return pymupdf_pdf_page_to_img_pil(
+            pdf_page, img_dpi=self.img_dpi, rotation=False
+        )
+
+    def _export_page_img_docs(
+        self, element_info: ElementInfo, page_img: Image.Image, meta: Dict[str, Any]
+    ) -> List[HaystackDocument]:
+        img_bytestream = HaystackByteStream(
+            data=pil_img_to_base64(page_img),
+            mime_type="image/jpeg",
+        )
+        img_outputs = list()
+        if self.page_img_text_intro:
+            img_outputs.append(
+                HaystackDocument(
+                    id=f"{element_info.element_id}_page_img_intro_text",
+                    content=self.page_img_text_intro.format(
+                        page_number=element_info.start_page_number
+                    ),
+                    meta=meta,
+                )
+            )
+        img_outputs.append(
+            HaystackDocument(
+                id=f"{element_info.element_id}_img",
+                blob=img_bytestream,
+                meta=meta,
+            )
+        )
+        return img_outputs
+
+    def _export_page_text_docs(
+        self, element_info: ElementInfo, text_formats: List[str], meta: Dict[str, Any]
+    ) -> List[HaystackDocument]:
+        output_strings = list()
+        for format in text_formats:
+            has_format_placeholders = self._format_str_contains_placeholders(
+                format, self.expected_format_placeholders
+            )
+            formatted_text = format.format(page_number=element_info.start_page_number)
+            formatted_if_null = format.format(page_number="")
+            if formatted_text != formatted_if_null or not has_format_placeholders:
+                output_strings.append(formatted_text)
+        if output_strings:
+            # Join outputs together with new lines
+            return [
+                HaystackDocument(
+                    id=f"{element_info.element_id}_text",
+                    content="\n".join(output_strings),
+                    meta=meta,
+                )
+            ]
+        return list()
+
+
+class DocumentParagraphExporterBase(DocumentElementExporterBase):
+
+    expected_element = DocumentParagraph
+
+    @abstractmethod
+    def convert_paragraph(self, element_info: ElementInfo) -> List[HaystackDocument]:
+        """
+        Method for exporting element for the beginning of the page.
+        """
+        pass
+
+
+class DefaultDocumentParagraphExporter(DocumentParagraphExporterBase):
+    def __init__(
         self,
-        result: AnalyzeResult,
-        pdf_path: Optional[Union[str, os.PathLike]] = None,
-        pdf_url: Optional[str] = None,
+        general_text_format: Optional[str] = "{content}",
+        page_header_format: Optional[str] = "Page Title: {content}",
+        page_footer_format: Optional[str] = "\nPage Footer: {content}",
+        title_format: Optional[str] = "\nTitle: {content}\n",
+        section_heading_format: Optional[str] = "\nSection heading: {content}\n",
+        footnote_format: Optional[str] = "Footnote: {content}",
+        page_number_format: Optional[str] = None,
     ):
-        """
-        Processes the result of an analyze operation and returns the extracted text and tables.
+        self.paragraph_format_mapper = {
+            None: general_text_format,
+            ParagraphRole.PAGE_HEADER: page_header_format,
+            ParagraphRole.PAGE_FOOTER: page_footer_format,
+            ParagraphRole.TITLE: title_format,
+            ParagraphRole.SECTION_HEADING: section_heading_format,
+            ParagraphRole.FOOTNOTE: footnote_format,
+            ParagraphRole.PAGE_NUMBER: page_number_format,
+        }
 
-        :param result: The result of an analyze operation.
-        :returns: A dictionary containing the extracted text and tables.
-        """
-        # Get images of every page
-        pdf_page_imgs: Dict[int, Image.Image] = dict()
-        if self.include_imgs:
-            pdf = self._load_fitz_pdf(pdf_path=pdf_path, pdf_url=pdf_url)
-            for page in pdf.pages():
-                pdf_page_imgs[page.number + 1] = pymupdf_pdf_page_to_img_pil(
-                    next(iter(pdf.pages())), img_dpi=self.img_dpi, rotation=False
+    def convert_paragraph(self, element_info: ElementInfo) -> List[HaystackDocument]:
+        self._validate_element_type(element_info)
+        format_mapper = self.paragraph_format_mapper[element_info.element.role]
+        if format_mapper:
+            return [
+                HaystackDocument(
+                    id=f"{element_info.element_id}",
+                    content=format_mapper.format(content=element_info.element.content),
+                    meta={
+                        "element_id": element_info.element_id,
+                        "page_number": element_info.start_page_number,
+                    },
                 )
+            ]
+        return list()
 
-        # Get mapper of element to heirarchy
-        elem_heirarchy_mapper = get_element_heirarchy_mapper(result.sections)
-        span_to_ordered_idx_mapper = get_span_to_ordered_idx_mapper(result)
 
-        # Extract the text and tables
-        paragraphs = self._convert_paragraphs(
-            result, elem_heirarchy_mapper, span_to_ordered_idx_mapper
-        )
-        figures = self._convert_figures(
-            result, pdf_page_imgs, elem_heirarchy_mapper, span_to_ordered_idx_mapper
-        )
-        tables = self._convert_tables(
-            result, elem_heirarchy_mapper, span_to_ordered_idx_mapper
-        )
+class DocumentLineExporterBase(DocumentElementExporterBase):
 
-        return EnhancedAnalyzeResult(
-            base_obj=result,
-            paragraphs=paragraphs,
-            tables=tables,
-            figures=figures,
-        )
+    expected_element = DocumentLine
 
-    def _convert_figures(
+    @abstractmethod
+    def convert_line(self, element_info: ElementInfo) -> List[HaystackDocument]:
+        """
+        Method for exporting element for the beginning of the page.
+        """
+        pass
+
+
+class DefaultDocumentLineExporter(DocumentLineExporterBase):
+
+    def __init__(
         self,
-        result: "AnalyzeResult",
-        page_imgs: Dict[int, Image.Image],
-        elem_heirarchy_mapper: Dict[str, tuple[int]],
-        span_to_ordered_idx_mapper: Dict[tuple[int], int],
-    ) -> List[EnhancedDocumentFigure]:
-        """TODO"""
-        figures = []
-        for fig_id, figure in enumerate(result.figures):
-            enhanced_figure = self._convert_figure(
-                result=result,
-                figure=figure,
-                page_imgs=page_imgs,
-                ordered_idx=span_to_ordered_idx_mapper[
-                    get_min_and_max_span_offsets(figure.spans)
-                ],
-                section_heirarchy=elem_heirarchy_mapper["figures"][fig_id],
+        text_format: Optional[str] = "{content}",
+    ):
+        self.text_format = text_format
+
+    def convert_line(self, element_info: ElementInfo) -> List[HaystackDocument]:
+        self._validate_element_type(element_info)
+        if self.text_format:
+            formatted_text = self.text_format.format(
+                content=element_info.element.content
             )
-            figures.append(enhanced_figure)
-        return figures
+            formatted_if_null = self.text_format.format(content="")
+            if formatted_text != formatted_if_null:
+                return [
+                    HaystackDocument(
+                        id=f"{element_info.element_id}",
+                        content=self.text_format.format(
+                            content=element_info.element.content
+                        ),
+                        meta={
+                            "element_id": element_info.element_id,
+                            "page_number": element_info.start_page_number,
+                        },
+                    )
+                ]
+        return list()
 
-    def _convert_figure(
+
+class DocumentWordExporterBase(DocumentElementExporterBase):
+
+    expected_element = DocumentWord
+
+    @abstractmethod
+    def convert_word(self, element_info: ElementInfo) -> List[HaystackDocument]:
+        """
+        Method for exporting element for the beginning of the page.
+        """
+        pass
+
+
+class DefaultDocumentWordExporter(DocumentWordExporterBase):
+
+    def __init__(
         self,
-        result: AnalyzeResult,
-        figure: DocumentFigure,
-        page_imgs: Optional[Dict[int, Image.Image]],
-        ordered_idx: int,
-        section_heirarchy: tuple[int],
-    ) -> List[EnhancedDocumentFigure]:
-        """TODO"""
-        if page_imgs:
-            page_numbers = [region.page_number for region in figure.bounding_regions]
-            if len(page_numbers) > 1:
-                logger.warning(
-                    f"Figure spans multiple pages. Only the first page will be used. Page numbers: {page_numbers}"
+        text_format: Optional[str] = "{content}",
+    ):
+        self.text_format = text_format
+
+    def convert_word(self, element_info: ElementInfo) -> List[HaystackDocument]:
+        self._validate_element_type(element_info)
+        if self.text_format:
+            formatted_text = self.text_format.format(
+                content=element_info.element.content
+            )
+            formatted_if_null = self.text_format.format(content="")
+            if formatted_text != formatted_if_null:
+                return [
+                    HaystackDocument(
+                        id=f"{element_info.element_id}",
+                        content=self.text_format.format(
+                            content=element_info.element.content
+                        ),
+                        meta={
+                            "element_id": element_info.element_id,
+                            "page_number": element_info.start_page_number,
+                        },
+                    )
+                ]
+        return list()
+
+
+class DocumentTableExporterBase(DocumentElementExporterBase):
+
+    expected_element = DocumentTable
+
+    @abstractmethod
+    def convert_table(
+        self, element_info: ElementInfo, all_formulas: List[DocumentFormula]
+    ) -> List[HaystackDocument]:
+        """
+        Method for exporting table elements.
+        """
+        pass
+
+
+class DefaultDocumentTableExporter(DocumentTableExporterBase):
+
+    expected_format_placeholders = ["{table_number}", "{caption}", "{footnotes}"]
+
+    def __init__(
+        self,
+        before_table_text_formats: Optional[List[str]] = ["Table Caption: {caption}"],
+        after_table_text_formats: Optional[List[str]] = ["Footnotes: {footnotes}"],
+    ):
+        self.before_table_text_formats = before_table_text_formats
+        self.after_table_text_formats = after_table_text_formats
+
+    def convert_table(
+        self, element_info: ElementInfo, all_formulas: List[DocumentFormula]
+    ) -> List[HaystackDocument]:
+        self._validate_element_type(element_info)
+        outputs: List[HaystackDocument] = list()
+        meta = {
+            "element_id": element_info.element_id,
+            "page_number": element_info.start_page_number,
+        }
+        if self.before_table_text_formats:
+            outputs.extend(
+                self._export_table_text(
+                    element_info,
+                    f"{element_info.element_id}_before_table_text",
+                    self.before_table_text_formats,
+                    meta,
                 )
-            page_number = page_numbers[0]
-            page_img = page_imgs[page_number]
-            di_page = next(
-                iter([page for page in result.pages if page.page_number == page_number])
             )
-            di_page_dimensions = (di_page.width, di_page.height)
-            figure_img = crop_img(
-                page_img,
-                normalize_xy_coords(
-                    figure.bounding_regions[0].polygon,
-                    di_page_dimensions,
-                    page_img.size,
-                ),
+        # Convert table content
+        table_md, table_df = self._convert_table_content(
+            element_info.element, all_formulas
+        )
+        outputs.append(
+            HaystackDocument(
+                id=f"{element_info.element_id}_table",
+                content=table_md,
+                dataframe=table_df,
+                meta=meta,
+            )
+        )
+        if self.after_table_text_formats:
+            outputs.extend(
+                self._export_table_text(
+                    element_info,
+                    f"{element_info.element_id}_after_table_text",
+                    self.after_table_text_formats,
+                    meta,
+                )
+            )
+
+        return outputs
+
+    def _export_table_text(
+        self,
+        element_info: ElementInfo,
+        id: str,
+        text_formats: List[str],
+        meta: Dict[str, Any],
+    ) -> List[HaystackDocument]:
+        table_number_text = get_element_number(element_info)
+        caption_text = (
+            element_info.element.caption.content if element_info.element.caption else ""
+        )
+        if element_info.element.footnotes:
+            footnotes_text = "\n".join(
+                [footnote.content for footnote in element_info.element.footnotes]
             )
         else:
-            figure_img = None
-
-        enhanced_figure = EnhancedDocumentFigure(
-            base_obj=figure,
-            image=figure_img,
-            ordered_idx=ordered_idx,
-            section_heirarchy=section_heirarchy,
-        )
-        return enhanced_figure
-
-    def _convert_tables(
-        self,
-        result: "AnalyzeResult",
-        elem_heirarchy_mapper: Dict[str, tuple[int]],
-        span_to_ordered_idx_mapper: Dict[tuple[int], int],
-    ) -> List[EnhancedDocumentTable]:
-        """
-        Converts the tables extracted by Azure's Document Intelligence service into Haystack Documents.
-
-        :param result: The AnalyzeResult object returned by the `begin_analyze_document` method. Docs on Analyze result
-            can be found [here](https://azuresdkdocs.blob.core.windows.net/$web/python/azure-ai-formrecognizer/3.3.0/azure.ai.formrecognizer.html?highlight=read#azure.ai.formrecognizer.AnalyzeResult).
-        :returns: List of Documents containing the tables extracted from the AnalyzeResult object.
-        """
-        all_formulas = get_all_formulas(result)
-        tables = []
-        for table_id, table in enumerate(result.tables):
-            enhanced_table = self._convert_table(
-                table=table,
-                all_formulas=all_formulas,
-                ordered_idx=span_to_ordered_idx_mapper[
-                    get_min_and_max_span_offsets(table.spans)
-                ],
-                section_heirarchy=elem_heirarchy_mapper["figures"][table_id],
+            footnotes_text = ""
+        output_strings = list()
+        for format in text_formats:
+            has_format_placeholders = self._format_str_contains_placeholders(
+                format, self.expected_format_placeholders
             )
-            tables.append(enhanced_table)
-        return tables
+            formatted_text = format.format(
+                table_number=table_number_text,
+                caption=caption_text,
+                footnotes=footnotes_text,
+            )
+            formatted_if_null = format.format(table_number="", caption="", footnotes="")
+            if formatted_text != formatted_if_null or not has_format_placeholders:
+                output_strings.append(formatted_text)
+        if output_strings:
+            return [
+                HaystackDocument(
+                    id=id,
+                    content="\n".join(output_strings),
+                    meta=meta,
+                ),
+            ]
+        return list()
 
-    def _convert_table(
-        self,
-        table: DocumentTable,
-        all_formulas: List[DocumentFormula],
-        ordered_idx: int,
-        section_heirarchy: tuple[int],
-    ) -> EnhancedDocumentTable:
+    def _convert_table_content(
+        self, table: DocumentTable, all_formulas: List[DocumentFormula]
+    ) -> tuple[str, pd.DataFrame]:
         sorted_cells = sorted(
             table.cells, key=lambda cell: (cell.row_index, cell.column_index)
         )
@@ -745,368 +1194,260 @@ class AzureDocumentIntelligenceResultProcessor:
         index = num_index_cols > 0
         table_fmt = "github" if num_header_rows > 0 else "rounded_grid"
         table_md = table_df.to_markdown(index=index, tablefmt=table_fmt)
-        # TODO: Set headers and columns by checking # of rows and columns of kind columnHeader / rowHeader, then set index and columns
-        page_number = min(
-            region.page_number
-            for cell in sorted_cells
-            for region in cell.bounding_regions
-        )
-        # Construct model without validating the ID., which will be added later
-        return EnhancedDocumentTable.model_construct(
-            page_number=page_number,
-            span=table.spans[0],
-            table_md=table_md,
-            table_df=table_df,
-            ordered_idx=ordered_idx,
-            section_heirarchy=section_heirarchy,
-            di_document_table=table,
-        )
-
-    def _convert_paragraphs(
-        self,
-        result: "AnalyzeResult",
-        elem_heirarchy_mapper: Dict[str, tuple[int]],
-        span_to_ordered_idx_mapper: Dict[tuple[int], int],
-    ) -> List[EnhancedDocumentParagraph]:
-        """
-        This converts the `AnalyzeResult` object ... TODO.
-
-        :param result: The AnalyzeResult object returned by the `begin_analyze_document` method. Docs on Analyze result
-            can be found [here](https://azuresdkdocs.blob.core.windows.net/$web/python/azure-ai-formrecognizer/3.3.0/azure.ai.formrecognizer.html?highlight=read#azure.ai.formrecognizer.AnalyzeResult).
-        :returns: TODO
-        """
-        table_spans = self._collect_table_spans(result=result)
-        figure_spans = self._collect_figure_spans(result=result)
-
-        paragraphs_to_pages: Dict[int, list] = defaultdict(list)
-        if not result.paragraphs:
-            logger.warning("No text paragraphs were detected by the OCR conversion.")
-            return []
-        for paragraph_idx, paragraph in enumerate(result.paragraphs):
-            print(paragraph_idx, paragraph.content)
-            # Check if paragraph is part of a table or figure and if so skip
-            if any(
-                (
-                    self._check_if_in_table(table_spans, line_or_paragraph=paragraph),
-                    self._check_if_in_figure(figure_spans, line_or_paragraph=paragraph),
-                )
-            ):
-                continue
-            if paragraph.bounding_regions:
-                # If paragraph spans multiple pages we group it with the first page number
-                page_numbers = [b.page_number for b in paragraph.bounding_regions]
-            else:
-                # If page_number is not available we put the paragraph onto an existing page
-                current_last_page_number = (
-                    sorted(paragraphs_to_pages.keys())[-1] if paragraphs_to_pages else 1
-                )
-                page_numbers = [current_last_page_number]
-            # Get section heirarchy. For non-normal content like headers and footers, this will be None
-            section_heirarchy = elem_heirarchy_mapper["paragraphs"].get(
-                paragraph_idx, tuple()
-            )
-            # Contruct the EnhancedDocumentParagraph model
-            enhanced_paragraph = EnhancedDocumentParagraph(
-                text=paragraph.content,
-                role=paragraph.role,
-                page_number=page_numbers[0],
-                span=paragraph.spans[0],
-                ordered_idx=span_to_ordered_idx_mapper[
-                    get_min_and_max_span_offsets(paragraph.spans)
-                ],
-                section_heirarchy=section_heirarchy,
-                di_document_paragraph=paragraph,
-            )
-            paragraphs_to_pages[page_numbers[0]].append(enhanced_paragraph)
-
-            # max_page_number: int = max(paragraphs_to_pages)
-            # for page_idx in range(1, max_page_number + 1):
-            #     # We add empty strings for missing pages so the preprocessor can still extract the correct page number
-            #     # from the original PDF.
-            #     page_text = paragraphs_to_pages.get(page_idx, "")
-            #     paragraphs.append(page_text)
-        return list(itertools.chain.from_iterable(paragraphs_to_pages.values()))
-
-    def _collect_table_spans(self, result: "AnalyzeResult") -> List["DocumentSpan"]:
-        """
-        Collect the spans of all tables by page number.
-
-        :param result: The AnalyzeResult object returned by the `begin_analyze_document` method.
-        :returns: A dictionary with the page number as key and a list of table spans as value.
-        """
-        tables: List[DocumentTable] = result.tables
-        return list(itertools.chain.from_iterable([table.spans for table in tables]))
-
-    def _check_if_in_table(
-        self,
-        table_spans: List["DocumentSpan"],
-        line_or_paragraph: Union["DocumentLine", "DocumentParagraph"],
-    ) -> bool:
-        """
-        Check if a line or paragraph is part of a table.
-
-        :param table_spans_on_page: A list of table spans on the current page.
-        :param line_or_paragraph: The line or paragraph to check.
-        :returns: True if the line or paragraph is part of a table, False otherwise.
-        """
-        for table_span in table_spans:
-            if (
-                table_span.offset
-                <= line_or_paragraph.spans[0].offset
-                <= table_span.offset + table_span.length
-            ):
-                return True
-        return False
-
-    def _collect_figure_spans(self, result: "AnalyzeResult") -> List["DocumentSpan"]:
-        """
-        Collect the spans of all figures by page number.
-
-        :param result: The AnalyzeResult object returned by the `begin_analyze_document` method.
-        :returns: A dictionary with the page number as key and a list of figure spans as value.
-        """
-        figures: List[DocumentFigure] = result.figures
-        return list(itertools.chain.from_iterable([figure.spans for figure in figures]))
-
-    def _check_if_in_figure(
-        self,
-        figure_spans: List["DocumentSpan"],
-        line_or_paragraph: Union["DocumentLine", "DocumentParagraph"],
-    ) -> bool:
-        """
-        Check if a line or paragraph is part of a figure.
-
-        :param figure_spans_on_page: A list of figure spans on the current page.
-        :param line_or_paragraph: The line or paragraph to check.
-        :returns: True if the line or paragraph is part of a figure, False otherwise.
-        """
-        for figure_span in figure_spans:
-            if (
-                figure_span.offset
-                <= line_or_paragraph.spans[0].offset
-                <= figure_span.offset + figure_span.length
-            ):
-                return True
-        return False
-
-
-@dataclass
-class BaseFormatConfig:
-    include: bool
-
-    def format_page_element(
-        self, page_element: DocumentPage, element_id: str, **kwargs
-    ) -> List[HaystackDocument]:
-        raise NotImplementedError("Subclasses must implement this method.")
-
-
-class DocumentPageImgExporterBase(ABC):
-
-    @abstractmethod
-    def export_page_img(self, page: PyMuPDFPage) -> Image.Image:
-        """
-        Method for exporting a Page as an image.
-        """
-        pass
-
-
-class DefaultDocumentPageImgExporter(DocumentPageImgExporterBase):
-    def __init__(self, img_dpi: int = 200):
-        self.img_dpi = img_dpi
-
-    def export_page_img(self, page: PyMuPDFPage) -> Image.Image:
-        return pymupdf_pdf_page_to_img_pil(page, img_dpi=self.img_dpi, rotation=0)
-
-
-@dataclass
-class PageFormatConfig(BaseFormatConfig):
-    text_format: str = "Page: {page_number}"
-    page_text_order: Literal["start", "end", "none"] = "start"
-    page_img_order: Literal["start", "end", "none"] = "end"
-
-    def format_page_element(
-        self,
-        page_element: DocumentPage,
-        element_id: str,
-        current_location: Literal["start", "end"],
-        page_img: Optional[Image.Image] = None,
-    ) -> List[HaystackDocument]:
-        documents: List[HaystackDocument] = list()
-        if self.include:
-            # Text content
-            if self.page_text_order == current_location:
-                documents.append(
-                    HaystackDocument(
-                        id=f"{element_id}_text",
-                        content=self.text_format.format(
-                            page_number=page_element.page_number
-                        ),
-                        meta={
-                            "element_id": element_id,
-                            "page_text_order": self.page_text_order,
-                        },
-                    )
-                )
-            if self.page_img_order == current_location:
-                if page_img is None:
-                    raise ValueError(
-                        "page_img must be provided if page_img_order is not 'none'"
-                    )
-                img_bytestream = HaystackByteStream(
-                    data=pil_img_to_base64(page_img),
-                    mime_type="image/jpeg",
-                )
-                documents.append(
-                    HaystackDocument(
-                        id=f"{element_id}_img",
-                        blob=img_bytestream,
-                        meta={
-                            "element_id": element_id,
-                            "page_img_order": self.page_img_order,
-                        },
-                    )
-                )
-        return documents
-
-
-class DocumentTableLoaderBase(ABC):
-
-    @abstractmethod
-    def load_di_document_table(table: DocumentTable) -> tuple[str, pd.DataFrame]:
-        """
-        Method for loading a DocumentTable object into a tuple of markdown
-        and DataFrame
-        """
-        pass
-
-
-class DefaultDocumentTableLoader(DocumentTableLoaderBase):
-    def __init__(self, all_formulas: List[DocumentFormula]):
-        self.all_formulas = all_formulas
-
-    def load_di_document_table(self, table: DocumentTable) -> tuple[str, pd.DataFrame]:
-        sorted_cells = sorted(
-            table.cells, key=lambda cell: (cell.row_index, cell.column_index)
-        )
-        cell_dict = defaultdict(list)
-
-        num_header_rows = 0
-        num_index_cols = 0
-        for cell in sorted_cells:
-            if cell.kind == "columnHeader":
-                num_header_rows = max(num_header_rows, cell.row_index + 1)
-            if cell.kind == "rowHeader":
-                num_index_cols = max(num_index_cols, cell.column_index + 1)
-            # Get text content
-            cell_content = cell.content
-            if ":formula:" in cell_content:
-                matched_formula = get_formula(self.all_formulas, cell.spans[0])
-                cell_content = cell_content.replace(":formula:", matched_formula.value)
-            cell_content = cell_content.replace(":selected:", "").replace(
-                ":unselected:", ""
-            )
-            cell_dict[cell.row_index].append(cell_content)
-        table_df = pd.DataFrame.from_dict(cell_dict, orient="index")
-        # Set index and columns
-        if num_index_cols > 0:
-            table_df.set_index(list(range(0, num_index_cols)), inplace=True)
-        if num_header_rows > 0:
-            table_df = table_df.T
-            table_df.set_index(list(range(0, num_header_rows)), inplace=True)
-            table_df = table_df.T
-        index = num_index_cols > 0
-        table_fmt = "github" if num_header_rows > 0 else "rounded_grid"
-        table_md = table_df.to_markdown(index=index, tablefmt=table_fmt)
         return table_md, table_df
 
 
-@dataclass
-class TableFormatConfig(BaseFormatConfig):
-    """
-    Sets the config for how tables are formatted.
+class DocumentFigureExporterBase(DocumentElementExporterBase):
 
-    Args:
-    TODO
-
-    The following fields can be used in `text_format`:
-    - {table}: The table in markdown format.
-    - {caption}: The caption of the table, if any. Typically a title or
-        description.
-    - {footnotes}: The footnotes of the table, if any.
-    """
-
-    table_loader: DocumentTableLoaderBase
-    text_format: str = "{caption}\n{table}\n{footnotes}"
-    content_outputs: tuple[Literal["text", "dataframe"]] = "text"
-
-    def format_page_element(
-        self, page_element: DocumentTable, element_id: str
-    ) -> List[HaystackDocument]:
-        documents = list()
-        if self.include:
-            table_md, table_df = self.table_loader.load_di_document_table(page_element)
-            footnotes = "\n".join(
-                [footnote.content for footnote in page_element.footnotes]
-            )
-            for output_type in self.content_outputs:
-                if output_type == "text":
-                    documents.append(
-                        HaystackDocument(
-                            id=f"{element_id}_text",
-                            content=self.text_format.format(
-                                table=table_md,
-                                caption=page_element.caption,
-                                footnotes=footnotes,
-                            ),
-                            meta={"element_id": element_id},
-                        )
-                    )
-                elif output_type == "dataframe":
-                    documents.append(
-                        HaystackDocument(
-                            id=f"{element_id}_dataframe",
-                            content=table_df,
-                            meta={"element_id": element_id},
-                        )
-                    )
-        return documents
-
-
-class DocumentFigureExporterBase(ABC):
+    expected_element = DocumentFigure
 
     @abstractmethod
-    def export_figure_img(
-        figure: DocumentFigure,
-    ) -> Image.Image:
+    def convert_figure(
+        self, element_info: ElementInfo, page_img: Image.Image
+    ) -> List[HaystackDocument]:
         """
-        Method for loading a DocumentFigure object into a tuple of image objects
-        (text_content, PIL.Image.Image and bytes64)
+        Method for exporting figure elements.
         """
         pass
+
+
+def get_element_number(element_info: ElementInfo) -> str:
+    return str(int(element_info.element_id.split("/")[-1]) + 1)
 
 
 class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
-    def __init__(self):
-        pass
 
-    def export_figure_img(
+    expected_format_placeholders = [
+        "{figure_number}",
+        "{caption}",
+        "{footnotes}",
+        "{content}",
+    ]
+
+    def __init__(
         self,
-        figure: DocumentFigure,
-        result: AnalyzeResult,
-        page_imgs: Optional[Dict[int, Image.Image]],
-    ) -> Image.Image:
-        page_numbers = [region.page_number for region in figure.bounding_regions]
+        before_figure_text_formats: Optional[List[str]] = [
+            "Figure Caption: {caption}",
+            "Figure Content:\n{content}",
+        ],
+        output_figure_img: bool = True,
+        after_figure_text_formats: Optional[List[str]] = ["Footnotes: {footnotes}"],
+    ):
+        self.before_figure_text_formats = before_figure_text_formats
+        self.output_figure_img = output_figure_img
+        self.after_figure_text_formats = after_figure_text_formats
+
+    def convert_figure(
+        self, element_info: ElementInfo, page_img: Image.Image, di_result: AnalyzeResult
+    ) -> List[HaystackDocument]:
+        self._validate_element_type(element_info)
+        page_numbers = [
+            region.page_number for region in element_info.element.bounding_regions
+        ]
         if len(page_numbers) > 1:
             logger.warning(
                 f"Figure spans multiple pages. Only the first page will be used. Page numbers: {page_numbers}"
             )
-        page_number = page_numbers[0]
-        page_img = page_imgs[page_number]
-        di_page = next(
-            iter([page for page in result.pages if page.page_number == page_number])
+        outputs: List[HaystackDocument] = list()
+        meta = {
+            "element_id": element_info.element_id,
+            "page_number": element_info.start_page_number,
+        }
+        if self.before_figure_text_formats:
+            outputs.extend(
+                self._export_figure_text(
+                    element_info,
+                    di_result,
+                    f"{element_info.element_id}_before_figure_text",
+                    self.before_figure_text_formats,
+                    meta,
+                )
+            )
+        if self.output_figure_img:
+            page_element = di_result.pages[page_numbers[0]]
+            figure_img = self.convert_figure_to_img(
+                element_info.element, page_img, page_element
+            )
+            outputs.append(
+                HaystackDocument(
+                    id=f"{element_info.element_id}_img",
+                    content=f"\nFigure {get_element_number(element_info)} Image:",
+                    blob=HaystackByteStream(
+                        data=pil_img_to_base64(figure_img),
+                        mime_type="image/jpeg",
+                    ),
+                    meta=meta,
+                )
+            )
+        if self.after_figure_text_formats:
+            outputs.extend(
+                self._export_figure_text(
+                    element_info,
+                    di_result,
+                    f"{element_info.element_id}_after_figure_text",
+                    self.after_figure_text_formats,
+                    meta,
+                )
+            )
+
+        return outputs
+
+    def _export_figure_text(
+        self,
+        element_info: ElementInfo,
+        di_result: AnalyzeResult,
+        id: str,
+        text_formats: List[str],
+        meta: Dict[str, Any],
+    ) -> List[HaystackDocument]:
+        figure_number_text = get_element_number(element_info)
+        caption_text = (
+            element_info.element.caption if element_info.element.caption else ""
         )
-        di_page_dimensions = (di_page.width, di_page.height)
-        figure_img = crop_img(
+        if element_info.element.footnotes:
+            footnotes_text = "\n".join(
+                [footnote.content for footnote in element_info.element.footnotes]
+            )
+        else:
+            footnotes_text = ""
+        # Get text content only if it is necessary (it is a slow operation)
+        content_text = (
+            self._get_figure_text_content(element_info.element, di_result)
+            if any("{content}" in format for format in text_formats)
+            else ""
+        )
+
+        output_strings = list()
+        for format in text_formats:
+            has_format_placeholders = self._format_str_contains_placeholders(
+                format, self.expected_format_placeholders
+            )
+            formatted_text = format.format(
+                figure_number=figure_number_text,
+                caption=caption_text,
+                footnotes=footnotes_text,
+                content=content_text,
+            )
+            formatted_if_null = format.format(
+                figure_number="", caption="", footnotes="", content=""
+            )
+            if formatted_text != formatted_if_null or not has_format_placeholders:
+                output_strings.append(formatted_text)
+        if output_strings:
+            return [
+                HaystackDocument(
+                    id=id,
+                    content="\n".join(output_strings),
+                    meta=meta,
+                ),
+            ]
+        return list()
+
+    def _get_figure_text_content(
+        self, figure_element: DocumentFigure, di_result: AnalyzeResult
+    ) -> str:
+        # Identify figure content spans
+        caption_spans = figure_element.caption.spans if figure_element.caption else []
+        footnote_spans = list(
+            itertools.chain.from_iterable(
+                [footnote.spans for footnote in figure_element.footnotes or []]
+            )
+        )
+        content_spans = [
+            span
+            for span in figure_element.spans
+            if span not in caption_spans and span not in footnote_spans
+        ]
+        figure_page_numbers = [
+            region.page_number for region in figure_element.bounding_regions
+        ]
+
+        content_min_max_span_bounds = get_min_and_max_span_bounds(content_spans)
+
+        output_line_strings = list()
+        current_line_strings = list()
+        matched_spans = list()
+        for content_span in content_spans:
+            content_min_max_span_bounds = get_min_and_max_span_bounds(content_spans)
+            # print(content_span)
+            span_perfect_match = False
+            # print("PARAGRAPHS")
+            for para in di_result.paragraphs or []:
+                if para.spans[0].offset > content_min_max_span_bounds.end:
+                    break
+                # print(para)
+                span_perfect_match = para.spans[0] == content_span
+                span_perfect_match = False
+                if span_perfect_match or all(
+                    is_span_in_span(para_span, content_span) for para_span in para.spans
+                ):
+                    # print("para match")
+                    matched_spans.extend(para.spans)
+                    if current_line_strings:
+                        output_line_strings.append(" ".join(current_line_strings))
+                        current_line_strings = list()
+                    output_line_strings.append(para.content)
+            if span_perfect_match:
+                continue
+            for page_number in figure_page_numbers:
+                # print("LINES - page {}".format(page_number))
+                for line in di_result.pages[page_number - 1].lines or []:
+                    # print(line)
+                    # If we have already matched the span, we can skip the rest of the lines
+                    if line.spans[0].offset > content_min_max_span_bounds.end:
+                        break
+                    # If line is already part of a higher-priority element, skip it
+                    if any(
+                        is_span_in_span(line_span, matched_span)
+                        for matched_span in matched_spans
+                        for line_span in line.spans
+                    ):
+                        # print("Line already contained")
+                        continue
+                    span_perfect_match = line.spans[0] == content_span
+                    if span_perfect_match or all(
+                        is_span_in_span(line_span, content_span)
+                        for line_span in line.spans
+                    ):
+                        # print("line match")
+                        matched_spans.extend(line.spans)
+                        if current_line_strings:
+                            output_line_strings.append(" ".join(current_line_strings))
+                            current_line_strings = list()
+                        output_line_strings.append(line.content)
+                if span_perfect_match:
+                    continue
+                # print("WORDS - page {}".format(page_number))
+                for word in di_result.pages[page_number - 1].words or []:
+                    # print(word)
+                    # If we have already matched the span, we can skip the rest of the lines
+                    if word.span.offset > content_min_max_span_bounds.end:
+                        break
+                    # If line is already part of a higher-priority element, skip it
+                    if any(
+                        is_span_in_span(word.span, matched_span)
+                        for matched_span in matched_spans
+                    ):
+                        # print("Word already contained")
+                        continue
+                    span_perfect_match = word.span == content_span
+                    if span_perfect_match or is_span_in_span(word.span, content_span):
+                        # print("word match")
+                        current_line_strings.append(word.content)
+            if current_line_strings:
+                output_line_strings.append(" ".join(current_line_strings))
+                current_line_strings = list()
+        if output_line_strings:
+            # print("Figure text content for img:", "\n".join(output_line_strings))
+            return "\n".join(output_line_strings)
+        # print("No text content for img")
+        return ""
+
+    def convert_figure_to_img(
+        self, figure: DocumentFigure, page_img: Image.Image, page_element: DocumentPage
+    ) -> Image.Image:
+        di_page_dimensions = (page_element.width, page_element.height)
+        return crop_img(
             page_img,
             normalize_xy_coords(
                 figure.bounding_regions[0].polygon,
@@ -1114,62 +1455,3 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
                 page_img.size,
             ),
         )
-        return figure_img
-
-
-@dataclass
-class FigureFormatConfig(BaseFormatConfig):
-    """
-    Sets the config for how figures are formatted.
-
-    Args:
-    TODO
-
-    The following fields can be used in `text_format`:
-    - {table}: The table in markdown format.
-    - {caption}: The caption of the table, if any. Typically a title or
-        description.
-    - {footnotes}: The footnotes of the table, if any.
-    """
-
-    figure_exporter: DocumentFigureExporterBase
-    before_text_format: str = "{caption}\n{table}\n{footnotes}"
-    image_order: Literal["start", "middle", "end", "none"] = "end"
-    after_text_format: str = "{caption}\n{table}\n{footnotes}"
-    content_outputs: tuple[Literal["before_text", "image", "after_text"]] = (
-        "before_text",
-        "image",
-        "after_text",
-    )
-
-    def format_page_element(
-        self, page_element: DocumentTable, element_id: str
-    ) -> List[HaystackDocument]:
-        documents = list()
-        if self.include:
-            table_md, table_df = self.table_loader.load_di_document_table(page_element)
-            footnotes = "\n".join(
-                [footnote.content for footnote in page_element.footnotes]
-            )
-            for output_type in self.content_outputs:
-                if output_type == "text":
-                    documents.append(
-                        HaystackDocument(
-                            id=f"{element_id}_text",
-                            content=self.text_format.format(
-                                table=table_md,
-                                caption=page_element.caption,
-                                footnotes=footnotes,
-                            ),
-                            meta={"element_id": element_id},
-                        )
-                    )
-                elif output_type == "dataframe":
-                    documents.append(
-                        HaystackDocument(
-                            id=f"{element_id}_dataframe",
-                            content=table_df,
-                            meta={"element_id": element_id},
-                        )
-                    )
-        return documents

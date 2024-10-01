@@ -108,3 +108,8 @@ class MeasureRunTime:
         self.end_time = perf_counter()
         self.time_taken = round(self.end_time - self.start_time, self._round_to)
         return self.time_taken
+
+
+def camel_to_snake(name: str) -> str:
+    """Converts camel case to snake case."""
+    return "".join(["_" + c.lower() if c.isupper() else c for c in name]).lstrip("_")
