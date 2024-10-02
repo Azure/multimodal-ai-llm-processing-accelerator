@@ -11,6 +11,7 @@ import fitz
 import gradio as gr
 import requests
 from azure.cosmos import CosmosClient
+from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 from PIL import Image
@@ -28,15 +29,16 @@ load_dotenv()
 FUNCTION_HOSTNAME = os.getenv("FUNCTION_HOSTNAME", "http://localhost:7071/")
 FUNCTION_KEY = os.getenv("FUNCTION_KEY", "")
 FUNCTION_ENDPOINT = os.path.join(FUNCTION_HOSTNAME, "api")
+STORAGE_ACCOUNT_ENDPOINT = os.getenv("STORAGE_ACCOUNT_ENDPOINT")
+COSMOSDB_ACCOUNT_ENDPOINT = os.getenv("COSMOSDB_ACCOUNT_ENDPOINT")
 COSMOSDB_DATABASE_NAME = os.getenv("COSMOSDB_DATABASE_NAME")
 
 # Create clients for Azure services
-blob_service_client = BlobServiceClient.from_connection_string(
-    conn_str=os.getenv("STORAGE_ACCOUNT_CONNECTION_STRING")
+credential = DefaultAzureCredential()
+blob_service_client = BlobServiceClient(
+    account_url=STORAGE_ACCOUNT_ENDPOINT, credential=credential
 )
-cosmos_client = CosmosClient.from_connection_string(
-    conn_str=os.getenv("COSMOSDB_ACCOUNT_CONNECTION_STRING")
-)
+cosmos_client = CosmosClient(url=COSMOSDB_ACCOUNT_ENDPOINT, credential=credential)
 
 # Set authentication values based on the environment variables, defaulting to auth enabled
 WEB_APP_USE_PASSWORD_AUTH = (

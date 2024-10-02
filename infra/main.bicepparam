@@ -15,7 +15,8 @@ param webAppPassword = 'password'
 param resourcePrefix = 'llm-proc'
 
 // Storage
-param blobStorageAccountName = 'llmprocstorage'
+param additionalRoleAssignmentIdentityId = ''
+param storageAccountName = 'llmprocstorage'
 
 // Cognitive services
 param speechLocation = 'eastus'
