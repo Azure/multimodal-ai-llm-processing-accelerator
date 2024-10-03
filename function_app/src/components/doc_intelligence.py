@@ -16,28 +16,23 @@ import pandas as pd
 import PIL
 import PIL.Image as Image
 import requests
-from azure.ai.documentintelligence._model_base import Model as DocumentModelBase
+from azure.ai.documentintelligence._model_base import \
+    Model as DocumentModelBase
 from azure.ai.documentintelligence._model_base import rest_field
-from azure.ai.documentintelligence.models import (
-    AnalyzeResult,
-    Document,
-    DocumentBarcode,
-    DocumentFigure,
-    DocumentFootnote,
-    DocumentFormula,
-    DocumentKeyValueElement,
-    DocumentLanguage,
-    DocumentLine,
-    DocumentList,
-    DocumentPage,
-    DocumentParagraph,
-    DocumentSection,
-    DocumentSelectionMark,
-    DocumentSpan,
-    DocumentTable,
-    DocumentWord,
-    ParagraphRole,
-)
+from azure.ai.documentintelligence.models import (AnalyzeResult, Document,
+                                                  DocumentBarcode,
+                                                  DocumentFigure,
+                                                  DocumentFootnote,
+                                                  DocumentFormula,
+                                                  DocumentKeyValueElement,
+                                                  DocumentLanguage,
+                                                  DocumentLine, DocumentList,
+                                                  DocumentPage,
+                                                  DocumentParagraph,
+                                                  DocumentSection,
+                                                  DocumentSelectionMark,
+                                                  DocumentSpan, DocumentTable,
+                                                  DocumentWord, ParagraphRole)
 from fitz import Page as PyMuPDFPage
 from haystack.dataclasses import ByteStream as HaystackByteStream
 from haystack.dataclasses import Document as HaystackDocument
@@ -91,7 +86,7 @@ def get_all_formulas(result: AnalyzeResult) -> List[DocumentFormula]:
 
 
 def get_formula(
-    all_formulas: List[DocumentFormula], span: dict[str, int]
+    all_formulas: List[DocumentFormula], span: DocumentSpan
 ) -> DocumentFormula:
     """
     Get the formula that matches the given span.
@@ -99,7 +94,7 @@ def get_formula(
     :param all_formulas: A list of all formulas in the document.
     :type all_formulas: List[DocumentFormula]
     :param span: The span to match.
-    :type span: dict[str, int]
+    :type span: DocumentSpan
     :raises ValueError: If no formula is found for the given span.
     :raises NotImplementedError: If multiple formulas are found for the given
         span.
@@ -116,6 +111,32 @@ def get_formula(
             "Support for multiple matched formulas is not yet available."
         )
     return matching_formulas[0]
+
+
+def get_formulas_in_spans(
+    all_formulas: List[DocumentFormula], spans: List[DocumentSpan]
+) -> List[DocumentFormula]:
+    """
+    Get the formula that matches the given span.
+
+    TODO: update docs
+
+    :param all_formulas: A list of all formulas in the document.
+    :type all_formulas: List[DocumentFormula]
+    :param span: The span to match.
+    :type span: DocumentSpan
+    :raises ValueError: If no formula is found for the given span.
+    :raises NotImplementedError: If multiple formulas are found for the given
+        span.
+    :return: The formula that matches the given span.
+    :rtype: DocumentFormula
+    """
+    matching_formulas = list()
+    for span in spans:
+        matching_formulas.extend(
+            [formula for formula in all_formulas if is_span_in_span(formula.span, span)]
+        )
+    return matching_formulas
 
 
 def crop_img(img: PIL.Image.Image, crop_poly: list[float]) -> PIL.Image.Image:
@@ -1241,9 +1262,11 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
         self, element_info: ElementInfo, page_img: Image.Image, di_result: AnalyzeResult
     ) -> List[HaystackDocument]:
         self._validate_element_type(element_info)
-        page_numbers = [
-            region.page_number for region in element_info.element.bounding_regions
-        ]
+        page_numbers = list(
+            sorted(
+                {region.page_number for region in element_info.element.bounding_regions}
+            )
+        )
         if len(page_numbers) > 1:
             logger.warning(
                 f"Figure spans multiple pages. Only the first page will be used. Page numbers: {page_numbers}"
