@@ -17,10 +17,14 @@ from dotenv import load_dotenv
 from PIL import Image
 
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.INFO,
     format="%(asctime)s:%(levelname)s:%(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+# Reduce Azure SDK logging level
+_logger = logging.getLogger("azure.core")
+_logger.setLevel(logging.WARNING)
 
 load_dotenv()
 
@@ -29,15 +33,37 @@ load_dotenv()
 FUNCTION_HOSTNAME = os.getenv("FUNCTION_HOSTNAME", "http://localhost:7071/")
 FUNCTION_KEY = os.getenv("FUNCTION_KEY", "")
 FUNCTION_ENDPOINT = os.path.join(FUNCTION_HOSTNAME, "api")
+
+# Create clients for Azure services. If connecting to Azure resources, ensure
+# the current Azure identity has the necessary permissions to access the
+# storage & cosmosDB accounts.
+# You can set the `additionalRoleAssignmentIdentityId` property when deploying
+# the solution to grant the necessary permissions to the logged-in user. See
+# the README for more info.
+USE_LOCAL_STORAGE_EMULATOR = os.getenv("USE_LOCAL_STORAGE_EMULATOR", "false") == "true"
+LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING = os.getenv(
+    "LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING"
+)
 STORAGE_ACCOUNT_ENDPOINT = os.getenv("STORAGE_ACCOUNT_ENDPOINT")
 COSMOSDB_ACCOUNT_ENDPOINT = os.getenv("COSMOSDB_ACCOUNT_ENDPOINT")
 COSMOSDB_DATABASE_NAME = os.getenv("COSMOSDB_DATABASE_NAME")
 
-# Create clients for Azure services
 credential = DefaultAzureCredential()
-blob_service_client = BlobServiceClient(
-    account_url=STORAGE_ACCOUNT_ENDPOINT, credential=credential
-)
+
+if USE_LOCAL_STORAGE_EMULATOR:
+    # Connect to the local development storage account emulator using a connection string
+    logging.info("Connecting to the local development storage account emulator.")
+    blob_service_client = BlobServiceClient.from_connection_string(
+        LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING
+    )
+else:
+    # Connect to the Azure storage account using identity auth
+    logging.info("Connecting to the Azure storage account.")
+    blob_service_client = BlobServiceClient(
+        account_url=STORAGE_ACCOUNT_ENDPOINT, credential=credential
+    )
+# Connect to CosmosDB using identity auth (this requires a role assignment for
+# the current identity)
 cosmos_client = CosmosClient(url=COSMOSDB_ACCOUNT_ENDPOINT, credential=credential)
 
 # Set authentication values based on the environment variables, defaulting to auth enabled
