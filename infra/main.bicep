@@ -24,7 +24,7 @@ param webAppPassword string
 param resourcePrefix string = 'llm-proc'
 
 @description('An additional identity ID to assign storage & CosmosDB access roles to. You can use this to give storage access to your developer identity.')
-param additionalRoleAssignmentIdentityId string = ''
+param additionalRoleAssignmentIdentityIds array = []
 
 @description('The name of the default Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
 param storageAccountName string = 'llmprocstorage'
@@ -213,7 +213,7 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
           kind: 'Hash'
         }
         indexingPolicy: {
-          indexingMode: 'lazy'
+          indexingMode: 'consistent'
           automatic: true
         }
         defaultTtl: -1
@@ -580,25 +580,29 @@ module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
 }
 
 // Additional role assignments (if provided)
-module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment.bicep' = if (additionalRoleAssignmentIdentityId != '') {
-  name: 'additionalIdentityStorageRoleAssignments'
-  scope: resourceGroup()
-  params: {
-    storageAccountName: storageAccount.name
-    identityId: additionalRoleAssignmentIdentityId
-    roleDefintionIds: storageRoleDefinitionIds
-  }
-}
 
-module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = if (additionalRoleAssignmentIdentityId != '') {
-  name: 'additionalIdentityCosmosDbRoleAssignment'
-  scope: resourceGroup()
-  params: {
-    accountName: cosmosDbAccount.name
-    identityId: additionalRoleAssignmentIdentityId
-    roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
+module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment.bicep' = [
+  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
+    name: 'StorageRoleAssignments-${additionalRoleAssignmentIdentityId}'
+    scope: resourceGroup()
+    params: {
+      storageAccountName: storageAccount.name
+      identityId: additionalRoleAssignmentIdentityId
+      roleDefintionIds: storageRoleDefinitionIds
+    }
   }
-}
+]
+module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = [
+  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
+    name: 'CosmosDbRoleAssignment-${additionalRoleAssignmentIdentityId}'
+    scope: resourceGroup()
+    params: {
+      accountName: cosmosDbAccount.name
+      identityId: additionalRoleAssignmentIdentityId
+      roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
+    }
+  }
+]
 
 output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = webApp.properties.defaultHostName

@@ -839,7 +839,7 @@ with gr.Blocks(
         sum_text_block.render()
     with gr.Tab("City Names Extraction, Doc Intel (HTTP)"):
         di_llm_ext_names_block.render()
-    with gr.Tab("City Names Extraction, PyMuPDF (HTTP))"):
+    with gr.Tab("City Names Extraction, PyMuPDF (HTTP)"):
         local_pdf_prc_block.render()
     with gr.Tab("Doc Intelligence Only (HTTP)"):
         di_only_block.render()
