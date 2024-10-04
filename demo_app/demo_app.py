@@ -370,6 +370,7 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
             # Return status code, time taken and the first item from the list (it should only have one item)
             return (200, client_side_time_taken, items[0])
         except Exception as e:
+            logging.exception("Error occurred during blob upload and CosmosDB query.")
             # Ensure the blob is deleted from storage if an error occurs
             try:
                 blob_client.delete_blob()
