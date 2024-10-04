@@ -32,6 +32,7 @@ from src.components.doc_intelligence import (
     convert_element_heirarchy_to_incremental_numbering,
     get_element_heirarchy_mapper,
     get_section_heirarchy,
+    substitute_content_formulas,
 )
 
 
@@ -533,3 +534,56 @@ class TestTableFormatConfig:
         print(result)
         print(expected)
         assert result == expected
+
+
+@pytest.mark.parametrize(
+    "content,matching_formulas,expected",
+    [
+        ["", [], ""],
+        ["rest of string", [], "rest of string"],
+        [
+            ":formula: rest of string",
+            [
+                DocumentFormula(
+                    value="\\left( \\beta \\% = 8 0 \\% \\right.",
+                    span=DocumentSpan(offset=0, length=8),
+                )
+            ],
+            "\\left( \\beta \\% = 8 0 \\% \\right. rest of string",
+        ],
+        [
+            ":formula: rest :formula: of string",
+            [
+                DocumentFormula(
+                    value="\\left( \\beta \\% = 8 0 \\% \\right.",
+                    span=DocumentSpan(offset=0, length=8),
+                ),
+                DocumentFormula(
+                    value="second substitution", span=DocumentSpan(offset=15, length=8)
+                ),
+            ],
+            "\\left( \\beta \\% = 8 0 \\% \\right. rest second substitution of string",
+        ],
+        [
+            ":formula: rest :formula: of string :formula:",
+            [
+                DocumentFormula(
+                    value="\\left( \\beta \\% = 8 0 \\% \\right.",
+                    span=DocumentSpan(offset=0, length=8),
+                ),
+                DocumentFormula(
+                    value="second substitution", span=DocumentSpan(offset=15, length=8)
+                ),
+                DocumentFormula(
+                    value="final substitution", span=DocumentSpan(offset=30, length=8)
+                ),
+            ],
+            "\\left( \\beta \\% = 8 0 \\% \\right. rest second substitution of string final substitution",
+        ],
+    ],
+)
+def test_substitute_content_formulas(content, matching_formulas, expected):
+    result = substitute_content_formulas(content, matching_formulas)
+    print(result)
+    print(expected)
+    assert result == expected

@@ -4,6 +4,7 @@ import io
 import itertools
 import logging
 import os
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
@@ -16,23 +17,28 @@ import pandas as pd
 import PIL
 import PIL.Image as Image
 import requests
-from azure.ai.documentintelligence._model_base import \
-    Model as DocumentModelBase
+from azure.ai.documentintelligence._model_base import Model as DocumentModelBase
 from azure.ai.documentintelligence._model_base import rest_field
-from azure.ai.documentintelligence.models import (AnalyzeResult, Document,
-                                                  DocumentBarcode,
-                                                  DocumentFigure,
-                                                  DocumentFootnote,
-                                                  DocumentFormula,
-                                                  DocumentKeyValueElement,
-                                                  DocumentLanguage,
-                                                  DocumentLine, DocumentList,
-                                                  DocumentPage,
-                                                  DocumentParagraph,
-                                                  DocumentSection,
-                                                  DocumentSelectionMark,
-                                                  DocumentSpan, DocumentTable,
-                                                  DocumentWord, ParagraphRole)
+from azure.ai.documentintelligence.models import (
+    AnalyzeResult,
+    Document,
+    DocumentBarcode,
+    DocumentFigure,
+    DocumentFootnote,
+    DocumentFormula,
+    DocumentKeyValueElement,
+    DocumentLanguage,
+    DocumentLine,
+    DocumentList,
+    DocumentPage,
+    DocumentParagraph,
+    DocumentSection,
+    DocumentSelectionMark,
+    DocumentSpan,
+    DocumentTable,
+    DocumentWord,
+    ParagraphRole,
+)
 from fitz import Page as PyMuPDFPage
 from haystack.dataclasses import ByteStream as HaystackByteStream
 from haystack.dataclasses import Document as HaystackDocument
@@ -137,6 +143,63 @@ def get_formulas_in_spans(
             [formula for formula in all_formulas if is_span_in_span(formula.span, span)]
         )
     return matching_formulas
+
+
+def substitute_content_formulas(
+    content: str, matching_formulas: list[DocumentFormula]
+) -> str:
+    """
+    Substitute formulas in the content with their actual values.
+
+    :param content: The content to substitute formulas in.
+    :type content: str
+    :param matching_formulas: The formulas to substitute.
+    :type matching_formulas: list[DocumentFormula]
+    :returns: The content with the formulas substituted.
+    :rtype: str
+    """
+    # Get all string indices of :formula: in the content
+    match_bounds = [
+        (match.start(), match.end()) for match in re.finditer(r":formula:", content)
+    ]
+    if not len(match_bounds) == len(matching_formulas):
+        raise ValueError(
+            "The number of formulas to substitute does not match the number of :formula: placeholders in the content."
+        )
+    # Regex may throw issues with certain characters (e.g. double backslashes), so do the replacement manually
+    new_content = ""
+    last_idx = 0
+    for match_bounds, matching_formula in zip(match_bounds, matching_formulas):
+        if match_bounds[0] == last_idx:
+            new_content += matching_formula.value
+            last_idx = match_bounds[1]
+        else:
+            new_content += content[last_idx : match_bounds[0]]
+            new_content += matching_formula.value
+            last_idx = match_bounds[1]
+    new_content += content[last_idx:]
+    return new_content
+
+
+def replace_content_formulas(
+    content: str, content_spans: List[DocumentSpan], all_formulas: List[DocumentFormula]
+) -> str:
+    """
+    Replace formulas in the content with their actual values.
+
+    :param content: The content to replace formulas in.
+    :type content: str
+    :param content_spans: The spans of the content.
+    :type content_spans: List[DocumentSpan]
+    :param all_formulas: A list of all formulas in the document.
+    :type all_formulas: List[DocumentFormula]
+    :returns: The content with the formulas replaced.
+    :rtype: str
+    """
+    if ":formula:" in content:
+        matching_formulas = get_formulas_in_spans(all_formulas, content_spans)
+        return substitute_content_formulas(content, matching_formulas)
+    return content
 
 
 def crop_img(img: PIL.Image.Image, crop_poly: list[float]) -> PIL.Image.Image:
@@ -769,13 +832,32 @@ def order_element_info_list(
     )
 
 
-class DocumentElementExporterBase(ABC):
+class SelectionMarkFormatter(ABC):
+    @abstractmethod
+    def format_content(self, content: str) -> str:
+        pass
+
+
+class DefaultSelectionMarkFormatter(SelectionMarkFormatter):
+    def __init__(
+        self, selected_replacement: str = "[X]", unselected_replacement: str = "[ ]"
+    ):
+        self._selected_replacement = selected_replacement
+        self._unselected_replacement = unselected_replacement
+
+    def format_content(self, content: str) -> str:
+        return content.replace(":selected:", self._selected_replacement).replace(
+            ":unselected:", self._unselected_replacement
+        )
+
+
+class DocumentElementProcessor(ABC):
 
     expected_element = None
 
     def _validate_element_type(self, element_info: ElementInfo):
         if not self.expected_element:
-            raise ValueError("expected_element has not been set for this exporter.")
+            raise ValueError("expected_element has not been set for this processor.")
 
         if not isinstance(element_info.element, self.expected_element):
             raise ValueError(
@@ -798,7 +880,65 @@ class DocumentElementExporterBase(ABC):
         return any([placeholder in format_str for placeholder in expected_placeholders])
 
 
-class DocumentPageExporterBase(DocumentElementExporterBase):
+class DocumentSectionProcessor(DocumentElementProcessor):
+
+    expected_element = DocumentSection
+
+    @abstractmethod
+    def convert_section(
+        self,
+        element_info: ElementInfo,
+    ) -> List[HaystackDocument]:
+        """
+        Method for processing section elements.
+        """
+        pass
+
+
+class DefaultDocumentSectionProcessor(DocumentSectionProcessor):
+
+    def __init__(
+        self,
+        text_format: Optional[str] = "Section: {section_incremental_id}",
+        max_depth: Optional[int] = 3,
+    ):
+        self.text_format = text_format
+        # If max_depth is None, ensure it is set to a high number
+        if max_depth < 0:
+            raise ValueError("max_depth must be a positive integer or None.")
+        self.max_depth = max_depth if max_depth is not None else 999
+
+    def convert_section(
+        self,
+        element_info: ElementInfo,
+    ) -> List[HaystackDocument]:
+        self._validate_element_type(element_info)
+        # Section incremental ID can be empty for the first section representing
+        # the entire document. Only output text if values exist
+        if self.text_format and element_info.section_heirarchy_incremental_id:
+            section_incremental_id_text = ".".join(
+                str(i)
+                for i in element_info.section_heirarchy_incremental_id[: self.max_depth]
+            )
+            formatted_text = self.text_format.format(
+                section_incremental_id=section_incremental_id_text
+            )
+            formatted_if_null = self.text_format.format(section_incremental_id="")
+            if formatted_text != formatted_if_null:
+                return [
+                    HaystackDocument(
+                        id=f"{element_info.element_id}",
+                        content=formatted_text,
+                        meta={
+                            "element_id": element_info.element_id,
+                            "page_number": element_info.start_page_number,
+                        },
+                    )
+                ]
+        return list()
+
+
+class DocumentPageProcessor(DocumentElementProcessor):
 
     expected_element = DocumentPage
 
@@ -821,7 +961,7 @@ class DocumentPageExporterBase(DocumentElementExporterBase):
         pass
 
 
-class DefaultDocumentPageExporter(DocumentPageExporterBase):
+class DefaultDocumentPageProcessor(DocumentPageProcessor):
 
     expected_format_placeholders = ["{page_number}"]
 
@@ -936,19 +1076,33 @@ class DefaultDocumentPageExporter(DocumentPageExporterBase):
         return list()
 
 
-class DocumentParagraphExporterBase(DocumentElementExporterBase):
+class DocumentParagraphProcessor(DocumentElementProcessor):
 
     expected_element = DocumentParagraph
 
     @abstractmethod
-    def convert_paragraph(self, element_info: ElementInfo) -> List[HaystackDocument]:
+    def convert_paragraph(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
+    ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
         """
         pass
 
 
-class DefaultDocumentParagraphExporter(DocumentParagraphExporterBase):
+def get_heading_hashes(section_heirarchy: Optional[tuple[int]]) -> str:
+    if section_heirarchy:
+        return "#" * len(section_heirarchy)
+    return ""
+
+
+class DefaultDocumentParagraphProcessor(DocumentParagraphProcessor):
+
+    expected_format_placeholders = ["{content}", "{heading_hashes}"]
+
     def __init__(
         self,
         general_text_format: Optional[str] = "{content}",
@@ -957,6 +1111,7 @@ class DefaultDocumentParagraphExporter(DocumentParagraphExporterBase):
         title_format: Optional[str] = "\nTitle: {content}\n",
         section_heading_format: Optional[str] = "\nSection heading: {content}\n",
         footnote_format: Optional[str] = "Footnote: {content}",
+        formula_format: Optional[str] = "Formula: {content}",
         page_number_format: Optional[str] = None,
     ):
         self.paragraph_format_mapper = {
@@ -966,17 +1121,45 @@ class DefaultDocumentParagraphExporter(DocumentParagraphExporterBase):
             ParagraphRole.TITLE: title_format,
             ParagraphRole.SECTION_HEADING: section_heading_format,
             ParagraphRole.FOOTNOTE: footnote_format,
+            ParagraphRole.FORMULA_BLOCK: formula_format,
             ParagraphRole.PAGE_NUMBER: page_number_format,
         }
 
-    def convert_paragraph(self, element_info: ElementInfo) -> List[HaystackDocument]:
+    def convert_paragraph(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
+    ) -> List[HaystackDocument]:
         self._validate_element_type(element_info)
         format_mapper = self.paragraph_format_mapper[element_info.element.role]
+        heading_hashes = get_heading_hashes(
+            element_info.section_heirarchy_incremental_id
+        )
+        content = replace_content_formulas(
+            element_info.element.content, element_info.element.spans, all_formulas
+        )
+        content = selection_mark_formatter.format_content(content)
         if format_mapper:
+            formatted_text = format_mapper.format(
+                heading_hashes=heading_hashes, content=content
+            )
+            formatted_if_null = format_mapper.format(heading_hashes="", content="")
+            if formatted_text != formatted_if_null:
+                return [
+                    HaystackDocument(
+                        id=f"{element_info.element_id}",
+                        content=formatted_text,
+                        meta={
+                            "element_id": element_info.element_id,
+                            "page_number": element_info.start_page_number,
+                        },
+                    )
+                ]
             return [
                 HaystackDocument(
                     id=f"{element_info.element_id}",
-                    content=format_mapper.format(content=element_info.element.content),
+                    content=format_mapper.format(content=content),
                     meta={
                         "element_id": element_info.element_id,
                         "page_number": element_info.start_page_number,
@@ -986,19 +1169,24 @@ class DefaultDocumentParagraphExporter(DocumentParagraphExporterBase):
         return list()
 
 
-class DocumentLineExporterBase(DocumentElementExporterBase):
+class DocumentLineProcessor(DocumentElementProcessor):
 
     expected_element = DocumentLine
 
     @abstractmethod
-    def convert_line(self, element_info: ElementInfo) -> List[HaystackDocument]:
+    def convert_line(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
+    ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
         """
         pass
 
 
-class DefaultDocumentLineExporter(DocumentLineExporterBase):
+class DefaultDocumentLineProcessor(DocumentLineProcessor):
 
     def __init__(
         self,
@@ -1006,20 +1194,25 @@ class DefaultDocumentLineExporter(DocumentLineExporterBase):
     ):
         self.text_format = text_format
 
-    def convert_line(self, element_info: ElementInfo) -> List[HaystackDocument]:
+    def convert_line(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
+    ) -> List[HaystackDocument]:
         self._validate_element_type(element_info)
+        content = replace_content_formulas(
+            element_info.element.content, element_info.element.spans, all_formulas
+        )
+        content = selection_mark_formatter.format_content(content)
         if self.text_format:
-            formatted_text = self.text_format.format(
-                content=element_info.element.content
-            )
+            formatted_text = self.text_format.format(content=content)
             formatted_if_null = self.text_format.format(content="")
             if formatted_text != formatted_if_null:
                 return [
                     HaystackDocument(
                         id=f"{element_info.element_id}",
-                        content=self.text_format.format(
-                            content=element_info.element.content
-                        ),
+                        content=formatted_text,
                         meta={
                             "element_id": element_info.element_id,
                             "page_number": element_info.start_page_number,
@@ -1029,19 +1222,24 @@ class DefaultDocumentLineExporter(DocumentLineExporterBase):
         return list()
 
 
-class DocumentWordExporterBase(DocumentElementExporterBase):
+class DocumentWordProcessor(DocumentElementProcessor):
 
     expected_element = DocumentWord
 
     @abstractmethod
-    def convert_word(self, element_info: ElementInfo) -> List[HaystackDocument]:
+    def convert_word(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
+    ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
         """
         pass
 
 
-class DefaultDocumentWordExporter(DocumentWordExporterBase):
+class DefaultDocumentWordProcessor(DocumentWordProcessor):
 
     def __init__(
         self,
@@ -1049,20 +1247,25 @@ class DefaultDocumentWordExporter(DocumentWordExporterBase):
     ):
         self.text_format = text_format
 
-    def convert_word(self, element_info: ElementInfo) -> List[HaystackDocument]:
+    def convert_word(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
+    ) -> List[HaystackDocument]:
         self._validate_element_type(element_info)
+        content = replace_content_formulas(
+            element_info.element.content, [element_info.element.span], all_formulas
+        )
+        content = selection_mark_formatter.format_content(content)
         if self.text_format:
-            formatted_text = self.text_format.format(
-                content=element_info.element.content
-            )
+            formatted_text = self.text_format.format(content=content)
             formatted_if_null = self.text_format.format(content="")
             if formatted_text != formatted_if_null:
                 return [
                     HaystackDocument(
                         id=f"{element_info.element_id}",
-                        content=self.text_format.format(
-                            content=element_info.element.content
-                        ),
+                        content=self.text_format.format(content=content),
                         meta={
                             "element_id": element_info.element_id,
                             "page_number": element_info.start_page_number,
@@ -1072,13 +1275,16 @@ class DefaultDocumentWordExporter(DocumentWordExporterBase):
         return list()
 
 
-class DocumentTableExporterBase(DocumentElementExporterBase):
+class DocumentTableProcessor(DocumentElementProcessor):
 
     expected_element = DocumentTable
 
     @abstractmethod
     def convert_table(
-        self, element_info: ElementInfo, all_formulas: List[DocumentFormula]
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
     ) -> List[HaystackDocument]:
         """
         Method for exporting table elements.
@@ -1086,7 +1292,7 @@ class DocumentTableExporterBase(DocumentElementExporterBase):
         pass
 
 
-class DefaultDocumentTableExporter(DocumentTableExporterBase):
+class DefaultDocumentTableProcessor(DocumentTableProcessor):
 
     expected_format_placeholders = ["{table_number}", "{caption}", "{footnotes}"]
 
@@ -1099,7 +1305,10 @@ class DefaultDocumentTableExporter(DocumentTableExporterBase):
         self.after_table_text_formats = after_table_text_formats
 
     def convert_table(
-        self, element_info: ElementInfo, all_formulas: List[DocumentFormula]
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
     ) -> List[HaystackDocument]:
         self._validate_element_type(element_info)
         outputs: List[HaystackDocument] = list()
@@ -1111,6 +1320,8 @@ class DefaultDocumentTableExporter(DocumentTableExporterBase):
             outputs.extend(
                 self._export_table_text(
                     element_info,
+                    all_formulas,
+                    selection_mark_formatter,
                     f"{element_info.element_id}_before_table_text",
                     self.before_table_text_formats,
                     meta,
@@ -1118,7 +1329,7 @@ class DefaultDocumentTableExporter(DocumentTableExporterBase):
             )
         # Convert table content
         table_md, table_df = self._convert_table_content(
-            element_info.element, all_formulas
+            element_info.element, all_formulas, selection_mark_formatter
         )
         outputs.append(
             HaystackDocument(
@@ -1132,6 +1343,8 @@ class DefaultDocumentTableExporter(DocumentTableExporterBase):
             outputs.extend(
                 self._export_table_text(
                     element_info,
+                    all_formulas,
+                    selection_mark_formatter,
                     f"{element_info.element_id}_after_table_text",
                     self.after_table_text_formats,
                     meta,
@@ -1143,20 +1356,34 @@ class DefaultDocumentTableExporter(DocumentTableExporterBase):
     def _export_table_text(
         self,
         element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
         id: str,
         text_formats: List[str],
         meta: Dict[str, Any],
     ) -> List[HaystackDocument]:
         table_number_text = get_element_number(element_info)
         caption_text = (
-            element_info.element.caption.content if element_info.element.caption else ""
-        )
-        if element_info.element.footnotes:
-            footnotes_text = "\n".join(
-                [footnote.content for footnote in element_info.element.footnotes]
+            selection_mark_formatter.format_content(
+                replace_content_formulas(
+                    element_info.element.caption.content,
+                    element_info.element.caption.spans,
+                    all_formulas,
+                )
             )
-        else:
-            footnotes_text = ""
+            if element_info.element.caption
+            else ""
+        )
+        footnotes_text = selection_mark_formatter.format_content(
+            "\n".join(
+                [
+                    replace_content_formulas(
+                        footnote.content, footnote.spans, all_formulas
+                    )
+                    for footnote in element_info.element.footnotes or []
+                ]
+            )
+        )
         output_strings = list()
         for format in text_formats:
             has_format_placeholders = self._format_str_contains_placeholders(
@@ -1181,7 +1408,10 @@ class DefaultDocumentTableExporter(DocumentTableExporterBase):
         return list()
 
     def _convert_table_content(
-        self, table: DocumentTable, all_formulas: List[DocumentFormula]
+        self,
+        table: DocumentTable,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
     ) -> tuple[str, pd.DataFrame]:
         sorted_cells = sorted(
             table.cells, key=lambda cell: (cell.row_index, cell.column_index)
@@ -1196,35 +1426,39 @@ class DefaultDocumentTableExporter(DocumentTableExporterBase):
             if cell.kind == "rowHeader":
                 num_index_cols = max(num_index_cols, cell.column_index + 1)
             # Get text content
-            cell_content = cell.content
-            if ":formula:" in cell_content:
-                matched_formula = get_formula(all_formulas, cell.spans[0])
-                cell_content = cell_content.replace(":formula:", matched_formula.value)
-            cell_content = cell_content.replace(":selected:", "").replace(
-                ":unselected:", ""
+            cell_content = selection_mark_formatter.format_content(
+                replace_content_formulas(cell.content, cell.spans, all_formulas)
             )
             cell_dict[cell.row_index].append(cell_content)
         table_df = pd.DataFrame.from_dict(cell_dict, orient="index")
         # Set index and columns
         if num_index_cols > 0:
             table_df.set_index(list(range(0, num_index_cols)), inplace=True)
+        table_df = table_df.T
         if num_header_rows > 0:
-            table_df = table_df.T
             table_df.set_index(list(range(0, num_header_rows)), inplace=True)
-            table_df = table_df.T
+        else:
+            # Set index to first column
+            table_df.set_index(0, inplace=True)
+        table_df = table_df.T
         index = num_index_cols > 0
         table_fmt = "github" if num_header_rows > 0 else "rounded_grid"
         table_md = table_df.to_markdown(index=index, tablefmt=table_fmt)
         return table_md, table_df
 
 
-class DocumentFigureExporterBase(DocumentElementExporterBase):
+class DocumentFigureProcessor(DocumentElementProcessor):
 
     expected_element = DocumentFigure
 
     @abstractmethod
     def convert_figure(
-        self, element_info: ElementInfo, page_img: Image.Image
+        self,
+        element_info: ElementInfo,
+        page_img: Image.Image,
+        di_result: AnalyzeResult,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
     ) -> List[HaystackDocument]:
         """
         Method for exporting figure elements.
@@ -1236,7 +1470,7 @@ def get_element_number(element_info: ElementInfo) -> str:
     return str(int(element_info.element_id.split("/")[-1]) + 1)
 
 
-class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
+class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
 
     expected_format_placeholders = [
         "{figure_number}",
@@ -1252,14 +1486,21 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
             "Figure Content:\n{content}",
         ],
         output_figure_img: bool = True,
+        figure_img_text_format: Optional[str] = "\nFigure Image:",
         after_figure_text_formats: Optional[List[str]] = ["Footnotes: {footnotes}"],
     ):
         self.before_figure_text_formats = before_figure_text_formats
         self.output_figure_img = output_figure_img
+        self.figure_img_text_format = figure_img_text_format
         self.after_figure_text_formats = after_figure_text_formats
 
     def convert_figure(
-        self, element_info: ElementInfo, page_img: Image.Image, di_result: AnalyzeResult
+        self,
+        element_info: ElementInfo,
+        page_img: Image.Image,
+        di_result: AnalyzeResult,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
     ) -> List[HaystackDocument]:
         self._validate_element_type(element_info)
         page_numbers = list(
@@ -1281,6 +1522,8 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
                 self._export_figure_text(
                     element_info,
                     di_result,
+                    all_formulas,
+                    selection_mark_formatter,
                     f"{element_info.element_id}_before_figure_text",
                     self.before_figure_text_formats,
                     meta,
@@ -1291,10 +1534,22 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
             figure_img = self.convert_figure_to_img(
                 element_info.element, page_img, page_element
             )
+            figure_img_text_docs = self._export_figure_text(
+                element_info,
+                di_result,
+                all_formulas,
+                selection_mark_formatter,
+                id="NOT_REQUIRED",
+                text_formats=[self.figure_img_text_format],
+                meta={},
+            )
+            figure_img_text = (
+                figure_img_text_docs[0].content if figure_img_text_docs else ""
+            )
             outputs.append(
                 HaystackDocument(
                     id=f"{element_info.element_id}_img",
-                    content=f"\nFigure {get_element_number(element_info)} Image:",
+                    content=figure_img_text,
                     blob=HaystackByteStream(
                         data=pil_img_to_base64(figure_img),
                         mime_type="image/jpeg",
@@ -1307,6 +1562,8 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
                 self._export_figure_text(
                     element_info,
                     di_result,
+                    all_formulas,
+                    selection_mark_formatter,
                     f"{element_info.element_id}_after_figure_text",
                     self.after_figure_text_formats,
                     meta,
@@ -1319,23 +1576,40 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
         self,
         element_info: ElementInfo,
         di_result: AnalyzeResult,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
         id: str,
         text_formats: List[str],
         meta: Dict[str, Any],
     ) -> List[HaystackDocument]:
         figure_number_text = get_element_number(element_info)
-        caption_text = (
-            element_info.element.caption if element_info.element.caption else ""
+        caption_text = selection_mark_formatter.format_content(
+            replace_content_formulas(
+                element_info.element.caption.content,
+                element_info.element.caption.spans,
+                all_formulas,
+            )
+            if element_info.element.caption
+            else ""
         )
         if element_info.element.footnotes:
-            footnotes_text = "\n".join(
-                [footnote.content for footnote in element_info.element.footnotes]
+            footnotes_text = selection_mark_formatter.format_content(
+                "\n".join(
+                    [
+                        replace_content_formulas(
+                            footnote.content, footnote.spans, all_formulas
+                        )
+                        for footnote in element_info.element.footnotes
+                    ]
+                )
             )
         else:
             footnotes_text = ""
         # Get text content only if it is necessary (it is a slow operation)
-        content_text = (
-            self._get_figure_text_content(element_info.element, di_result)
+        content_text = selection_mark_formatter.format_content(
+            self._get_figure_text_content(
+                element_info.element, di_result, all_formulas, selection_mark_formatter
+            )
             if any("{content}" in format for format in text_formats)
             else ""
         )
@@ -1367,7 +1641,11 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
         return list()
 
     def _get_figure_text_content(
-        self, figure_element: DocumentFigure, di_result: AnalyzeResult
+        self,
+        figure_element: DocumentFigure,
+        di_result: AnalyzeResult,
+        all_formulas: List[DocumentFormula],
+        selection_mark_formatter: SelectionMarkFormatter,
     ) -> str:
         # Identify figure content spans
         caption_spans = figure_element.caption.spans if figure_element.caption else []
@@ -1409,7 +1687,13 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
                     if current_line_strings:
                         output_line_strings.append(" ".join(current_line_strings))
                         current_line_strings = list()
-                    output_line_strings.append(para.content)
+                    output_line_strings.append(
+                        selection_mark_formatter.format_content(
+                            replace_content_formulas(
+                                para.content, para.spans, all_formulas
+                            )
+                        )
+                    )
             if span_perfect_match:
                 continue
             for page_number in figure_page_numbers:
@@ -1437,7 +1721,13 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
                         if current_line_strings:
                             output_line_strings.append(" ".join(current_line_strings))
                             current_line_strings = list()
-                        output_line_strings.append(line.content)
+                        output_line_strings.append(
+                            selection_mark_formatter.format_content(
+                                replace_content_formulas(
+                                    line.content, line.spans, all_formulas
+                                )
+                            )
+                        )
                 if span_perfect_match:
                     continue
                 # print("WORDS - page {}".format(page_number))
@@ -1456,7 +1746,13 @@ class DefaultDocumentFigureExporter(DocumentFigureExporterBase):
                     span_perfect_match = word.span == content_span
                     if span_perfect_match or is_span_in_span(word.span, content_span):
                         # print("word match")
-                        current_line_strings.append(word.content)
+                        current_line_strings.append(
+                            selection_mark_formatter.format_content(
+                                replace_content_formulas(
+                                    word.content, [word.span], all_formulas
+                                )
+                            )
+                        )
             if current_line_strings:
                 output_line_strings.append(" ".join(current_line_strings))
                 current_line_strings = list()
