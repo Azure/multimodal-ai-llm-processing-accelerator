@@ -455,7 +455,6 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
     properties: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
-      AzureWebJobsStorage: storageAccountConnectionString // Cannot use key vault reference here
       AzureWebJobsStorage__credential: 'managedIdentity'
       AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.core.windows.net'
       AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.core.windows.net'
