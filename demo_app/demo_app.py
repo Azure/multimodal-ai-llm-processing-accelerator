@@ -11,15 +11,20 @@ import fitz
 import gradio as gr
 import requests
 from azure.cosmos import CosmosClient
+from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 from PIL import Image
 
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.INFO,
     format="%(asctime)s:%(levelname)s:%(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+# Reduce Azure SDK logging level
+_logger = logging.getLogger("azure.core")
+_logger.setLevel(logging.WARNING)
 
 load_dotenv()
 
@@ -28,15 +33,38 @@ load_dotenv()
 FUNCTION_HOSTNAME = os.getenv("FUNCTION_HOSTNAME", "http://localhost:7071/")
 FUNCTION_KEY = os.getenv("FUNCTION_KEY", "")
 FUNCTION_ENDPOINT = os.path.join(FUNCTION_HOSTNAME, "api")
+
+# Create clients for Azure services. If connecting to Azure resources, ensure
+# the current Azure identity has the necessary permissions to access the
+# storage & cosmosDB accounts.
+# You can set the `additionalRoleAssignmentIdentityIds` property when deploying
+# the solution to grant the necessary permissions to the logged-in user. See
+# the README for more info.
+USE_LOCAL_STORAGE_EMULATOR = os.getenv("USE_LOCAL_STORAGE_EMULATOR", "false") == "true"
+LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING = os.getenv(
+    "LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING"
+)
+STORAGE_ACCOUNT_ENDPOINT = os.getenv("STORAGE_ACCOUNT_ENDPOINT")
+COSMOSDB_ACCOUNT_ENDPOINT = os.getenv("COSMOSDB_ACCOUNT_ENDPOINT")
 COSMOSDB_DATABASE_NAME = os.getenv("COSMOSDB_DATABASE_NAME")
 
-# Create clients for Azure services
-blob_service_client = BlobServiceClient.from_connection_string(
-    conn_str=os.getenv("LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING")
-)
-cosmos_client = CosmosClient.from_connection_string(
-    conn_str=os.getenv("COSMOSDB_ACCOUNT_CONNECTION_STRING")
-)
+credential = DefaultAzureCredential()
+
+if USE_LOCAL_STORAGE_EMULATOR:
+    # Connect to the local development storage account emulator using a connection string
+    logging.info("Connecting to the local development storage account emulator.")
+    blob_service_client = BlobServiceClient.from_connection_string(
+        LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING
+    )
+else:
+    # Connect to the Azure storage account using identity auth
+    logging.info("Connecting to the Azure storage account.")
+    blob_service_client = BlobServiceClient(
+        account_url=STORAGE_ACCOUNT_ENDPOINT, credential=credential
+    )
+# Connect to CosmosDB using identity auth (this requires a role assignment for
+# the current identity)
+cosmos_client = CosmosClient(url=COSMOSDB_ACCOUNT_ENDPOINT, credential=credential)
 
 # Set authentication values based on the environment variables, defaulting to auth enabled
 WEB_APP_USE_PASSWORD_AUTH = (
@@ -342,6 +370,7 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
             # Return status code, time taken and the first item from the list (it should only have one item)
             return (200, client_side_time_taken, items[0])
         except Exception as e:
+            logging.exception("Error occurred during blob upload and CosmosDB query.")
             # Ensure the blob is deleted from storage if an error occurs
             try:
                 blob_client.delete_blob()
@@ -418,28 +447,25 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
 with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
     # Define requesting function, which reshapes the input into the correct schema
     def cc_audio_upload(file: str, transcription_method: str):
+        if file is None:
+            gr.Warning(
+                "Please select or upload an audio file, then click 'Process File'."
+            )
+            return ("", "", {})
         # Get response from the API
-        try:
-            with open(file, "rb") as f:
-                payload = {"method": transcription_method}
-                files = {
-                    "audio": (file, f, "audio/wav"),
-                    "json": ("payload.json", json.dumps(payload), "application/json"),
-                }
+        with open(file, "rb") as f:
+            payload = {"method": transcription_method}
+            files = {
+                "audio": (file, f, "audio/wav"),
+                "json": ("payload.json", json.dumps(payload), "application/json"),
+            }
 
-                request_outputs = send_request(
-                    route="call_center_audio_analysis",
-                    files=files,
-                    force_json_content_type=True,  # JSON gradio block requires this
-                )
-            return request_outputs
-        except TypeError as e:
-            if "expected str, bytes or os.PathLike object" in str(e):
-                gr.Error(
-                    "Audio selection/upload failed - please try again and wait until the preview is fully loaded prior to clicking the 'Process Audio' button."
-                )
-            else:
-                raise e
+            request_outputs = send_request(
+                route="call_center_audio_analysis",
+                files=files,
+                force_json_content_type=True,  # JSON gradio block requires this
+            )
+        return request_outputs
 
     # Input components
     cc_audio_proc_instructions = gr.Markdown(
@@ -811,7 +837,7 @@ with gr.Blocks(
         sum_text_block.render()
     with gr.Tab("City Names Extraction, Doc Intel (HTTP)"):
         di_llm_ext_names_block.render()
-    with gr.Tab("City Names Extraction, PyMuPDF (HTTP))"):
+    with gr.Tab("City Names Extraction, PyMuPDF (HTTP)"):
         local_pdf_prc_block.render()
     with gr.Tab("Doc Intelligence Only (HTTP)"):
         di_only_block.render()

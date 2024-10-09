@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 .vscode/*
 *.DS_Store
+*__azurite*
+*__blobstorage__*
+*__queuestorage__*
 
 # C extensions
 *.so

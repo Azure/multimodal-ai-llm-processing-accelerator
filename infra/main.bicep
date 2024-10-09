@@ -23,8 +23,11 @@ param webAppPassword string
 @description('The prefix to use for all resources except the function and web apps')
 param resourcePrefix string = 'llm-proc'
 
-@description('The name of the Blob Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
-param blobStorageAccountName string = 'llmprocstorage'
+@description('An additional identity ID to assign storage & CosmosDB access roles to. You can use this to give storage access to your developer identity.')
+param additionalRoleAssignmentIdentityIds array = []
+
+@description('The name of the default Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
+param storageAccountName string = 'llmprocstorage'
 
 @description('The name of the default blob storage containers to be created')
 param blobContainerNames array = ['blob-form-to-cosmosdb-blobs']
@@ -70,7 +73,6 @@ param resourceToken string = take(toLower(uniqueString(subscription().id, resour
 param tags object = {}
 param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
-param cosmosDbConnectionStringSecretName string = 'cosmosdb-connection-string'
 param storageConnectionStringSecretName string = 'storage-connection-string'
 param aoaiKeyKvSecretName string = 'aoai-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
@@ -78,6 +80,7 @@ param speechKeyKvSecretName string = 'speech-api-key'
 param funcAppKeyKvSecretName string = 'func-api-key'
 param appInsightsInstrumentationKeyKvSecretName string = 'appins-instrumentation-key'
 
+// Set function app settings based on the deployment type. 
 var functionAppSkuProperties = functionAppUsePremiumSku
   ? {
       name: 'P0v3'
@@ -93,6 +96,11 @@ var functionAppSkuProperties = functionAppUsePremiumSku
       family: 'Y'
       capacity: 0
     }
+// The current version of this repo requires key-based storage account access to load the function app package.
+// In a future version, containers will be used, enabling full identity-based access to the storage account.
+var functionAppConsumptionSettings = ((!functionAppUsePremiumSku)
+  ? { AzureWebJobsStorage: storageAccountConnectionString }
+  : {})
 
 var deployOpenAILLMModel = (openAILLMDeploymentCapacity > 0)
 var deployOpenAIWhisperModel = (openAIWhisperDeploymentCapacity > 0)
@@ -101,7 +109,7 @@ var functionAppTokenName = appendUniqueUrlSuffix
   ? toLower('${functionAppName}-${resourceToken}')
   : toLower(functionAppName)
 var webAppTokenName = appendUniqueUrlSuffix ? toLower('${webAppName}-${resourceToken}') : toLower(webAppName)
-var blobStorageAccountTokenName = toLower('${blobStorageAccountName}${resourceToken}')
+var storageAccountTokenName = toLower('${storageAccountName}${resourceToken}')
 var cosmosDbAccountTokenName = toLower('${resourcePrefix}-cosmosdb-${resourceToken}')
 var functionAppPlanTokenName = toLower('${functionAppName}-plan-${resourceToken}')
 var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
@@ -115,10 +123,10 @@ var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToke
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
 
 //
-// Blob Storage (the storage account is required for the Function App)
+// Storage account (the storage account is required for the Function App)
 //
-resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-  name: blobStorageAccountTokenName
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageAccountTokenName
   location: location
   sku: {
     name: 'Standard_LRS'
@@ -127,14 +135,13 @@ resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
-    allowSharedKeyAccess: true
     allowBlobPublicAccess: false
   }
 }
 
 // Optional blob container for storing files
 resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
-  parent: blobStorageAccount
+  parent: storageAccount
   name: 'default'
 }
 
@@ -148,14 +155,28 @@ resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/co
   }
 ]
 
-var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${blobStorageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${blobStorageAccount.listKeys().keys[0].value}'
+// Set list of storage role IDs - See here for more info on required roles: 
+// https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference?tabs=blob&pivots=programming-language-python#connecting-to-host-storage-with-an-identity
+var storageAccountContributorRoleId = '17d1049b-9a84-46fb-8f53-869881c3d3ab'
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
+var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+
+var storageRoleDefinitionIds = [
+  storageAccountContributorRoleId // Storage Account Contributor
+  storageBlobDataContributorRoleId // Storage Blob Data Contributor
+  storageBlobDataOwnerRoleId // Storage Blob Data Owner
+  storageQueueDataContributorRoleId // Storage Queue Data Contributor
+]
+
+var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
 
 //
 // CosmosDB
 //
 
 // Default configuration is based on: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-bicep#free-tier
-resource cosmodDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
+resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
   name: cosmosDbAccountTokenName
   location: location
   properties: {
@@ -174,7 +195,7 @@ resource cosmodDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
 }
 
 resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = {
-  parent: cosmodDbAccount
+  parent: cosmosDbAccount
   name: cosmosDbDatabaseName
   properties: {
     resource: {
@@ -197,7 +218,7 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
           kind: 'Hash'
         }
         indexingPolicy: {
-          indexingMode: 'lazy'
+          indexingMode: 'consistent'
           automatic: true
         }
         defaultTtl: -1
@@ -206,7 +227,12 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
   }
 ]
 
-var cosmosDbConnectionString = cosmodDbAccount.listConnectionStrings().connectionStrings[0].connectionString
+resource cosmosDbDataContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2021-04-15' existing = {
+  parent: cosmosDbAccount
+  name: '00000000-0000-0000-0000-000000000002' // Built-in Data Contributor Role
+}
+
+var cosmosDbConnectionString = cosmosDbAccount.listConnectionStrings().connectionStrings[0].connectionString
 
 // Cognitive services resources
 
@@ -321,14 +347,6 @@ resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-
   }
 }
 
-resource cosmosDbConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: cosmosDbConnectionStringSecretName
-  parent: keyVault
-  properties: {
-    value: cosmosDbConnectionString
-  }
-}
-
 resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: storageConnectionStringSecretName
   parent: keyVault
@@ -431,14 +449,17 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   }
   resource functionSettings 'config@2022-09-01' = {
     name: 'appsettings'
-    properties: {
+    properties: union(functionAppConsumptionSettings, {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
-      AzureWebJobsStorage: storageAccountConnectionString // Cannot use key vault reference here
+      AzureWebJobsStorage__credential: 'managedIdentity'
+      AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
+      AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
+      AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
       WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
       APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
-      CosmosDbConnectionSetting: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${cosmosDbConnectionStringSecretName})'
+      CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
       COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       FUNCTIONS_EXTENSION_VERSION: '~4'
       FUNCTIONS_WORKER_RUNTIME: 'python'
@@ -451,7 +472,28 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       SPEECH_REGION: speech.location
       SPEECH_ENDPOINT: speech.properties.endpoint
       SPEECH_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${speechKeyKvSecretName})'
-    }
+    })
+  }
+}
+
+// Role assignments for the Function App's managed identity
+module functionAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = {
+  name: 'functionAppStorageRoleAssignments'
+  scope: resourceGroup()
+  params: {
+    storageAccountName: storageAccount.name
+    identityId: functionApp.identity.principalId
+    roleDefintionIds: storageRoleDefinitionIds
+  }
+}
+
+module functionAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
+  name: 'functionAppCosmosDbRoleAssignment'
+  scope: resourceGroup()
+  params: {
+    accountName: cosmosDbAccount.name
+    identityId: functionApp.identity.principalId
+    roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
   }
 }
 
@@ -501,8 +543,8 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       FUNCTION_HOSTNAME: 'https://${functionApp.properties.defaultHostName}'
       FUNCTION_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${funcAppKeyKvSecretName})'
-      STORAGE_ACCOUNT_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${storageConnectionStringSecretName})'
-      COSMOSDB_ACCOUNT_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${cosmosDbConnectionStringSecretName})'
+      STORAGE_ACCOUNT_ENDPOINT: storageAccount.properties.primaryEndpoints.blob
+      COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
       COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       WEB_APP_USE_PASSWORD_AUTH: string(webAppUsePasswordAuth)
       WEB_APP_USERNAME: webAppUsername // Demo app username, no need for key vault storage
@@ -511,5 +553,56 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   }
 }
 
+// Role assignments for the Web App's managed identity
+
+module webAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = {
+  name: 'webAppStorageRoleAssignments'
+  scope: resourceGroup()
+  params: {
+    storageAccountName: storageAccount.name
+    identityId: webApp.identity.principalId
+    roleDefintionIds: storageRoleDefinitionIds
+  }
+}
+
+module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
+  name: 'webAppCosmosDbRoleAssignment'
+  scope: resourceGroup()
+  params: {
+    accountName: cosmosDbAccount.name
+    identityId: webApp.identity.principalId
+    roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
+  }
+}
+
+// Additional role assignments (if provided)
+
+module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment.bicep' = [
+  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
+    name: 'StorageRoleAssignments-${additionalRoleAssignmentIdentityId}'
+    scope: resourceGroup()
+    params: {
+      storageAccountName: storageAccount.name
+      identityId: additionalRoleAssignmentIdentityId
+      roleDefintionIds: storageRoleDefinitionIds
+    }
+  }
+]
+module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = [
+  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
+    name: 'CosmosDbRoleAssignment-${additionalRoleAssignmentIdentityId}'
+    scope: resourceGroup()
+    params: {
+      accountName: cosmosDbAccount.name
+      identityId: additionalRoleAssignmentIdentityId
+      roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
+    }
+  }
+]
+
 output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = webApp.properties.defaultHostName
+output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+output cosmosDbAccountEndpoint string = cosmosDbAccount.properties.documentEndpoint
+output cosmosDbAccountName string = cosmosDbAccount.name
+output cosmosDbDatabaseName string = cosmosDbDatabaseName

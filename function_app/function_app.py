@@ -57,5 +57,4 @@ def extract_blob_pdf_fields_to_cosmosdb(
     :type outputdocument: func.Out[func.Document]
     """
     output_result = get_structured_extraction_func_outputs(inputblob)
-    logging.info(f"Output result: {output_result}")
     outputdocument.set(func.Document.from_dict(output_result))
