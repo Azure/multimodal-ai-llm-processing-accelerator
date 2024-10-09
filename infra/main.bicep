@@ -428,6 +428,13 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   kind: 'linux'
 }
 
+// Set settings based on the deployment type. 
+// The current version of this repo requires key-based storage account access to load the function app package.
+// In a future version, containers will be used, enabling identity-based access to the storage account.
+var functionAppConsumptionSettings = ((!functionAppUsePremiumSku)
+  ? { AzureWebJobsStorage: storageAccountConnectionString }
+  : {})
+
 resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   name: functionAppTokenName
   kind: 'functionapp,linux'
@@ -452,7 +459,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   }
   resource functionSettings 'config@2022-09-01' = {
     name: 'appsettings'
-    properties: {
+    properties: union(functionAppConsumptionSettings, {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage__credential: 'managedIdentity'
@@ -475,7 +482,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       SPEECH_REGION: speech.location
       SPEECH_ENDPOINT: speech.properties.endpoint
       SPEECH_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${speechKeyKvSecretName})'
-    }
+    })
   }
 }
 
