@@ -447,28 +447,25 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
 with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
     # Define requesting function, which reshapes the input into the correct schema
     def cc_audio_upload(file: str, transcription_method: str):
+        if file is None:
+            gr.Warning(
+                "Please select or upload an audio file, then click 'Process File'."
+            )
+            return ("", "", {})
         # Get response from the API
-        try:
-            with open(file, "rb") as f:
-                payload = {"method": transcription_method}
-                files = {
-                    "audio": (file, f, "audio/wav"),
-                    "json": ("payload.json", json.dumps(payload), "application/json"),
-                }
+        with open(file, "rb") as f:
+            payload = {"method": transcription_method}
+            files = {
+                "audio": (file, f, "audio/wav"),
+                "json": ("payload.json", json.dumps(payload), "application/json"),
+            }
 
-                request_outputs = send_request(
-                    route="call_center_audio_analysis",
-                    files=files,
-                    force_json_content_type=True,  # JSON gradio block requires this
-                )
-            return request_outputs
-        except TypeError as e:
-            if "expected str, bytes or os.PathLike object" in str(e):
-                gr.Error(
-                    "Audio selection/upload failed - please try again and wait until the preview is fully loaded prior to clicking the 'Process Audio' button."
-                )
-            else:
-                raise e
+            request_outputs = send_request(
+                route="call_center_audio_analysis",
+                files=files,
+                force_json_content_type=True,  # JSON gradio block requires this
+            )
+        return request_outputs
 
     # Input components
     cc_audio_proc_instructions = gr.Markdown(
