@@ -607,3 +607,5 @@ output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = webApp.properties.defaultHostName
 output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
 output cosmosDbAccountEndpoint string = cosmosDbAccount.properties.documentEndpoint
+output cosmosDbAccountName string = cosmosDbAccount.name
+output cosmosDbDatabaseName string = cosmosDbDatabaseName
