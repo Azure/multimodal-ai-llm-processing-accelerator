@@ -80,6 +80,7 @@ param speechKeyKvSecretName string = 'speech-api-key'
 param funcAppKeyKvSecretName string = 'func-api-key'
 param appInsightsInstrumentationKeyKvSecretName string = 'appins-instrumentation-key'
 
+// Set function app settings based on the deployment type. 
 var functionAppSkuProperties = functionAppUsePremiumSku
   ? {
       name: 'P0v3'
@@ -95,6 +96,11 @@ var functionAppSkuProperties = functionAppUsePremiumSku
       family: 'Y'
       capacity: 0
     }
+// The current version of this repo requires key-based storage account access to load the function app package.
+// In a future version, containers will be used, enabling full identity-based access to the storage account.
+var functionAppConsumptionSettings = ((!functionAppUsePremiumSku)
+  ? { AzureWebJobsStorage: storageAccountConnectionString }
+  : {})
 
 var deployOpenAILLMModel = (openAILLMDeploymentCapacity > 0)
 var deployOpenAIWhisperModel = (openAIWhisperDeploymentCapacity > 0)
@@ -418,13 +424,6 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   sku: functionAppSkuProperties
   kind: 'linux'
 }
-
-// Set settings based on the deployment type. 
-// The current version of this repo requires key-based storage account access to load the function app package.
-// In a future version, containers will be used, enabling identity-based access to the storage account.
-var functionAppConsumptionSettings = ((!functionAppUsePremiumSku)
-  ? { AzureWebJobsStorage: storageAccountConnectionString }
-  : {})
 
 resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   name: functionAppTokenName
