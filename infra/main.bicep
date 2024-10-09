@@ -73,7 +73,6 @@ param resourceToken string = take(toLower(uniqueString(subscription().id, resour
 param tags object = {}
 param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
-param cosmosDbConnectionStringSecretName string = 'cosmosdb-connection-string'
 param storageConnectionStringSecretName string = 'storage-connection-string'
 param aoaiKeyKvSecretName string = 'aoai-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
@@ -339,14 +338,6 @@ resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-
         }
       }
     ]
-  }
-}
-
-resource cosmosDbConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: cosmosDbConnectionStringSecretName
-  parent: keyVault
-  properties: {
-    value: cosmosDbConnectionString
   }
 }
 
