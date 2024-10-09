@@ -4,15 +4,19 @@ import os
 from typing import Optional
 
 import azure.functions as func
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
 from dotenv import load_dotenv
+import fitz
 from haystack import Document
 from haystack.components.converters import AzureOCRDocumentConverter
 from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
 from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
-from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES
-from src.components.pymupdf import PyMuPDFConverter
+from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES, DocumentIntelligenceProcessor, convert_content_chunks_to_openai_messages, extract_pdf_page_images
+from src.components.pymupdf import PyMuPDFConverter, load_fitz_pdf
 from src.helpers.common import MeasureRunTime, haystack_doc_to_string
 from src.helpers.image import (
     base64_to_pil_img,
@@ -21,7 +25,7 @@ from src.helpers.image import (
     resize_img_by_max,
 )
 from src.result_enrichment.common import merge_confidence_scores
-from src.result_enrichment.doc_intelligence import find_matching_di_lines
+from src.result_enrichment.doc_intelligence import find_matching_di_lines,
 from src.schema import LLMResponseBaseModel
 
 load_dotenv()
@@ -30,6 +34,7 @@ bp_form_extraction_with_confidence = func.Blueprint()
 
 # Load environment variables
 DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
+DOC_INTEL_API_KEY = os.getenv("DOC_INTEL_API_KEY")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
 # Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
@@ -61,6 +66,12 @@ azure_generator = AzureOpenAIChatGenerator(
         "response_format": {"type": "json_object"}
     },  # Ensure we get JSON responses
 )
+di_client = DocumentIntelligenceClient(
+    endpoint=DOC_INTEL_ENDPOINT, 
+    credential=AzureKeyCredential(DOC_INTEL_API_KEY),
+    api_version="2024-02-29-preview",
+)
+doc_intel_result_processor = DocumentIntelligenceProcessor()
 
 
 # Setup Pydantic models for validation of LLM calls, and the Function response itself
@@ -298,10 +309,28 @@ def form_extraction_with_confidence(
                 mimetype="application/json",
                 status_code=500,
             )
-        # Extract the text using Document Intelligence
+        # Extract the text and images using Document Intelligence
         try:
             with MeasureRunTime() as di_timer:
-                di_result = di_converter.run(sources=[bytestream])
+                # di_result = di_converter.run(sources=[bytestream])
+                poller = di_client.begin_analyze_document(
+                    model_id="prebuilt-layout",
+                    analyze_request=AnalyzeDocumentRequest(bytes_source=req_body),
+                )
+                di_result = poller.result()
+                # Process the result and convert it to OpenAI messages
+                pdf = fitz.open(stream=req_body, filetype="pdf")
+                # pdf = load_fitz_pdf(pdf_path=None, pdf_url=pdf_url)
+                doc_page_imgs = extract_pdf_page_images(pdf, img_dpi=100, starting_idx=1)
+                processed_content_docs = doc_intel_result_processor.process_analyze_result(
+                    analyze_result=di_result, 
+                    doc_page_imgs=doc_page_imgs, 
+                    on_error="raise",
+                )
+                merged_subchunk_content_docs = doc_intel_result_processor.merge_subchunk_text_content(
+                    processed_content_docs
+                )
+
             di_result_docs: list[Document] = di_result["documents"]
             output_model.di_extracted_text = [
                 doc.to_dict() for doc in di_result_docs if doc.content
@@ -324,17 +353,24 @@ def form_extraction_with_confidence(
         # 2. Extracted text from Document Intelligence
         # 3. Extracted images from PyMuPDF
         try:
+            # Convert chunk content to OpenAI messages
+            content_messages = convert_content_chunks_to_openai_messages(merged_subchunk_content_docs, role="user")
             input_messages = [
-                ChatMessage.from_system(LLM_SYSTEM_PROMPT),
-                *[
-                    ChatMessage.from_user(haystack_doc_to_string(doc))
-                    for doc in di_result_docs
-                ],
-                *[ChatMessage.from_user(bytestream) for bytestream in pdf_images],
+                {
+                    "role": "system",
+                    "content": LLM_SYSTEM_PROMPT,
+                },
+                # *[
+                #     ChatMessage.from_user(haystack_doc_to_string(doc))
+                #     for doc in di_result_docs
+                # ],
+                # *[ChatMessage.from_user(bytestream) for bytestream in pdf_images],
+                *content_messages,
             ]
-            output_model.llm_input_messages = [
-                msg.to_openai_format() for msg in input_messages
-            ]
+            # output_model.llm_input_messages = [
+            #     msg.to_openai_format() for msg in input_messages
+            # ]
+            output_model.llm_input_messages = input_messages
         except Exception as _e:
             output_model.error_text = (
                 "An error occurred while creating the LLM input messages."

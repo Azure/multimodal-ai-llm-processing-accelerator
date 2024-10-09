@@ -2629,7 +2629,7 @@ class DocumentIntelligenceProcessor:
 
     def merge_subchunk_text_content(
         self,
-        chunk_content_list: List[List[HaystackDocument]],
+        chunk_content_list: Union[List[List[HaystackDocument]], List[HaystackDocument]],
         text_merge_separator: str = "\n",
     ) -> List[List[HaystackDocument]]:
         """
@@ -2650,6 +2650,9 @@ class DocumentIntelligenceProcessor:
             merged together.
         :rtype: List[List[HaystackDocument]]
         """
+        # If a single list is provided, convert it to a list of lists
+        if not all(isinstance(list_item, list) for list_item in chunk_content_list):
+            chunk_content_list = [chunk_content_list]
         chunk_outputs = list()
 
         # Join chunks together
