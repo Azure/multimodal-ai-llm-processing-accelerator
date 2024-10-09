@@ -3,6 +3,9 @@
     "Values": {
         "FUNCTIONS_WORKER_RUNTIME": "python",
         "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "CosmosDbConnectionSetting": "",
+        "COSMOSDB_DATABASE_NAME": "",
         "AOAI_ENDPOINT": "",
         "AOAI_LLM_DEPLOYMENT": "",
         "AOAI_WHISPER_DEPLOYMENT": "",

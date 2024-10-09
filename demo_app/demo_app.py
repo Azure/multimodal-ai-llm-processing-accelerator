@@ -10,6 +10,8 @@ from typing import Optional, Union
 import fitz
 import gradio as gr
 import requests
+from azure.cosmos import CosmosClient
+from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 from PIL import Image
 
@@ -26,6 +28,16 @@ load_dotenv()
 FUNCTION_HOSTNAME = os.getenv("FUNCTION_HOSTNAME", "http://localhost:7071/")
 FUNCTION_KEY = os.getenv("FUNCTION_KEY", "")
 FUNCTION_ENDPOINT = os.path.join(FUNCTION_HOSTNAME, "api")
+COSMOSDB_DATABASE_NAME = os.getenv("COSMOSDB_DATABASE_NAME")
+
+# Create clients for Azure services
+blob_service_client = BlobServiceClient.from_connection_string(
+    conn_str=os.getenv("STORAGE_ACCOUNT_CONNECTION_STRING")
+)
+cosmos_client = CosmosClient.from_connection_string(
+    conn_str=os.getenv("COSMOSDB_ACCOUNT_CONNECTION_STRING")
+)
+
 # Set authentication values based on the environment variables, defaulting to auth enabled
 WEB_APP_USE_PASSWORD_AUTH = (
     os.getenv("WEB_APP_USE_PASSWORD_AUTH", "true").lower() == "true"
@@ -151,7 +163,7 @@ def render_visual_media_input(file: str):
         raise NotImplementedError(f"Unsupported mime_type: {mime_type}")
 
 
-### Form Extraction with confidence scores example ###
+### Form Extraction with confidence scores - HTTP example ###
 with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block:
     # Define requesting function, which reshapes the input into the correct schema
     def form_ext_w_conf_upload(file: str):
@@ -268,6 +280,136 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
             form_ext_w_conf_time_taken,
             form_ext_w_conf_img_output,
             form_ext_w_conf_output_json,
+        ],
+    )
+
+
+### Form Extraction - Blob to CosmosDB example ###
+with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_block:
+    # Setup the CosmosDB container client for this use pipeline.
+    # It relies on the CosmosDB database + container that were deployed with bicep
+    blob_form_extraction_to_cosmosdb_container_client = (
+        cosmos_client.get_database_client(COSMOSDB_DATABASE_NAME).get_container_client(
+            "blob-form-to-cosmosdb-container"
+        )
+    )
+
+    # Define the processing function, which reshapes the input into the correct schema
+    def blob_form_to_cosmosdb_process(file: str):
+        start_time = time.time()
+        try:
+            # Append a random prefix to the filename to avoid conflicts
+            random_prefix = str(int(time.time()))
+            name, ext = os.path.splitext(os.path.basename(file))
+            blob_name = f"{name}_{random_prefix}{ext}"
+            # Upload data to blob storage
+            blob_client = blob_service_client.get_blob_client(
+                container="blob-form-to-cosmosdb-blobs", blob=blob_name
+            )
+            with open(file, "rb") as f:
+                data = f.read()
+                blob_client.upload_blob(data)
+            # Query the CosmosDB container until a result is found
+            gr.Info(
+                "File uploaded to Blob Storage. Polling CosmosDB until the result appears..."
+            )
+            cosmos_timeout_secs = 30
+            query = "SELECT * FROM c WHERE c.filename = @filename"
+            parameters = [{"name": "@filename", "value": blob_name}]
+            items = None
+            cosmos_query_timer = time.time()
+            while not items:
+                time.sleep(2)
+                if time.time() - cosmos_query_timer > cosmos_timeout_secs:
+                    # If no record is found, return a placeholder result
+                    timeout_error_text = f"Timeout: No result found in CosmosDB after {cosmos_timeout_secs} seconds."
+                    client_side_time_taken = (
+                        f"{round(time.time() - start_time, 1)} seconds"
+                    )
+                    return (404, client_side_time_taken, {"Error": timeout_error_text})
+
+                items = list(
+                    blob_form_extraction_to_cosmosdb_container_client.query_items(
+                        query=query,
+                        parameters=parameters,
+                        enable_cross_partition_query=True,
+                    )
+                )
+            client_side_time_taken = f"{round(time.time() - start_time, 1)} seconds"
+            # Delete the blob from storage
+            blob_client.delete_blob()
+            gr.Info("Task complete. Deleting the file from blob storage...")
+            # Return status code, time taken and the first item from the list (it should only have one item)
+            return (200, client_side_time_taken, items[0])
+        except Exception as e:
+            # Ensure the blob is deleted from storage if an error occurs
+            try:
+                blob_client.delete_blob()
+                gr.Error("Error occurred. Deleting the file from blob storage...")
+            except Exception as _e:
+                pass
+            # Return the result including the error.
+            client_side_time_taken = f"{round(time.time() - start_time, 1)} seconds"
+            return (500, client_side_time_taken, {"Error": str(e)})
+
+    # Input components
+    blob_form_to_cosmosdb_instructions = gr.Markdown(
+        (
+            "This example extracts key information from Bank Account application forms, triggered by uploading the document to blob storage and with the results written to a CosmosDB NoSQL database."
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_form_extraction_with_confidence.py))."
+            "\n\nThe pipeline is as follows:\n"
+            "1. The PDF is uploaded to a blob storage container, triggering the pipeline.\n"
+            "2. PyMuPDF is used to convert the PDFs into images.\n"
+            "3. Azure Document Intelligence extracts the raw text from the PDF along with confidence scores for each "
+            "word/line.\n"
+            "4. The image and raw extracted text are sent together in a multimodal request to GPT-4o. "
+            "GPT-4o is instructed to extract all of the key information from the form in a structured format.\n"
+            "5. The result is saved directly to a CosmosDB NoSQL table, ready for querying by downstream applications.\n"
+            "Note: Any files uploaded as part of this pipeline are deleted immediately after processing.\n"
+        ),
+        show_label=False,
+        line_breaks=True,
+    )
+    with gr.Row():
+        blob_form_to_cosmosdb_file_upload = gr.File(
+            label="Upload File", file_count="single", type="filepath"
+        )
+        blob_form_to_cosmosdb_input_thumbs = gr.Gallery(
+            label="File Preview", object_fit="contain", visible=True
+        )
+    # Examples
+    blob_form_to_cosmosdb_examples = gr.Examples(
+        examples=DEMO_ACCOUNT_OPENING_FORM_FILES,
+        inputs=[blob_form_to_cosmosdb_file_upload],
+        label=FILE_EXAMPLES_LABEL,
+        outputs=[
+            blob_form_to_cosmosdb_input_thumbs,
+        ],
+        fn=render_visual_media_input,
+        run_on_click=True,
+    )
+    blob_form_to_cosmosdb_process_btn = gr.Button("Process File")
+    # Output components
+    with gr.Column() as blob_form_to_cosmosdb_output_row:
+        blob_form_to_cosmosdb_output_label = gr.Label(
+            value="Pipeline Result", show_label=False
+        )
+        with gr.Row():
+            blob_form_to_cosmosdb_status_code = gr.Textbox(
+                label="Response Status Code", interactive=False
+            )
+            blob_form_to_cosmosdb_time_taken = gr.Textbox(
+                label="Time Taken", interactive=False
+            )
+        blob_form_to_cosmosdb_output_json = gr.JSON(label="CosmosDB Record")
+    # Actions
+    blob_form_to_cosmosdb_process_btn.click(
+        fn=blob_form_to_cosmosdb_process,
+        inputs=[blob_form_to_cosmosdb_file_upload],
+        outputs=[
+            blob_form_to_cosmosdb_status_code,
+            blob_form_to_cosmosdb_time_taken,
+            blob_form_to_cosmosdb_output_json,
         ],
     )
 
@@ -659,17 +801,19 @@ with gr.Blocks(
         ),
         show_label=False,
     )
-    with gr.Tab("Form Extraction with Confidence Scores"):
+    with gr.Tab("Form Extraction with Confidence Scores (HTTP)"):
         form_extraction_with_confidence_block.render()
-    with gr.Tab("Call Center Audio Processing"):
+    with gr.Tab("Call Center Audio Processing (HTTP)"):
         call_center_audio_processing_block.render()
-    with gr.Tab("Summarize Text"):
+    with gr.Tab("Form Extraction (Blob -> CosmosDB)"):
+        blob_form_extraction_to_cosmosdb_block.render()
+    with gr.Tab("Summarize Text (HTTP)"):
         sum_text_block.render()
-    with gr.Tab("City Names Extraction (Doc Intelligence)"):
+    with gr.Tab("City Names Extraction, Doc Intel (HTTP)"):
         di_llm_ext_names_block.render()
-    with gr.Tab("City Names Extraction (PyMuPDF)"):
+    with gr.Tab("City Names Extraction, PyMuPDF (HTTP))"):
         local_pdf_prc_block.render()
-    with gr.Tab("Doc Intelligence Only"):
+    with gr.Tab("Doc Intelligence Only (HTTP)"):
         di_only_block.render()
 
 if __name__ == "__main__":

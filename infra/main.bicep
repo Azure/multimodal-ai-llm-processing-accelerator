@@ -1,6 +1,9 @@
 @description('The name of the Function App. This will become part of the URL (e.g. https://{functionAppName}.azurewebsites.net) and must be unique across Azure.')
 param functionAppName string = 'ai-llm-processing-func'
 
+@description('Whether to use a premium or consumption SKU for the function\'s app service plan. Premium plans are recommended for production workloads, especially non-HTTP-triggered functions.')
+param functionAppUsePremiumSku bool = false
+
 @description('The name of the Web App. This will become part of the URL (e.g. https://{webAppName}.azurewebsites.net) and must be unique across Azure.')
 param webAppName string = 'ai-llm-processing-demo'
 
@@ -20,14 +23,26 @@ param webAppPassword string
 @description('The prefix to use for all resources except the function and web apps')
 param resourcePrefix string = 'llm-proc'
 
-@description('The name of the Blob Storage account. This should be only lowercase letters and numbers')
+@description('The name of the Blob Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
 param blobStorageAccountName string = 'llmprocstorage'
+
+@description('The name of the default blob storage containers to be created')
+param blobContainerNames array = ['blob-form-to-cosmosdb-blobs']
+
+@description('The name of the default CosmosDB database')
+param cosmosDbDatabaseName string = 'default'
+
+@description('The name of the default CosmosDB containers to be created')
+param cosmosDbContainerNames array = ['blob-form-to-cosmosdb-container']
 
 @description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
 param speechLocation string = 'eastus'
 
 @description('The location of the OpenAI Azure resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)')
 param openAILocation string = 'eastus2'
+
+@description('The max TPM of the deployed OpenAI LLM model, in thousands. `30` = 30k max TPM. If set to 0, the OpenAI LLM model will not be deployed.')
+param openAILLMDeploymentCapacity int = 30
 
 @description('The OpenAI LLM model to be deployed')
 param openAILLMModel string = 'gpt-4o'
@@ -38,8 +53,8 @@ param openAILLMModelVersion string = '2024-05-13'
 @description('The OpenAI LLM model deployment SKU')
 param openAILLMDeploymentSku string = 'Standard'
 
-@description('The max TPM of the deployed OpenAI LLM model, in thousands. `30` = 30k max TPM.')
-param openAILLMDeploymentCapacity int = 30
+@description('The max TPM of the deployed OpenAI Whisper model, in thousands. `3` = 3k max TPM. If set to 0, the Whisper model will not be deployed.')
+param openAIWhisperDeploymentCapacity int = 3
 
 @description('The OpenAI Whisper model to be deployed')
 param openAIWhisperModel string = 'whisper'
@@ -50,37 +65,57 @@ param openAIWhisperModelVersion string = '001'
 @description('The OpenAI LLM model deployment SKU')
 param openAIWhisperDeploymentSku string = 'Standard'
 
-@description('The max TPM of the deployed OpenAI Whisper model, in thousands. `3` = 3k max TPM.')
-param openAIWhisperDeploymentCapacity int = 3
-
 param location string = resourceGroup().location
 param resourceToken string = take(toLower(uniqueString(subscription().id, resourceGroup().id, location)), 5)
 param tags object = {}
 param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
+param cosmosDbConnectionStringSecretName string = 'cosmosdb-connection-string'
+param storageConnectionStringSecretName string = 'storage-connection-string'
 param aoaiKeyKvSecretName string = 'aoai-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
 param speechKeyKvSecretName string = 'speech-api-key'
-param funcKeyKvSecretName string = 'func-api-key'
+param funcAppKeyKvSecretName string = 'func-api-key'
+param appInsightsInstrumentationKeyKvSecretName string = 'appins-instrumentation-key'
+
+var functionAppSkuProperties = functionAppUsePremiumSku
+  ? {
+      name: 'P0v3'
+      tier: 'Premium0V3'
+      size: 'P0v3'
+      family: 'Pv3'
+      capacity: 1
+    }
+  : {
+      name: 'Y1'
+      tier: 'Dynamic'
+      size: 'Y1'
+      family: 'Y'
+      capacity: 0
+    }
+
+var deployOpenAILLMModel = (openAILLMDeploymentCapacity > 0)
+var deployOpenAIWhisperModel = (openAIWhisperDeploymentCapacity > 0)
 
 var functionAppTokenName = appendUniqueUrlSuffix
   ? toLower('${functionAppName}-${resourceToken}')
   : toLower(functionAppName)
 var webAppTokenName = appendUniqueUrlSuffix ? toLower('${webAppName}-${resourceToken}') : toLower(webAppName)
 var blobStorageAccountTokenName = toLower('${blobStorageAccountName}${resourceToken}')
+var cosmosDbAccountTokenName = toLower('${resourcePrefix}-cosmosdb-${resourceToken}')
 var functionAppPlanTokenName = toLower('${functionAppName}-plan-${resourceToken}')
 var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
-var openAITokenName = toLower('${resourcePrefix}-aoai-${location}-${resourceToken}')
+var openAITokenName = toLower('${resourcePrefix}-aoai-${openAILocation}-${resourceToken}')
 var openAILLMDeploymentName = toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
 var openAIWhisperDeploymentName = toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
 var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${resourceToken}')
-var speechTokenName = toLower('${resourcePrefix}-speech-${resourceToken}')
+var speechTokenName = toLower('${resourcePrefix}-speech-${speechLocation}-${resourceToken}')
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
 var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToken}')
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
 
 //
-// Blob Storage
+// Blob Storage (the storage account is required for the Function App)
 //
 resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: blobStorageAccountTokenName
@@ -92,11 +127,86 @@ resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
+    allowSharedKeyAccess: true
     allowBlobPublicAccess: false
   }
 }
 
+// Optional blob container for storing files
+resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  parent: blobStorageAccount
+  name: 'default'
+}
+
+resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = [
+  for containerName in blobContainerNames: {
+    name: containerName
+    parent: blobServices
+    properties: {
+      publicAccess: 'None'
+    }
+  }
+]
+
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${blobStorageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${blobStorageAccount.listKeys().keys[0].value}'
+
+//
+// CosmosDB
+//
+
+// Default configuration is based on: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-bicep#free-tier
+resource cosmodDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
+  name: cosmosDbAccountTokenName
+  location: location
+  properties: {
+    enableFreeTier: false
+    databaseAccountOfferType: 'Standard'
+    disableLocalAuth: false
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    locations: [
+      {
+        locationName: location
+      }
+    ]
+  }
+}
+
+resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = {
+  parent: cosmodDbAccount
+  name: cosmosDbDatabaseName
+  properties: {
+    resource: {
+      id: cosmosDbDatabaseName
+    }
+  }
+}
+
+resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-11-15' = [
+  for containerName in cosmosDbContainerNames: {
+    parent: cosmosDbDatabase
+    name: containerName
+    properties: {
+      resource: {
+        id: containerName
+        partitionKey: {
+          paths: [
+            '/id'
+          ]
+          kind: 'Hash'
+        }
+        indexingPolicy: {
+          indexingMode: 'lazy'
+          automatic: true
+        }
+        defaultTtl: -1
+      }
+    }
+  }
+]
+
+var cosmosDbConnectionString = cosmodDbAccount.listConnectionStrings().connectionStrings[0].connectionString
 
 // Cognitive services resources
 
@@ -139,7 +249,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAILLMModel) {
   parent: azureopenai
   name: openAILLMDeploymentName
   properties: {
@@ -155,7 +265,7 @@ resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05
   }
 }
 
-resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIWhisperModel) {
   parent: azureopenai
   dependsOn: [llmdeployment] // Ensure one model deployment at a time
   name: openAIWhisperDeploymentName
@@ -211,6 +321,22 @@ resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-
   }
 }
 
+resource cosmosDbConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: cosmosDbConnectionStringSecretName
+  parent: keyVault
+  properties: {
+    value: cosmosDbConnectionString
+  }
+}
+
+resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: storageConnectionStringSecretName
+  parent: keyVault
+  properties: {
+    value: storageAccountConnectionString
+  }
+}
+
 resource openAIKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: aoaiKeyKvSecretName
   parent: keyVault
@@ -236,10 +362,18 @@ resource SpeechKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
 }
 
 resource funcAppKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: funcKeyKvSecretName
+  name: funcAppKeyKvSecretName
   parent: keyVault
   properties: {
     value: listkeys('${functionApp.id}/host/default', '2022-03-01').masterKey
+  }
+}
+
+resource appInsightsInstrumentationKeyKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: appInsightsInstrumentationKeyKvSecretName
+  parent: keyVault
+  properties: {
+    value: appInsights.properties.ConnectionString
   }
 }
 
@@ -266,14 +400,11 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   name: functionAppPlanTokenName
   location: location
-  kind: 'linux'
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-  }
   properties: {
     reserved: true
   }
+  sku: functionAppSkuProperties
+  kind: 'linux'
 }
 
 resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
@@ -301,14 +432,16 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   resource functionSettings 'config@2022-09-01' = {
     name: 'appsettings'
     properties: {
+      SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
-      AzureWebJobsStorage: storageAccountConnectionString
-      APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
+      AzureWebJobsStorage: storageAccountConnectionString // Cannot use key vault reference here
+      WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
+      APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
+      CosmosDbConnectionSetting: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${cosmosDbConnectionStringSecretName})'
+      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       FUNCTIONS_EXTENSION_VERSION: '~4'
       FUNCTIONS_WORKER_RUNTIME: 'python'
-      WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
-      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString
-      BLOB_STORAGE_CONNECTION_STRING: storageAccountConnectionString
       AOAI_ENDPOINT: azureopenai.properties.endpoint
       AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
       AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
@@ -347,6 +480,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   tags: union(tags, { 'azd-service-name': webAppServiceName })
   kind: 'app,linux'
   properties: {
+    clientAffinityEnabled: true // If app plan capacity > 1, set this to True to ensure gradio works correctly.
     serverFarmId: webAppPlan.id
     siteConfig: {
       alwaysOn: true
@@ -361,15 +495,21 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
     type: 'SystemAssigned'
   }
 
-  resource appSettings 'config' = {
+  resource appSettings 'config@2022-09-01' = {
     name: 'appsettings'
     properties: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       FUNCTION_HOSTNAME: 'https://${functionApp.properties.defaultHostName}'
-      FUNCTION_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${funcKeyKvSecretName})'
+      FUNCTION_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${funcAppKeyKvSecretName})'
+      STORAGE_ACCOUNT_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${storageConnectionStringSecretName})'
+      COSMOSDB_ACCOUNT_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${cosmosDbConnectionStringSecretName})'
+      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       WEB_APP_USE_PASSWORD_AUTH: string(webAppUsePasswordAuth)
       WEB_APP_USERNAME: webAppUsername // Demo app username, no need for key vault storage
       WEB_APP_PASSWORD: webAppPassword // Demo app password, no need for key vault storage
     }
   }
 }
+
+output FunctionAppUrl string = functionApp.properties.defaultHostName
+output webAppUrl string = webApp.properties.defaultHostName
