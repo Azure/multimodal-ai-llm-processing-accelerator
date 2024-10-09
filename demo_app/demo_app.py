@@ -37,7 +37,7 @@ FUNCTION_ENDPOINT = os.path.join(FUNCTION_HOSTNAME, "api")
 # Create clients for Azure services. If connecting to Azure resources, ensure
 # the current Azure identity has the necessary permissions to access the
 # storage & cosmosDB accounts.
-# You can set the `additionalRoleAssignmentIdentityId` property when deploying
+# You can set the `additionalRoleAssignmentIdentityIds` property when deploying
 # the solution to grant the necessary permissions to the logged-in user. See
 # the README for more info.
 USE_LOCAL_STORAGE_EMULATOR = os.getenv("USE_LOCAL_STORAGE_EMULATOR", "false") == "true"
