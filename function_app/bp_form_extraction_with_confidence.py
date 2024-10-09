@@ -2,20 +2,27 @@ import json
 import logging
 import os
 from typing import Optional
+from urllib import response
 
 import azure.functions as func
-from azure.core.credentials import AzureKeyCredential
+import fitz
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
+from azure.core.credentials import AzureKeyCredential
 from dotenv import load_dotenv
-import fitz
 from haystack import Document
 from haystack.components.converters import AzureOCRDocumentConverter
 from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
 from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
+from openai import AzureOpenAI
 from pydantic import BaseModel, Field
-from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES, DocumentIntelligenceProcessor, convert_content_chunks_to_openai_messages, extract_pdf_page_images
+from src.components.doc_intelligence import (
+    VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES,
+    DocumentIntelligenceProcessor,
+    convert_content_chunks_to_openai_messages,
+    extract_pdf_page_images,
+)
 from src.components.pymupdf import PyMuPDFConverter, load_fitz_pdf
 from src.helpers.common import MeasureRunTime, haystack_doc_to_string
 from src.helpers.image import (
@@ -25,7 +32,7 @@ from src.helpers.image import (
     resize_img_by_max,
 )
 from src.result_enrichment.common import merge_confidence_scores
-from src.result_enrichment.doc_intelligence import find_matching_di_lines,
+from src.result_enrichment.doc_intelligence import find_matching_di_lines
 from src.schema import LLMResponseBaseModel
 
 load_dotenv()
@@ -37,6 +44,7 @@ DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
 DOC_INTEL_API_KEY = os.getenv("DOC_INTEL_API_KEY")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
+AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 # Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
 DOC_INTEL_API_KEY_SECRET = Secret.from_env_var("DOC_INTEL_API_KEY")
 AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
@@ -67,11 +75,17 @@ azure_generator = AzureOpenAIChatGenerator(
     },  # Ensure we get JSON responses
 )
 di_client = DocumentIntelligenceClient(
-    endpoint=DOC_INTEL_ENDPOINT, 
+    endpoint=DOC_INTEL_ENDPOINT,
     credential=AzureKeyCredential(DOC_INTEL_API_KEY),
     api_version="2024-02-29-preview",
 )
 doc_intel_result_processor = DocumentIntelligenceProcessor()
+aoai_client = AzureOpenAI(
+    azure_endpoint=AOAI_ENDPOINT,
+    azure_deployment=AOAI_LLM_DEPLOYMENT,
+    api_key=AOAI_API_KEY,
+    api_version="2024-06-01",
+)
 
 
 # Setup Pydantic models for validation of LLM calls, and the Function response itself
@@ -321,21 +335,27 @@ def form_extraction_with_confidence(
                 # Process the result and convert it to OpenAI messages
                 pdf = fitz.open(stream=req_body, filetype="pdf")
                 # pdf = load_fitz_pdf(pdf_path=None, pdf_url=pdf_url)
-                doc_page_imgs = extract_pdf_page_images(pdf, img_dpi=100, starting_idx=1)
-                processed_content_docs = doc_intel_result_processor.process_analyze_result(
-                    analyze_result=di_result, 
-                    doc_page_imgs=doc_page_imgs, 
-                    on_error="raise",
+                doc_page_imgs = extract_pdf_page_images(
+                    pdf, img_dpi=100, starting_idx=1
                 )
-                merged_subchunk_content_docs = doc_intel_result_processor.merge_subchunk_text_content(
-                    processed_content_docs
+                processed_content_docs = (
+                    doc_intel_result_processor.process_analyze_result(
+                        analyze_result=di_result,
+                        doc_page_imgs=doc_page_imgs,
+                        on_error="raise",
+                    )
+                )
+                merged_subchunk_content_docs = (
+                    doc_intel_result_processor.merge_subchunk_text_content(
+                        processed_content_docs
+                    )
                 )
 
-            di_result_docs: list[Document] = di_result["documents"]
-            output_model.di_extracted_text = [
-                doc.to_dict() for doc in di_result_docs if doc.content
-            ]
-            output_model.di_raw_response = di_result["raw_azure_response"]
+            di_result_docs: list[Document] = processed_content_docs
+            output_model.di_extracted_text = "\n".join(
+                doc.content for doc in di_result_docs if doc.content is not None
+            )
+            output_model.di_raw_response = di_result.as_dict()
             output_model.di_time_taken_secs = di_timer.time_taken
         except Exception as _e:
             output_model.error_text = (
@@ -354,17 +374,19 @@ def form_extraction_with_confidence(
         # 3. Extracted images from PyMuPDF
         try:
             # Convert chunk content to OpenAI messages
-            content_messages = convert_content_chunks_to_openai_messages(merged_subchunk_content_docs, role="user")
+            content_messages = convert_content_chunks_to_openai_messages(
+                merged_subchunk_content_docs, role="user"
+            )
             input_messages = [
-                {
-                    "role": "system",
-                    "content": LLM_SYSTEM_PROMPT,
-                },
                 # *[
                 #     ChatMessage.from_user(haystack_doc_to_string(doc))
                 #     for doc in di_result_docs
                 # ],
                 # *[ChatMessage.from_user(bytestream) for bytestream in pdf_images],
+                {
+                    "role": "system",
+                    "content": LLM_SYSTEM_PROMPT,
+                },
                 *content_messages,
             ]
             # output_model.llm_input_messages = [
@@ -385,7 +407,13 @@ def form_extraction_with_confidence(
         # Send request to LLM
         try:
             with MeasureRunTime() as llm_timer:
-                llm_result = azure_generator.run(messages=input_messages)
+                # llm_result = azure_generator.run(messages=input_messages)
+                llm_result = aoai_client.chat.completions.create(
+                    messages=input_messages,
+                    model=AOAI_LLM_DEPLOYMENT,
+                    response_format={"type": "json_object"},
+                )
+                print(llm_result.choices[0])
             output_model.llm_time_taken_secs = llm_timer.time_taken
         except Exception as _e:
             output_model.error_text = "An error occurred when sending the LLM request."
@@ -398,16 +426,15 @@ def form_extraction_with_confidence(
             )
         # Validate that the LLM response matches the expected schema
         try:
-            output_model.llm_reply_messages = [
-                msg.to_openai_format() for msg in llm_result["replies"]
-            ]
-            if len(llm_result["replies"]) != 1:
+            output_model.llm_reply_messages = llm_result.choices[0].to_dict()
+            if len(llm_result.choices) != 1:
                 raise ValueError(
                     "The LLM response did not contain exactly one message."
                 )
-            output_model.llm_raw_response = llm_result["replies"][0].content
+            # output_model.llm_raw_response = llm_result["replies"][0].content
+            output_model.llm_raw_response = llm_result.choices[0].message.content
             llm_structured_response = LLMExtractedFieldsModel(
-                **json.loads(llm_result["replies"][0].content)
+                **json.loads(llm_result.choices[0].message.content)
             )
         except Exception as _e:
             output_model.error_text = "An error occurred when validating the LLM's returned response into the expected schema."
@@ -426,7 +453,7 @@ def form_extraction_with_confidence(
             is_any_field_missing = False
             min_field_confidence_score = 1
             # Get the raw text content from Document Intelligence for the document that was processed
-            raw_azure_doc_response = di_result["raw_azure_response"][0]
+            raw_azure_doc_response = di_result.as_dict()
             for field, value in llm_structured_response.__dict__.items():
                 # We will check for matches where the LLM output is part of the Doc Intelligence content.
                 # This is useful for cases where Doc Intelligence extracts the date of birth as a single word

@@ -1102,7 +1102,7 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
     def __init__(
         self,
         page_start_text_formats: Optional[List[str]] = [
-            "Page: {page_number} content\n"
+            "*Page {page_number} content:*\n"
         ],
         page_end_text_formats: Optional[str] = None,
         page_img_order: Optional[Literal["before", "after"]] = "after",
@@ -2604,7 +2604,15 @@ class DocumentIntelligenceProcessor:
                 # Save span start and end for the current element so we can skip lower-priority elements
                 current_page_priority_spans.extend(element_info.spans)
                 all_spans.extend(element_info.spans)
-                if element_idx > break_after_element_idx:
+                if (
+                    break_after_element_idx is not None
+                    and element_idx > break_after_element_idx
+                ):
+                    logging.info(
+                        "{} elements processed (break_after_element_idx={}), breaking loop and returning content.".format(
+                            element_idx + 1, break_after_element_idx
+                        )
+                    )
                     break
             except Exception as _e:
                 print(
@@ -2753,7 +2761,7 @@ def convert_content_chunks_to_openai_messages(
     chunked_content_docs: List[List[HaystackDocument]],
     role: str,
     img_detail: Literal["auto", "low", "high"] = "auto",
-) -> List[List[dict]]:
+) -> List[dict]:
     """
     Converts a list of lists of HaystackDocument objects into a list of OpenAI
     message objects, ready for sending to an OpenAI LLM API endpoint.
@@ -2780,7 +2788,7 @@ def convert_content_chunks_to_openai_messages(
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/{content_doc.blob.mime_type};base64,{content_doc.blob.data}",
+                            "url": f"data:{content_doc.blob.mime_type};base64,{content_doc.blob.data.decode()}",
                             "detail": img_detail,
                         },
                     }
@@ -2789,4 +2797,4 @@ def convert_content_chunks_to_openai_messages(
                 # All other types (content field should be populated with everything that is required)
                 msg_content_list.append({"type": "text", "text": content_doc.content})
     # Combine into a single message
-    return {"role": role, "content": msg_content_list}
+    return [{"role": role, "content": msg_content_list}]
