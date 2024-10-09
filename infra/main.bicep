@@ -456,9 +456,9 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage__credential: 'managedIdentity'
-      AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.core.windows.net'
-      AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.core.windows.net'
-      AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.core.windows.net'
+      AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
+      AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
+      AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
       WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
       APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
