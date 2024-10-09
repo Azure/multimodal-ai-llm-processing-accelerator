@@ -1,33 +1,20 @@
-import copy
-import hashlib
-import io
 import itertools
 import logging
-import os
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
-from typing import IO, Any, Callable, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-import fitz
-import networkx as nx
 import pandas as pd
-import PIL
-import PIL.Image as Image
-import requests
 from azure.ai.documentintelligence._model_base import Model as DocumentModelBase
-from azure.ai.documentintelligence._model_base import rest_field
 from azure.ai.documentintelligence.models import (
     AnalyzeResult,
     Document,
     DocumentBarcode,
     DocumentFigure,
-    DocumentFootnote,
     DocumentFormula,
     DocumentKeyValueElement,
-    DocumentLanguage,
     DocumentLine,
     DocumentList,
     DocumentPage,
@@ -39,12 +26,21 @@ from azure.ai.documentintelligence.models import (
     DocumentWord,
     ParagraphRole,
 )
-from fitz import Page as PyMuPDFPage
+from fitz import Document as PyMuPDFDocument
 from haystack.dataclasses import ByteStream as HaystackByteStream
 from haystack.dataclasses import Document as HaystackDocument
-from pydantic import BaseModel, Field
-from src.components.pymupdf import load_fitz_pdf, pymupdf_pdf_page_to_img_pil
-from src.helpers.image import base64_to_pil_img, pil_img_to_base64
+from PIL.Image import Image as PILImage
+from pylatexenc.latex2text import LatexNodes2Text
+from src.components.pymupdf import pymupdf_pdf_page_to_img_pil
+from src.helpers.image import (
+    TransformedImage,
+    crop_img,
+    get_flat_poly_lists_convex_hull,
+    pil_img_to_base64,
+    rotate_img_pil,
+    rotate_polygon,
+    scale_flat_poly_list,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +52,8 @@ VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES = {
     "image/tiff",
     "image/heif",
 }
+
+LATEX_NODES_TO_TEXT = LatexNodes2Text()
 
 
 def is_span_in_span(span: DocumentSpan, parent_span: DocumentSpan) -> bool:
@@ -74,19 +72,19 @@ def is_span_in_span(span: DocumentSpan, parent_span: DocumentSpan) -> bool:
     )
 
 
-def get_all_formulas(result: AnalyzeResult) -> List[DocumentFormula]:
+def get_all_formulas(analyze_result: AnalyzeResult) -> List[DocumentFormula]:
     """
     Returns all formulas from the Document Intelligence result.
 
-    :param result: AnalyzeResult object returned by the `begin_analyze_document`
+    :param analyze_result: AnalyzeResult object returned by the `begin_analyze_document`
         method.
-    :type result: AnalyzeResult
+    :type analyze_result: AnalyzeResult
     :return: A list of all formulas in the result.
     :rtype: List[DocumentFormula]
     """
     return list(
         itertools.chain.from_iterable(
-            page.formulas for page in result.pages if page.formulas
+            page.formulas for page in analyze_result.pages if page.formulas
         )
     )
 
@@ -145,6 +143,18 @@ def get_formulas_in_spans(
     return matching_formulas
 
 
+def latex_to_text(latex_str: str) -> str:
+    """
+    Converts a string containing LaTeX to plain text.
+
+    :param latex_str: The LaTeX string to convert.
+    :type latex_str: str
+    :return: The plain text representation of the LaTeX string.
+    :rtype: str
+    """
+    return LATEX_NODES_TO_TEXT.latex_to_text(latex_str).strip()
+
+
 def substitute_content_formulas(
     content: str, matching_formulas: list[DocumentFormula]
 ) -> str:
@@ -171,11 +181,11 @@ def substitute_content_formulas(
     last_idx = 0
     for match_bounds, matching_formula in zip(match_bounds, matching_formulas):
         if match_bounds[0] == last_idx:
-            new_content += matching_formula.value
+            new_content += latex_to_text(matching_formula.value)
             last_idx = match_bounds[1]
         else:
             new_content += content[last_idx : match_bounds[0]]
-            new_content += matching_formula.value
+            new_content += latex_to_text(matching_formula.value)
             last_idx = match_bounds[1]
     new_content += content[last_idx:]
     return new_content
@@ -200,46 +210,6 @@ def replace_content_formulas(
         matching_formulas = get_formulas_in_spans(all_formulas, content_spans)
         return substitute_content_formulas(content, matching_formulas)
     return content
-
-
-def crop_img(img: PIL.Image.Image, crop_poly: list[float]) -> PIL.Image.Image:
-    """
-    Crops an image based on the coordinates of an [x0, y0, x1, y1, ...] polygon.
-
-    :param img: Image to crop.
-    :type img: PIL.Image.Image
-    :param crop_poly: List of coordinates of the polygon (x0, y0, x1, y1, etc.)
-    :type crop_poly: list[float]
-    :return: The cropped image.
-    :rtype: PIL.Image.Image
-    """
-    top_left = (min(crop_poly[::2]), min(crop_poly[1::2]))
-    bottom_right = (max(crop_poly[::2]), max(crop_poly[1::2]))
-    return img.crop((top_left[0], top_left[1], bottom_right[0], bottom_right[1]))
-
-
-def normalize_xy_coords(
-    polygon: list[float],
-    existing_scale: tuple[float, float],
-    new_scale: tuple[float, float],
-):
-    """
-    Normalizes a polygon from one scale to a new one
-
-    :param polygon: List of coordinates of the polygon (x0, y0, x1, y1, etc.)
-    :type polygon: list[float]
-    :param existing_dimensions: Dimensions of the existing scale (width, height)
-    :type existing_dimensions: tuple[float, float]
-    :param new_dimensions: Dimensions of the new scale (width, height)
-    :type new_dimensions: tuple[float, float]
-    :return: Normalized polygon scaled to the new dimensions.
-    :rtype: _type_
-    """
-    x_coords = polygon[::2]
-    x_coords = [x / existing_scale[0] * new_scale[0] for x in x_coords]
-    y_coords = polygon[1::2]
-    y_coords = [y / existing_scale[1] * new_scale[1] for y in y_coords]
-    return list(itertools.chain.from_iterable(zip(x_coords, y_coords)))
 
 
 def get_section_heirarchy(
@@ -294,21 +264,21 @@ def _get_section_heirarchy(
 
 
 def get_element_heirarchy_mapper(
-    result: "AnalyzeResult",
+    analyze_result: "AnalyzeResult",
 ) -> Dict[str, Dict[int, tuple[int]]]:
     """
     Gets a mapping of each element contained to a heirarchy of its parent
     sections. The result will only contain elements contained by a parent section.
 
-    :param result: The AnalyzeResult object returned by the
+    :param analyze_result: The AnalyzeResult object returned by the
         `begin_analyze_document` method.
-    :type result: AnalyzeResult
+    :type analyze_result: AnalyzeResult
     :return: A dictionary containing a key for each element type, which each
         contain a mapping of element ID to a tuple of parent section IDs.
     :rtype: dict[str, dict[int, tuple[int]]]
     """
     # Get section mapper, mapping sections to their direct children
-    sections = result.sections
+    sections = analyze_result.sections
     section_direct_children_mapper = {
         section_id: [section_id] for section_id in range(len(sections))
     }
@@ -422,11 +392,9 @@ def convert_element_heirarchy_to_incremental_numbering(
         # Sections are not present in the heirarchy, meaning no sections were returned from the API. Return an empty dict
         return dict()
     section_to_heirarchy_mapper = elem_heirarchy_mapper["sections"]
-    # print(section_to_heirarchy_mapper)
     section_to_incremental_id_mapper = (
         _convert_section_heirarchy_to_incremental_numbering(section_to_heirarchy_mapper)
     )
-    # print(section_to_incremental_id_mapper)
 
     # Now iterate through all elements and create a mapping of element ID -> incremental heirarchy
     element_to_incremental_id_mapper = defaultdict(dict)
@@ -434,8 +402,6 @@ def convert_element_heirarchy_to_incremental_numbering(
     for elem_type, elem_heirarchy in elem_heirarchy_mapper.items():
         if elem_type != "sections":
             for elem_id, parent_section_heirarchy in elem_heirarchy.items():
-                # print(elem_type, elem_heirarchy)
-                # print(elem_id, parent_section_heirarchy)
                 parent_section = parent_section_heirarchy[-1]
                 element_to_incremental_id_mapper[elem_type][elem_id] = (
                     section_to_incremental_id_mapper.get(parent_section, None)
@@ -451,7 +417,7 @@ def get_document_element_spans(
     Get the spans of a document element.
 
     :param document_element: The document element to get the spans of.
-    :type document_element: DocumentModelBase
+    :type document_element: Model
     :raises NotImplementedError: Raised when the document element does not
         contain a span field.
     :return: The spans of the document element.
@@ -493,15 +459,15 @@ def document_span_to_span_bounds(span: DocumentSpan) -> SpanBounds:
 
 
 def get_span_bounds_to_ordered_idx_mapper(
-    result: "AnalyzeResult",
+    analyze_result: "AnalyzeResult",
 ) -> Dict[SpanBounds, int]:
     """
     Create a mapping of each span start location to the overall position of
     the content. This is used to order the content logically.
 
-    :param result: The AnalyzeResult object returned by the
+    :param analyze_result: The AnalyzeResult object returned by the
         `begin_analyze_document` method.
-    :type result: AnalyzeResult
+    :type analyze_result: AnalyzeResult
     :returns: A dictionary mapping span bounds to the ordered index within the
         document.
     :rtype: dict
@@ -516,9 +482,9 @@ def get_span_bounds_to_ordered_idx_mapper(
         "key_value_pairs",
         "documents",
     ]:
-        elements = getattr(result, attr) or list()
+        elements = getattr(analyze_result, attr) or list()
         all_spans.extend([get_min_and_max_span_bounds(elem.spans) for elem in elements])
-    for page in result.pages:
+    for page in analyze_result.pages:
         for attr in ["barcodes", "lines", "words", "selection_marks"]:
             elements = getattr(page, attr) or list()
             for elem in elements:
@@ -540,13 +506,13 @@ class PageSpanCalculator:
     """
     Calculator for determining the page number of a span based on its position.
 
-    :param di_result: The AnalyzeResult object returned by the
+    :param analyze_result: The AnalyzeResult object returned by the
         `begin_analyze_document` method.
     """
 
-    def __init__(self, di_result: AnalyzeResult):
+    def __init__(self, analyze_result: AnalyzeResult):
         self.page_span_bounds: Dict[int, SpanBounds] = self._get_page_span_bounds(
-            di_result
+            analyze_result
         )
         self._doc_end_span = self.page_span_bounds[max(self.page_span_bounds)].end
 
@@ -572,12 +538,14 @@ class PageSpanCalculator:
         ]
         return min(page_numbers)
 
-    def _get_page_span_bounds(self, di_result: AnalyzeResult) -> Dict[int, SpanBounds]:
+    def _get_page_span_bounds(
+        self, analyze_result: AnalyzeResult
+    ) -> Dict[int, SpanBounds]:
         """
         Gets the span bounds for each page.
 
-        :param di_result: AnalyzeResult object.
-        :type di_result: AnalyzeResult
+        :param analyze_result: AnalyzeResult object.
+        :type analyze_result: AnalyzeResult
         :raises ValueError: Raised when a gap exists between the span bounds of
             two pages.
         :return: Dictionary with page number as key and tuple of start and end.
@@ -585,7 +553,7 @@ class PageSpanCalculator:
         """
         page_span_bounds: Dict[int, SpanBounds] = dict()
         page_start_span = 0  # Set first page start to 0
-        for page in di_result.pages:
+        for page in analyze_result.pages:
             max_page_bound = get_min_and_max_span_bounds(page.spans).end
             max_word_bound = (
                 get_min_and_max_span_bounds([page.words[-1].span]).end
@@ -644,7 +612,7 @@ def get_min_and_max_span_bounds(spans: List[DocumentSpan]) -> SpanBounds:
 #         )
 #     return section_span_info_mapper
 
-# For Example usage: section_heirarchy_mapper = get_section_heirarchy_mapper(di_result.sections)
+# For Example usage: section_heirarchy_mapper = get_section_heirarchy_mapper(analyze_result.sections)
 
 
 @dataclass
@@ -690,7 +658,9 @@ def get_element_page_number(
     Get the page number of a document element.
 
     :param element: The document element to get the page number of.
-    :type element: Union[DocumentPage, DocumentSection, DocumentParagraph, DocumentTable, DocumentFigure, DocumentList, DocumentKeyValueElement, Document]
+    :type element: Union[DocumentPage, DocumentSection, DocumentParagraph,
+        DocumentTable, DocumentFigure, DocumentList, DocumentKeyValueElement,
+        Document]
     :return: The page number of the document element.
     :rtype: int
     """
@@ -700,7 +670,7 @@ def get_element_page_number(
 
 
 def get_element_span_info_list(
-    result: "AnalyzeResult",
+    analyze_result: "AnalyzeResult",
     page_span_calculator: PageSpanCalculator,
     section_to_incremental_id_mapper: Dict[int, tuple[int]],
 ) -> Dict[DocumentSpan, ElementInfo]:
@@ -708,8 +678,9 @@ def get_element_span_info_list(
     Create a mapping of each span start location to the overall position of
     the content. This is used to order the content logically.
 
-    :param result: The AnalyzeResult object returned by the `begin_analyze_document` method.
-    :type result: AnalyzeResult
+    :param analyze_result: The AnalyzeResult object returned by the
+        `begin_analyze_document` method.
+    :type analyze_result: AnalyzeResult
     :param page_span_calculator: The PageSpanCalculator object to determine the
         page location of a span.
     :type page_span_calculator: PageSpanCalculator
@@ -740,7 +711,7 @@ def get_element_span_info_list(
             DocumentKeyValueElement,
             Document,
         ] = (
-            getattr(result, attr) or list()
+            getattr(analyze_result, attr) or list()
         )
         for elem_idx, element in enumerate(elements):
             spans = get_document_element_spans(element)
@@ -762,7 +733,7 @@ def get_element_span_info_list(
                 )
             )
     page_sub_element_counter = defaultdict(int)
-    for page in result.pages:
+    for page_num, page in enumerate(analyze_result.pages):
         for attr in ["barcodes", "lines", "words", "selection_marks"]:
             elements: List[
                 DocumentBarcode, DocumentLine, DocumentWord, DocumentSelectionMark
@@ -774,12 +745,12 @@ def get_element_span_info_list(
                 full_span_bounds = get_min_and_max_span_bounds(spans)
                 element_span_info_list.append(
                     ElementInfo(
-                        element_id=f"/{attr}/{element_idx}",
+                        element_id=f"/pages/{page_num}/{attr}/{element_idx}",
                         element=element,
                         full_span_bounds=full_span_bounds,
                         spans=spans,
                         start_page_number=page.page_number,
-                        section_heirarchy_incremental_id=None,  # page elements are not referred to by sections
+                        section_heirarchy_incremental_id=None,  # Page elements are not referred to by sections
                     )
                 )
 
@@ -832,30 +803,94 @@ def order_element_info_list(
     )
 
 
+def extract_pdf_page_images(
+    pdf: PyMuPDFDocument, img_dpi: int = 100, starting_idx: int = 1
+) -> Dict[int, PILImage]:
+    """
+    Extracts all images from a PDF document and returns them as a dictionary.
+
+    :param pdf: PDF document to extract images from.
+    :type pdf: fitz.Document
+    :param img_dpi: DPI to use when extracting images, defaults to 100
+    :type img_dpi: int, optional
+    :param starting_idx: Index to start numbering the pages from, defaults to 1
+    :type starting_idx: int, optional
+    :return: Dictionary of page index to PIL Image
+    :rtype: Dict[int, PIL.Image.Image]
+    """
+    page_imgs: Dict[int, PILImage] = dict()
+    for page_idx, page in enumerate(pdf.pages()):
+        page_imgs[page_idx + starting_idx] = pymupdf_pdf_page_to_img_pil(
+            page, img_dpi=img_dpi, rotation=False
+        )
+    return page_imgs
+
+
 class SelectionMarkFormatter(ABC):
+    """
+    Base formatter class for Selection Mark elements.
+    """
+
     @abstractmethod
     def format_content(self, content: str) -> str:
         pass
 
 
 class DefaultSelectionMarkFormatter(SelectionMarkFormatter):
+    """
+    Default formatter for Selection Mark elements. This class provides a method
+    for formatting the content of a Selection Mark element.
+
+    :param selected_replacement: The text used to replace any selected
+        text placeholders within the document (anywhere a ':selected:'
+        placeholder exists), defaults to "[X]"
+    :type selected_replacement: str, optional
+    :param unselected_replacement: The text used to replace any unselected
+        text placeholders within the document (anywhere an ':unselected:'
+        placeholder exists), defaults to "[ ]"
+    :type unselected_replacement: str, optional
+    """
+
     def __init__(
         self, selected_replacement: str = "[X]", unselected_replacement: str = "[ ]"
     ):
+
         self._selected_replacement = selected_replacement
         self._unselected_replacement = unselected_replacement
 
     def format_content(self, content: str) -> str:
+        """
+        Formats text content, replacing any selection mark placeholders with
+        the selected or unselected replacement text.
+
+        :param content: Text content to format.
+        :type content: str
+        :return: Formatted text content.
+        :rtype: str
+        """
         return content.replace(":selected:", self._selected_replacement).replace(
             ":unselected:", self._unselected_replacement
         )
 
 
 class DocumentElementProcessor(ABC):
+    """
+    Base processor class for all Document elements extracted by Document
+    Intelligence.
+    """
 
     expected_element = None
 
     def _validate_element_type(self, element_info: ElementInfo):
+        """
+        Validates that the Document element contained by the ElementInfo object
+        is of the expected type.
+
+        :param element_info: Information about the Document element.
+        :type element_info: ElementInfo
+        :raises ValueError: If the element of the ElementInfo object is not of
+            the expected type.
+        """
         if not self.expected_element:
             raise ValueError("expected_element has not been set for this processor.")
 
@@ -881,6 +916,9 @@ class DocumentElementProcessor(ABC):
 
 
 class DocumentSectionProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentSection elements.
+    """
 
     expected_element = DocumentSection
 
@@ -888,6 +926,7 @@ class DocumentSectionProcessor(DocumentElementProcessor):
     def convert_section(
         self,
         element_info: ElementInfo,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for processing section elements.
@@ -896,30 +935,73 @@ class DocumentSectionProcessor(DocumentElementProcessor):
 
 
 class DefaultDocumentSectionProcessor(DocumentSectionProcessor):
+    """
+    The default processor for DocumentSection elements. This class provides
+    methods for converting a DocumentSection element into Haystack Documents
+    that contain section information.
+
+    The text_format string can contain placeholders for the following:
+    - {section_incremental_id}: The heirarchical ID of the section
+        (e.g. (1.2.4)).
+
+    :param text_format: A text format string which defines how the content
+        should be extracted from the element. If set to None, no text content
+        will be extracted from the element.
+    :type text_format: str, optional
+    :param max_heirarchy_depth: The maximum depth of the heirarchy to include in
+        the section incremental ID. If a section has an ID that is deeper than
+        max_heirarchy_depth, it's section ID will be ignored. If None, all
+        section ID levels will be included when printing section IDs.
+    :type max_heirarchy_depth: int, optional
+    """
 
     def __init__(
         self,
-        text_format: Optional[str] = "Section: {section_incremental_id}",
-        max_depth: Optional[int] = 3,
+        text_format: Optional[str] = None,
+        max_heirarchy_depth: Optional[int] = 3,
     ):
         self.text_format = text_format
         # If max_depth is None, ensure it is set to a high number
-        if max_depth < 0:
+        if max_heirarchy_depth < 0:
             raise ValueError("max_depth must be a positive integer or None.")
-        self.max_depth = max_depth if max_depth is not None else 999
+        self.max_heirarchy_depth = (
+            max_heirarchy_depth if max_heirarchy_depth is not None else 999
+        )
 
     def convert_section(
         self,
         element_info: ElementInfo,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
+        """
+        Converts a DocumentSection element into a Haystack Document.
+
+        :param element_info: Information about the DocumentSection element.
+        :type element_info: ElementInfo
+        :param section_heirarchy: The heirarchical ID of the section.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: A list of Haystack Documents containing the section information.
+        :rtype: List[HaystackDocument]
+        """
         self._validate_element_type(element_info)
         # Section incremental ID can be empty for the first section representing
-        # the entire document. Only output text if values exist
+        # the entire document. Only output text if values exist, and only if max_depth
+        # is not exceeded. We want to avoid printing the same section ID -
+        # e.g. (3, 1) should become 3.1 but (3, 1, 1) should be ignored if
+        # max_depth is only 2.
         if self.text_format and element_info.section_heirarchy_incremental_id:
-            section_incremental_id_text = ".".join(
-                str(i)
-                for i in element_info.section_heirarchy_incremental_id[: self.max_depth]
-            )
+            if (
+                len(element_info.section_heirarchy_incremental_id)
+                <= self.max_heirarchy_depth
+            ):
+                section_incremental_id_text = ".".join(
+                    str(i)
+                    for i in element_info.section_heirarchy_incremental_id[
+                        : self.max_heirarchy_depth
+                    ]
+                )
+            else:
+                section_incremental_id_text = ""
             formatted_text = self.text_format.format(
                 section_incremental_id=section_incremental_id_text
             )
@@ -931,7 +1013,9 @@ class DefaultDocumentSectionProcessor(DocumentSectionProcessor):
                         content=formatted_text,
                         meta={
                             "element_id": element_info.element_id,
+                            "element_type": type(element_info.element).__name__,
                             "page_number": element_info.start_page_number,
+                            "section_heirarchy": section_heirarchy,
                         },
                     )
                 ]
@@ -939,12 +1023,27 @@ class DefaultDocumentSectionProcessor(DocumentSectionProcessor):
 
 
 class DocumentPageProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentPage elements.
+    """
 
     expected_element = DocumentPage
 
     @abstractmethod
+    def export_page_img(
+        self, pdf_page_img: PILImage, di_page: DocumentPage
+    ) -> TransformedImage:
+        """
+        Method for exporting the page image and applying transformations.
+        """
+        pass
+
+    @abstractmethod
     def convert_page_start(
-        self, element_info: ElementInfo, page_img: Image.Image
+        self,
+        element_info: ElementInfo,
+        transformed_page_img: TransformedImage,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
@@ -953,7 +1052,10 @@ class DocumentPageProcessor(DocumentElementProcessor):
 
     @abstractmethod
     def convert_page_end(
-        self, element_info: ElementInfo, page_img: Image.Image
+        self,
+        element_info: ElementInfo,
+        transformed_page_img: TransformedImage,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
@@ -962,6 +1064,38 @@ class DocumentPageProcessor(DocumentElementProcessor):
 
 
 class DefaultDocumentPageProcessor(DocumentPageProcessor):
+    """
+    The default processor for DocumentPage elements. This class provides
+    methods for converting a DocumentPage element into Haystack Documents
+    that contain the text and page image content.
+
+    The text format string can contain placeholders for the following:
+    - {page_number}: The 1-based page number of the page.
+
+    :param page_start_text_formats: Text formats to be used to export text
+        content that should be shown at the start of the page. If None, no text
+        content will be exported at the start of the page.
+    :type page_start_text_formats: List[str], optional
+    :param page_end_text_formats: Text formats to be used to export text
+        content that should be shown at the end of the page. If None, no text
+        content will be exported at the end of the page.
+    :type page_end_text_formats: str, optional
+    :param page_img_order: Whether to export the page image 'before' or 'after'
+        the rest of the page content, or not at all ('None').
+    :type page_img_order: Literal["before", "after"], optional
+    :param page_img_text_intro: Introduction text to be paired with the page
+        image, defaults to "*Page Image:*"
+    :type page_img_text_intro: str, optional
+    :param img_export_dpi: DPI of the exported page image, defaults to 100
+    :type img_export_dpi: int, optional
+    :param adjust_rotation: Whether to automatically adjust the image based on
+        the page angle detected by Document Intelligence, defaults to True
+    :type adjust_rotation: bool, optional
+    :param rotated_fill_color: Defines the fill color to be used if the page
+        image is rotated and new pixels are added to the image, defaults to
+        (255, 255, 255)
+    :type rotated_fill_color: Tuple[int], optional
+    """
 
     expected_format_placeholders = ["{page_number}"]
 
@@ -970,29 +1104,79 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
         page_start_text_formats: Optional[List[str]] = [
             "Page: {page_number} content\n"
         ],
-        page_end_text_formats: Optional[str] = ["Footer: {page_number}"],
+        page_end_text_formats: Optional[str] = None,
         page_img_order: Optional[Literal["before", "after"]] = "after",
-        page_img_text_intro: Optional[str] = "\nPage {page_number} Image:",
-        img_dpi: int = 100,
+        page_img_text_intro: Optional[str] = "*Page Image:*",
+        img_export_dpi: int = 100,
+        adjust_rotation: bool = True,
+        rotated_fill_color: Tuple[int] = (255, 255, 255),
     ):
         self.page_start_text_formats = page_start_text_formats
         self.page_end_text_formats = page_end_text_formats
         self.page_img_order = page_img_order
         self.page_img_text_intro = page_img_text_intro
-        self.img_dpi = img_dpi
+        self.img_export_dpi = img_export_dpi
+        self.adjust_rotation = adjust_rotation
+        self.rotated_fill_color = rotated_fill_color
+
+    def export_page_img(
+        self, pdf_page_img: PILImage, di_page: DocumentPage
+    ) -> TransformedImage:
+        """
+        Export the page image and apply transformations.
+
+        :param pdf_page_img: PIL Image of the page.
+        :type pdf_page_img: PIL.Image.Image
+        :param di_page: DocumentPage object.
+        :type di_page: DocumentPage
+        :return: Transformed image object containing the original and
+            transformed image information.
+        :rtype: TransformedImage
+        """
+        if self.adjust_rotation:
+            transformed_img = rotate_img_pil(
+                pdf_page_img, di_page.angle, self.rotated_fill_color
+            )
+        else:
+            transformed_img = pdf_page_img
+        return TransformedImage(
+            image=transformed_img,
+            orig_image=pdf_page_img,
+            rotation_applied=di_page.angle if self.adjust_rotation else None,
+        )
 
     def convert_page_start(
-        self, element_info: ElementInfo, page_img: Image.Image
+        self,
+        element_info: ElementInfo,
+        transformed_page_img: TransformedImage,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
+        """
+        Exports Haystack Documents for content to be shown at the start of the
+        page.
+
+        :param element_info: Element information for the page.
+        :type element_info: ElementInfo
+        :param transformed_page_img: Transformed image object.
+        :type transformed_page_img: TransformedImage
+        :param section_heirarchy: Section heirarchy for the page.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: List of HaystackDocument objects containing the page content.
+        :rtype: List[Document]
+        """
         self._validate_element_type(element_info)
         outputs: List[HaystackDocument] = list()
         meta = {
             "element_id": element_info.element_id,
+            "element_type": type(element_info.element).__name__,
             "page_number": element_info.start_page_number,
             "page_location": "start",
+            "section_heirarchy": section_heirarchy,
         }
         if self.page_img_order == "before":
-            outputs.extend(self._export_page_img_docs(element_info, page_img, meta))
+            outputs.extend(
+                self._export_page_img_docs(element_info, transformed_page_img, meta)
+            )
         if self.page_start_text_formats:
             outputs.extend(
                 self._export_page_text_docs(
@@ -1002,13 +1186,31 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
         return outputs
 
     def convert_page_end(
-        self, element_info: ElementInfo, page_img: Image.Image
+        self,
+        element_info: ElementInfo,
+        transformed_page_img: TransformedImage,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[Document]:
+        """
+        Exports Haystack Documents for content to be shown at the end of the
+        page.
+
+        :param element_info: Element information for the page.
+        :type element_info: ElementInfo
+        :param transformed_page_img: Transformed image object.
+        :type transformed_page_img: TransformedImage
+        :param section_heirarchy: Section heirarchy for the page.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: List of HaystackDocument objects containing the page content.
+        :rtype: List[Document]
+        """
         outputs: List[HaystackDocument] = list()
         meta = {
             "element_id": element_info.element_id,
+            "element_type": type(element_info.element).__name__,
             "page_number": element_info.start_page_number,
             "page_location": "end",
+            "section_heirarchy": section_heirarchy,
         }
         if self.page_end_text_formats:
             outputs.extend(
@@ -1017,35 +1219,47 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
                 )
             )
         if self.page_img_order == "after":
-            outputs.extend(self._export_page_img_docs(element_info, page_img, meta))
+            outputs.extend(
+                self._export_page_img_docs(element_info, transformed_page_img, meta)
+            )
         return outputs
 
-    def export_page_img(self, pdf_page: PyMuPDFPage) -> Image.Image:
-        return pymupdf_pdf_page_to_img_pil(
-            pdf_page, img_dpi=self.img_dpi, rotation=False
-        )
-
     def _export_page_img_docs(
-        self, element_info: ElementInfo, page_img: Image.Image, meta: Dict[str, Any]
+        self,
+        element_info: ElementInfo,
+        transformed_page_img: TransformedImage,
+        meta: Dict[str, Any],
     ) -> List[HaystackDocument]:
+        """
+        Exports the page image as a HaystackDocument.
+
+        :param element_info: Element information for the page.
+        :type element_info: ElementInfo
+        :param transformed_page_img: Transformed image object.
+        :type transformed_page_img: TransformedImage
+        :param meta: Metadata to include in the output documents.
+        :type meta: Dict[str, Any]
+        :return: List of HaystackDocument objects containing the image content.
+        :rtype: List[HaystackDocument]
+        """
+        # Get transformed image, copying over image transformation metadata
         img_bytestream = HaystackByteStream(
-            data=pil_img_to_base64(page_img),
+            data=pil_img_to_base64(transformed_page_img.image),
             mime_type="image/jpeg",
         )
+        meta["rotation_applied"] = transformed_page_img.rotation_applied
+        # Create output docs
         img_outputs = list()
         if self.page_img_text_intro:
-            img_outputs.append(
-                HaystackDocument(
-                    id=f"{element_info.element_id}_page_img_intro_text",
-                    content=self.page_img_text_intro.format(
-                        page_number=element_info.start_page_number
-                    ),
-                    meta=meta,
-                )
+            page_intro_content = self.page_img_text_intro.format(
+                page_number=element_info.start_page_number
             )
+        else:
+            page_intro_content = None
         img_outputs.append(
             HaystackDocument(
                 id=f"{element_info.element_id}_img",
+                content=page_intro_content,
                 blob=img_bytestream,
                 meta=meta,
             )
@@ -1055,6 +1269,18 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
     def _export_page_text_docs(
         self, element_info: ElementInfo, text_formats: List[str], meta: Dict[str, Any]
     ) -> List[HaystackDocument]:
+        """
+        Exports text documents for the page.
+
+        :param element_info: Element information for the page.
+        :type element_info: ElementInfo
+        :param text_formats: List of text formats to use.
+        :type text_formats: List[str]
+        :param meta: Metadata to include in the output documents.
+        :type meta: Dict[str, Any]
+        :return: List of HaystackDocument objects containing the text content.
+        :rtype: List[HaystackDocument]
+        """
         output_strings = list()
         for format in text_formats:
             has_format_placeholders = self._format_str_contains_placeholders(
@@ -1076,7 +1302,25 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
         return list()
 
 
+def get_heading_hashes(section_heirarchy: Optional[tuple[int]]) -> str:
+    """
+    Gets the heading hashes for a section heirarchy.
+
+    :param section_heirarchy: Tuple of section IDs representing the section
+        heirarchy - For example, (1,1,4).
+    :type section_heirarchy: tuple[int], optional
+    :return: A string containing the heading hashes.
+    :rtype: str
+    """
+    if section_heirarchy:
+        return "#" * len(section_heirarchy)
+    return ""
+
+
 class DocumentParagraphProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentParagraph elements.
+    """
 
     expected_element = DocumentParagraph
 
@@ -1086,6 +1330,7 @@ class DocumentParagraphProcessor(DocumentElementProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
@@ -1093,25 +1338,48 @@ class DocumentParagraphProcessor(DocumentElementProcessor):
         pass
 
 
-def get_heading_hashes(section_heirarchy: Optional[tuple[int]]) -> str:
-    if section_heirarchy:
-        return "#" * len(section_heirarchy)
-    return ""
-
-
 class DefaultDocumentParagraphProcessor(DocumentParagraphProcessor):
+    """
+    The default processor for DocumentParagraph elements. This class provides a
+    method for converting a DocumentParagraph element into a Haystack Document
+    object that contains the text content. Since paragraphs can come with
+    different roles, the text format string can be set for each possible role.
+
+    The text format string can contain placeholders for the following:
+    - {content}: The text content of the element
+    - {heading_hashes}: The markdown heading hashes that set the heading
+        level of the paragraph. The heading level is based on the section
+        heirarchy of the paragraph and calculated automatically.
+
+    :param general_text_format: Text format string for general text content.
+    :type general_text_format: str, optional
+    :param page_header_format: Text format string for page headers.
+    :type page_header_format: str, optional
+    :param page_footer_format: Text format string for page footers.
+    :type page_footer_format: str, optional
+    :param title_format: Text format string for titles.
+    :type title_format: str, optional
+    :param section_heading_format: Text format string for section headings.
+    :type section_heading_format: str, optional
+    :param footnote_format: Text format string for footnotes.
+    :type footnote_format: str, optional
+    :param formula_format: Text format string for formulas.
+    :type formula_format: str, optional
+    :param page_number_format: Text format string for page numbers.
+    :type page_number_format: str, optional
+    """
 
     expected_format_placeholders = ["{content}", "{heading_hashes}"]
 
     def __init__(
         self,
         general_text_format: Optional[str] = "{content}",
-        page_header_format: Optional[str] = "Page Title: {content}",
-        page_footer_format: Optional[str] = "\nPage Footer: {content}",
-        title_format: Optional[str] = "\nTitle: {content}\n",
-        section_heading_format: Optional[str] = "\nSection heading: {content}\n",
-        footnote_format: Optional[str] = "Footnote: {content}",
-        formula_format: Optional[str] = "Formula: {content}",
+        page_header_format: Optional[str] = None,
+        page_footer_format: Optional[str] = None,
+        title_format: Optional[str] = "\n{heading_hashes} {content}",
+        section_heading_format: Optional[str] = "\n{heading_hashes} {content}",
+        footnote_format: Optional[str] = "*Footnote:* {content}",
+        formula_format: Optional[str] = "*Formula:* {content}",
         page_number_format: Optional[str] = None,
     ):
         self.paragraph_format_mapper = {
@@ -1130,6 +1398,7 @@ class DefaultDocumentParagraphProcessor(DocumentParagraphProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         self._validate_element_type(element_info)
         format_mapper = self.paragraph_format_mapper[element_info.element.role]
@@ -1152,24 +1421,19 @@ class DefaultDocumentParagraphProcessor(DocumentParagraphProcessor):
                         content=formatted_text,
                         meta={
                             "element_id": element_info.element_id,
+                            "element_type": type(element_info.element).__name__,
                             "page_number": element_info.start_page_number,
+                            "section_heirarchy": section_heirarchy,
                         },
                     )
                 ]
-            return [
-                HaystackDocument(
-                    id=f"{element_info.element_id}",
-                    content=format_mapper.format(content=content),
-                    meta={
-                        "element_id": element_info.element_id,
-                        "page_number": element_info.start_page_number,
-                    },
-                )
-            ]
         return list()
 
 
 class DocumentLineProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentLine elements.
+    """
 
     expected_element = DocumentLine
 
@@ -1179,6 +1443,7 @@ class DocumentLineProcessor(DocumentElementProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
@@ -1187,6 +1452,19 @@ class DocumentLineProcessor(DocumentElementProcessor):
 
 
 class DefaultDocumentLineProcessor(DocumentLineProcessor):
+    """
+    The default processor for DocumentLine elements. This class provides a
+    method for converting a DocumentLine element into a Haystack Document object
+    that contains the text content.
+
+    The text format string can contain placeholders for the following:
+    - {content}: The text content of the element
+
+    :param text_format: A text format string which defines
+        the content which should be extracted from the element. If set to None,
+        no text content will be extracted from the element.
+    :type text_format: str, optional
+    """
 
     def __init__(
         self,
@@ -1199,7 +1477,23 @@ class DefaultDocumentLineProcessor(DocumentLineProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
+        """
+        Converts a line element into a Haystack Document object containing the
+        text content of the line.
+
+        :param element_info: Element information for the line.
+        :type element_info: ElementInfo
+        :param all_formulas: List of all formulas extracted from the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: A formatter for selection marks.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param section_heirarchy: The section heirarchy of the line.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: A list of Haystack Documents containing the line content.
+        :rtype: List[HaystackDocument]
+        """
         self._validate_element_type(element_info)
         content = replace_content_formulas(
             element_info.element.content, element_info.element.spans, all_formulas
@@ -1215,7 +1509,9 @@ class DefaultDocumentLineProcessor(DocumentLineProcessor):
                         content=formatted_text,
                         meta={
                             "element_id": element_info.element_id,
+                            "element_type": type(element_info.element).__name__,
                             "page_number": element_info.start_page_number,
+                            "section_heirarchy": section_heirarchy,
                         },
                     )
                 ]
@@ -1223,6 +1519,9 @@ class DefaultDocumentLineProcessor(DocumentLineProcessor):
 
 
 class DocumentWordProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentWord elements.
+    """
 
     expected_element = DocumentWord
 
@@ -1232,6 +1531,7 @@ class DocumentWordProcessor(DocumentElementProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for exporting element for the beginning of the page.
@@ -1240,6 +1540,19 @@ class DocumentWordProcessor(DocumentElementProcessor):
 
 
 class DefaultDocumentWordProcessor(DocumentWordProcessor):
+    """
+    The default processor for DocumentWord elements. This class provides a
+    method for converting a DocumentWord element into a Haystack Document object
+    that contains the text content.
+
+    The text format string can contain placeholders for the following:
+    - {content}: The text content of the element
+
+    :param text_format: A text format string which defines
+        the content which should be extracted from the element. If set to None,
+        no text content will be extracted from the element.
+    :type text_format: str, optional
+    """
 
     def __init__(
         self,
@@ -1252,7 +1565,23 @@ class DefaultDocumentWordProcessor(DocumentWordProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
+        """
+        Converts a word element into a Haystack Document object containing the
+        text content of the word.
+
+        :param element_info: Element information for the word.
+        :type element_info: ElementInfo
+        :param all_formulas: List of all formulas extracted from the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: A formatter for selection marks.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param section_heirarchy: The section heirarchy of the word.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: A list of Haystack Documents containing the word content.
+        :rtype: List[HaystackDocument]
+        """
         self._validate_element_type(element_info)
         content = replace_content_formulas(
             element_info.element.content, [element_info.element.span], all_formulas
@@ -1268,7 +1597,9 @@ class DefaultDocumentWordProcessor(DocumentWordProcessor):
                         content=self.text_format.format(content=content),
                         meta={
                             "element_id": element_info.element_id,
+                            "element_type": type(element_info.element).__name__,
                             "page_number": element_info.start_page_number,
+                            "section_heirarchy": section_heirarchy,
                         },
                     )
                 ]
@@ -1276,6 +1607,9 @@ class DefaultDocumentWordProcessor(DocumentWordProcessor):
 
 
 class DocumentTableProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentTable element.
+    """
 
     expected_element = DocumentTable
 
@@ -1285,6 +1619,7 @@ class DocumentTableProcessor(DocumentElementProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for exporting table elements.
@@ -1293,13 +1628,52 @@ class DocumentTableProcessor(DocumentElementProcessor):
 
 
 class DefaultDocumentTableProcessor(DocumentTableProcessor):
+    """
+    The default processor for DocumentTable elements. This class provides
+    methods for converting DocumentTable elements into Haystack Document objects
+    for both the text and table/dataframe content of a table.
+
+    Text format strings can contain placeholders for the following:
+    - {table_number}: The table number (ordered from the beginning of the
+        document).
+    - {caption}: The table's caption (if available).
+    - {footnotes}: The table's footnotes (if available).
+
+    This processor outputs multiple Documents for each figure:
+    1. Before-table text: A list of text content documents that are output
+        prior to the table itself.
+    2. Table: The content of the table as a Haystack Document containing the
+        table's content as both a markdown string (content field) and a
+        dataframe (dataframe field).
+    3. After-table text: A list of text content documents that are output
+        following the table itself.
+
+    It is recommended to output most of the table content (captions, content,
+    footnotes etc) prior to the table itself.
+
+    :param before_table_text_formats: A list of text format strings which define
+        the content which should be extracted from the element prior to the
+        table itself. If None, no text content will be extracted prior to the
+        image.
+    :type before_table_text_formats: List[str], optional
+    :param after_table_text_formats: : A list of text format strings which define
+        the content which should be extracted from the element following the
+        table itself. If None, no text content will be extracted after the
+        table.
+    :type after_table_text_formats: List[str], optional
+    """
 
     expected_format_placeholders = ["{table_number}", "{caption}", "{footnotes}"]
 
     def __init__(
         self,
-        before_table_text_formats: Optional[List[str]] = ["Table Caption: {caption}"],
-        after_table_text_formats: Optional[List[str]] = ["Footnotes: {footnotes}"],
+        before_table_text_formats: Optional[List[str]] = [
+            "\n",
+            "*Table Caption:* {caption}",
+            "*Table Footnotes:* {footnotes}",
+            "*Table Content:*",
+        ],
+        after_table_text_formats: Optional[List[str]] = None,
     ):
         self.before_table_text_formats = before_table_text_formats
         self.after_table_text_formats = after_table_text_formats
@@ -1309,12 +1683,30 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
+        """
+        Converts a table element into a list of Haystack Documents containing
+        the content of the table.
+
+        :param element_info: Element information for the table.
+        :type element_info: ElementInfo
+        :param all_formulas: List of all formulas extracted from the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: A formatter for selection marks.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param section_heirarchy: The section heirarchy of the table.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: A list of Haystack Documents containing the table content.
+        :rtype: List[HaystackDocument]
+        """
         self._validate_element_type(element_info)
         outputs: List[HaystackDocument] = list()
         meta = {
             "element_id": element_info.element_id,
+            "element_type": type(element_info.element).__name__,
             "page_number": element_info.start_page_number,
+            "section_heirarchy": section_heirarchy,
         }
         if self.before_table_text_formats:
             outputs.extend(
@@ -1362,6 +1754,26 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         text_formats: List[str],
         meta: Dict[str, Any],
     ) -> List[HaystackDocument]:
+        """
+        Exports the text content for a table element.
+
+        :param element_info: Element information for the table.
+        :type element_info: ElementInfo
+        :param all_formulas: List of all formulas extracted from the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: A formatter for selection marks.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param id: ID of the table element.
+        :type id: str
+        :param text_formats: List of text formats to format with the table's
+            content.
+        :type text_formats: List[str]
+        :param meta: Metadata for the table element.
+        :type meta: Dict[str, Any]
+        :return: A list of HaystackDocument objects containing the table
+            content.
+        :rtype: List[HaystackDocument]
+        """
         table_number_text = get_element_number(element_info)
         caption_text = (
             selection_mark_formatter.format_content(
@@ -1413,6 +1825,21 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
     ) -> tuple[str, pd.DataFrame]:
+        """
+        Converts table content into both a markdown string and a pandas
+        DataFrame.
+
+        :param table: A DocumentTable element as extracted by Azure Document
+            Intelligence.
+        :type table: DocumentTable
+        :param all_formulas: A list of all formulas extracted from the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: A formatter for selection marks.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :return: A tuple of the markdown string and the pandas DataFrame.
+        :rtype: tuple[str, pd.DataFrame]
+        """
+        ### Create pandas DataFrame
         sorted_cells = sorted(
             table.cells, key=lambda cell: (cell.row_index, cell.column_index)
         )
@@ -1431,23 +1858,34 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
             )
             cell_dict[cell.row_index].append(cell_content)
         table_df = pd.DataFrame.from_dict(cell_dict, orient="index")
-        # Set index and columns
+        ### Create markdown text version
+        table_fmt = "github"
+        # Set index
         if num_index_cols > 0:
             table_df.set_index(list(range(0, num_index_cols)), inplace=True)
-        table_df = table_df.T
-        if num_header_rows > 0:
-            table_df.set_index(list(range(0, num_header_rows)), inplace=True)
-        else:
-            # Set index to first column
-            table_df.set_index(0, inplace=True)
-        table_df = table_df.T
         index = num_index_cols > 0
-        table_fmt = "github" if num_header_rows > 0 else "rounded_grid"
-        table_md = table_df.to_markdown(index=index, tablefmt=table_fmt)
+        # Set headers:
+        # Leaving headers blank results in different behaviour than the default value.
+        # This means we have to process tables differently based on whether they have headers.
+        if num_header_rows > 0:
+            table_df = table_df.T
+            # headers = list(range(0, num_index_cols + 1))
+            table_df.set_index(list(range(0, num_header_rows)), inplace=True)
+            # else:
+            # headers = []
+            # Set index to first column
+            # table_df.set_index(0, inplace=True)
+            table_df = table_df.T
+            table_md = table_df.to_markdown(index=index, tablefmt=table_fmt)
+        else:
+            table_md = table_df.to_markdown(index=index, tablefmt=table_fmt, headers=())
         return table_md, table_df
 
 
 class DocumentFigureProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentFigure elements.
+    """
 
     expected_element = DocumentFigure
 
@@ -1455,10 +1893,11 @@ class DocumentFigureProcessor(DocumentElementProcessor):
     def convert_figure(
         self,
         element_info: ElementInfo,
-        page_img: Image.Image,
-        di_result: AnalyzeResult,
+        transformed_page_img: TransformedImage,
+        analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
         Method for exporting figure elements.
@@ -1471,6 +1910,46 @@ def get_element_number(element_info: ElementInfo) -> str:
 
 
 class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
+    """
+    The default processor for DocumentFigure elements. This class provides
+    methods for converting DocumentFigure elements into Haystack Document
+    objects for both the text and image content of a figure.
+
+    Text format strings can contain placeholders for the following:
+    - {figure_number}: The figure number (ordered from the beginning of the
+        document).
+    - {caption}: The figure caption.
+    - {footnotes}: The figure footnotes.
+    - {content}: Text content from within the figure itself.
+
+    This processor outputs multiple Documents for each figure:
+    1. Before-image text: A list of text content documents that are output
+        prior to the image itself.
+    2. Image: The image content of the figure, optionally containing text
+        content that can give context to the image itself.
+    3. After-image text: A list of text content documents that are output
+        following the image itself.
+
+    It is recommended to output most of the figure content (captions, content,
+    footnotes etc) prior to the image itself.
+
+    :param before_figure_text_formats: A list of text format strings which define
+        the content which should be extracted from the element prior to the
+        image itself. If None, no text content will be extracted prior to the
+        image.
+    :type before_figure_text_formats: List[str], optional
+    :param output_figure_img: Whether to output a cropped image as part of the
+        outputs, defaults to True
+    :type output_figure_img: bool
+    :param figure_img_text_format: An optional text format str to be attached to
+        the Document containing the image.
+    :type figure_img_text_format: str, optional
+    :param after_figure_text_formats: : A list of text format strings which define
+        the content which should be extracted from the element following the
+        image itself. If None, no text content will be extracted after the
+        image.
+    :type after_figure_text_formats: List[str], optional
+    """
 
     expected_format_placeholders = [
         "{figure_number}",
@@ -1482,12 +1961,14 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
     def __init__(
         self,
         before_figure_text_formats: Optional[List[str]] = [
-            "Figure Caption: {caption}",
-            "Figure Content:\n{content}",
+            "\n",
+            "*Figure Caption:* {caption}",
+            "*Figure Footnotes:* {footnotes}",
+            "*Figure Content:*\n{content}",
         ],
         output_figure_img: bool = True,
-        figure_img_text_format: Optional[str] = "\nFigure Image:",
-        after_figure_text_formats: Optional[List[str]] = ["Footnotes: {footnotes}"],
+        figure_img_text_format: Optional[str] = "\n*Figure Image:*",
+        after_figure_text_formats: Optional[List[str]] = None,
     ):
         self.before_figure_text_formats = before_figure_text_formats
         self.output_figure_img = output_figure_img
@@ -1497,11 +1978,32 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
     def convert_figure(
         self,
         element_info: ElementInfo,
-        page_img: Image.Image,
-        di_result: AnalyzeResult,
+        transformed_page_img: TransformedImage,
+        analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
+        """
+        Converts a DocumentFigure element into a list of HaystackDocument
+        objects, containing the text and image content for the figure.
+
+        :param element_info: ElementInfo object for the figure.
+        :type element_info: ElementInfo
+        :param transformed_page_img: Transformed image of the page containing
+            the figure.
+        :type transformed_page_img: TransformedImage
+        :param analyze_result: The AnalyzeResult object.
+        :type analyze_result: AnalyzeResult
+        :param all_formulas: List of all formulas in the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: SelectionMarkFormatter object.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param section_heirarchy: Section heirarchy of the figure.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: List of HaystackDocument objects containing the figure content.
+        :rtype: List[HaystackDocument]
+        """
         self._validate_element_type(element_info)
         page_numbers = list(
             sorted(
@@ -1515,13 +2017,15 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         outputs: List[HaystackDocument] = list()
         meta = {
             "element_id": element_info.element_id,
+            "element_type": type(element_info.element).__name__,
             "page_number": element_info.start_page_number,
+            "section_heirarchy": section_heirarchy,
         }
         if self.before_figure_text_formats:
             outputs.extend(
                 self._export_figure_text(
                     element_info,
-                    di_result,
+                    analyze_result,
                     all_formulas,
                     selection_mark_formatter,
                     f"{element_info.element_id}_before_figure_text",
@@ -1530,13 +2034,15 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                 )
             )
         if self.output_figure_img:
-            page_element = di_result.pages[page_numbers[0]]
+            page_element = analyze_result.pages[
+                page_numbers[0] - 1
+            ]  # Convert 1-based page number to 0-based index
             figure_img = self.convert_figure_to_img(
-                element_info.element, page_img, page_element
+                element_info.element, transformed_page_img, page_element
             )
             figure_img_text_docs = self._export_figure_text(
                 element_info,
-                di_result,
+                analyze_result,
                 all_formulas,
                 selection_mark_formatter,
                 id="NOT_REQUIRED",
@@ -1561,7 +2067,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
             outputs.extend(
                 self._export_figure_text(
                     element_info,
-                    di_result,
+                    analyze_result,
                     all_formulas,
                     selection_mark_formatter,
                     f"{element_info.element_id}_after_figure_text",
@@ -1575,13 +2081,33 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
     def _export_figure_text(
         self,
         element_info: ElementInfo,
-        di_result: AnalyzeResult,
+        analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
         id: str,
         text_formats: List[str],
         meta: Dict[str, Any],
     ) -> List[HaystackDocument]:
+        """
+        Exports the text content of a figure element.
+
+        :param element_info: ElementInfo object for the figure.
+        :type element_info: ElementInfo
+        :param analyze_result: The AnalyzeResult object.
+        :type analyze_result: AnalyzeResult
+        :param all_formulas: List of all formulas in the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: SelectionMarkFormatter object.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param id: ID of the figure element.
+        :type id: str
+        :param text_formats: List of text formats to use.
+        :type text_formats: List[str]
+        :param meta: Metadata for the figure element.
+        :type meta: Dict[str, Any]
+        :return: List of HaystackDocument objects containing the text content.
+        :rtype: List[HaystackDocument]
+        """
         figure_number_text = get_element_number(element_info)
         caption_text = selection_mark_formatter.format_content(
             replace_content_formulas(
@@ -1608,7 +2134,10 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         # Get text content only if it is necessary (it is a slow operation)
         content_text = selection_mark_formatter.format_content(
             self._get_figure_text_content(
-                element_info.element, di_result, all_formulas, selection_mark_formatter
+                element_info.element,
+                analyze_result,
+                all_formulas,
+                selection_mark_formatter,
             )
             if any("{content}" in format for format in text_formats)
             else ""
@@ -1643,10 +2172,25 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
     def _get_figure_text_content(
         self,
         figure_element: DocumentFigure,
-        di_result: AnalyzeResult,
+        analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
         selection_mark_formatter: SelectionMarkFormatter,
     ) -> str:
+        """
+        Gets the text content of a figure element. This method automatically
+        excludes the caption and footnotes from the text content.
+
+        :param figure_element: Figure element to extract text content from.
+        :type figure_element: DocumentFigure
+        :param analyze_result: The AnalyzeResult object.
+        :type analyze_result: AnalyzeResult
+        :param all_formulas: List of all formulas in the document.
+        :type all_formulas: List[DocumentFormula]
+        :param selection_mark_formatter: SelectionMarkFormatter object.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :return: The text content of the figure element.
+        :rtype: str
+        """
         # Identify figure content spans
         caption_spans = figure_element.caption.spans if figure_element.caption else []
         footnote_spans = list(
@@ -1673,7 +2217,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
             # print(content_span)
             span_perfect_match = False
             # print("PARAGRAPHS")
-            for para in di_result.paragraphs or []:
+            for para in analyze_result.paragraphs or []:
                 if para.spans[0].offset > content_min_max_span_bounds.end:
                     break
                 # print(para)
@@ -1698,7 +2242,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                 continue
             for page_number in figure_page_numbers:
                 # print("LINES - page {}".format(page_number))
-                for line in di_result.pages[page_number - 1].lines or []:
+                for line in analyze_result.pages[page_number - 1].lines or []:
                     # print(line)
                     # If we have already matched the span, we can skip the rest of the lines
                     if line.spans[0].offset > content_min_max_span_bounds.end:
@@ -1731,7 +2275,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                 if span_perfect_match:
                     continue
                 # print("WORDS - page {}".format(page_number))
-                for word in di_result.pages[page_number - 1].words or []:
+                for word in analyze_result.pages[page_number - 1].words or []:
                     # print(word)
                     # If we have already matched the span, we can skip the rest of the lines
                     if word.span.offset > content_min_max_span_bounds.end:
@@ -1763,14 +2307,483 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         return ""
 
     def convert_figure_to_img(
-        self, figure: DocumentFigure, page_img: Image.Image, page_element: DocumentPage
-    ) -> Image.Image:
+        self,
+        figure: DocumentFigure,
+        transformed_page_img: TransformedImage,
+        page_element: DocumentPage,
+    ) -> PILImage:
+        """
+        Converts a figure element to a cropped image.
+
+        :param figure: DocumentFigure element to be converted.
+        :type figure: DocumentFigure
+        :param transformed_page_img: TransformedImage object of the page
+            containing the figure.
+        :type transformed_page_img: TransformedImage
+        :param page_element: Page object which contains the figure.
+        :type page_element: DocumentPage
+        :return: a PIL Image of the cropped figure.
+        :rtype: PILImage
+        """
         di_page_dimensions = (page_element.width, page_element.height)
-        return crop_img(
-            page_img,
-            normalize_xy_coords(
-                figure.bounding_regions[0].polygon,
-                di_page_dimensions,
-                page_img.size,
-            ),
+        pil_img_dimensions = (
+            transformed_page_img.orig_image.width,
+            transformed_page_img.orig_image.height,
         )
+        # Adjust DI page coordinates from inch-based to pixel-based
+        unique_pages = set([br.page_number for br in figure.bounding_regions])
+        if len(unique_pages) > 1:
+            logger.warning(
+                f"Figure contains bounding regions across multiple pages ({unique_pages}). Only image content from the first page will be used."
+            )
+        figure_polygons = [
+            br.polygon
+            for br in figure.bounding_regions
+            if br.page_number == page_element.page_number
+        ]
+        # Scale polygon coordinates from DI page to PIL image
+        scaled_polygons = [
+            scale_flat_poly_list(
+                figure_polygon,
+                di_page_dimensions,
+                pil_img_dimensions,
+            )
+            for figure_polygon in figure_polygons
+        ]
+        pixel_polygon = get_flat_poly_lists_convex_hull(scaled_polygons)
+        # If the page image has been transformed, adjust the DI page bounding boxes
+        if transformed_page_img.rotation_applied:
+            pixel_polygon = rotate_polygon(
+                pixel_polygon,
+                transformed_page_img.rotation_applied,
+                transformed_page_img.orig_image.width,
+                transformed_page_img.orig_image.height,
+            )
+        return crop_img(
+            transformed_page_img.image,
+            pixel_polygon,
+        )
+
+
+class DocumentIntelligenceProcessor:
+    def __init__(
+        self,
+        page_processor: DocumentPageProcessor = DefaultDocumentPageProcessor(),
+        section_processor: DocumentSectionProcessor = DefaultDocumentSectionProcessor(),
+        table_processor: DocumentTableProcessor = DefaultDocumentTableProcessor(),
+        figure_processor: DocumentFigureProcessor = DefaultDocumentFigureProcessor(),
+        paragraph_processor: DocumentParagraphProcessor = DefaultDocumentParagraphProcessor(),
+        line_processor: DocumentLineProcessor = DefaultDocumentLineProcessor(),
+        word_processor: DocumentWordProcessor = DefaultDocumentWordProcessor(),
+        selection_mark_formatter: SelectionMarkFormatter = DefaultSelectionMarkFormatter(),
+    ):
+        self._page_processor = page_processor
+        self._section_processor = section_processor
+        self._table_processor = table_processor
+        self._figure_processor = figure_processor
+        self._paragraph_processor = paragraph_processor
+        self._line_processor = line_processor
+        self._word_processor = word_processor
+        self._selection_mark_formatter = selection_mark_formatter
+
+    def process_analyze_result(
+        self,
+        analyze_result: AnalyzeResult,
+        doc_page_imgs: Optional[Dict[int, PILImage]] = None,
+        on_error: Literal["ignore", "raise"] = "ignore",
+        break_after_element_idx: Optional[int] = None,
+    ) -> List[HaystackDocument]:
+        """
+        Processes the result of a Document Intelligence analyze operation and
+        returns the extracted content as a list of Haystack Documents. This
+        output is ready for splitting into separate chunks and/or use with LLMs.
+
+        If image outputs are configured for the page or figure processors, the
+        source PDF must be provided using either the `pdf_path` or `pdf_url`
+        parameters.
+
+        This process maintains the order of the content as it appears in the
+        source document, with the configuration of each separate element
+        processor responsible for how the content is processed.
+
+        :param analyze_result: The result of an analyze operation.
+        :type analyze_result: AnalyzeResult
+        :param pdf_path: Local path of the PDF, defaults to None
+        :type pdf_path: Union[str, os.PathLike], optional
+        :param pdf_url: URL path to PDF, defaults to None
+        :type pdf_url: str, optional
+        :param on_error: How to handle errors, defaults to "ignore"
+        :type on_error: Literal["ignore", "raise"], optional
+        :param break_after_element_idx: If provided, this will break the
+            processing loop after this many items. defaults to None
+        :type break_after_element_idx: int, optional
+        :returns: A list of Haystack Documents containing the processed content.
+        :rtype: List[HaystackDocument]
+        """
+        if doc_page_imgs is not None:
+            # Check page image IDs match the DI page IDs
+            di_page_ids = {page.page_number for page in analyze_result.pages}
+            if not doc_page_imgs.keys() == di_page_ids:
+
+                raise ValueError(
+                    "doc_page_imgs keys do not match DI page numbers. doc_page_imgs Keys: {}, DI Page Numbers: {}".format(
+                        f"({min(doc_page_imgs.keys())} -> {max(doc_page_imgs.keys())})",
+                        f"{min(di_page_ids)} -> {max(di_page_ids)}",
+                    )
+                )
+        # Get mapper of element to section heirarchy
+        elem_heirarchy_mapper = get_element_heirarchy_mapper(analyze_result)
+        # span_to_ordered_idx_mapper = get_span_bounds_to_ordered_idx_mapper(analyze_result)
+        section_to_incremental_id_mapper = (
+            convert_element_heirarchy_to_incremental_numbering(elem_heirarchy_mapper)
+        )
+
+        page_span_calculator = PageSpanCalculator(analyze_result)
+
+        # # Get list of all spans in order
+        element_span_info_list = get_element_span_info_list(
+            analyze_result, page_span_calculator, section_to_incremental_id_mapper
+        )
+        ordered_element_span_info_list = order_element_info_list(element_span_info_list)
+
+        # pdf = load_fitz_pdf(pdf_path=pdf_path, pdf_url=pdf_url)
+
+        all_formulas = get_all_formulas(analyze_result)
+
+        # Create outputs
+        full_output_list: List[HaystackDocument] = list()
+
+        transformed_page_imgs: dict[TransformedImage] = dict()  # 1-based page numbers
+        current_page_info = None
+        current_section_heirarchy_incremental_id = None
+        # Keep track of all spans already processed on the page. We will use this to
+        # skip low-priority elements that may already be contained in higher-priority
+        # elements (e.g. ignoring paragraphs/lines/words that already appear in a table
+        # or figure, or lines/words that were already part of a paragraph).
+        current_page_priority_spans: List[DocumentSpan] = list()
+        all_spans: List[DocumentSpan] = list()
+        unprocessed_element_counter = defaultdict(int)
+        # Work through all elements and add to output
+        for element_idx, element_info in enumerate(ordered_element_span_info_list):
+            try:
+                # Skip lower priority elements if their content is already processed as part of a higher-priority element
+                if any(
+                    isinstance(element_info.element, element_type)
+                    for element_type in [DocumentParagraph, DocumentLine, DocumentWord]
+                ):
+                    span_already_processed = False
+                    for element_span in element_info.spans:
+                        if any(
+                            is_span_in_span(element_span, processed_span)
+                            for processed_span in current_page_priority_spans
+                        ):
+                            span_already_processed = True
+                            break
+                    if span_already_processed:
+                        continue
+                # Output page end outputs if the page has changed
+                if (
+                    current_page_info is not None
+                    and element_info.start_page_number
+                    > current_page_info.start_page_number
+                ):
+                    full_output_list.extend(
+                        self._page_processor.convert_page_end(
+                            current_page_info,
+                            transformed_page_imgs[
+                                current_page_info.element.page_number
+                            ],
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
+                    # Remove all spans that end before the current page does.
+                    current_page_priority_spans = [
+                        span
+                        for span in current_page_priority_spans
+                        if document_span_to_span_bounds(span).offset
+                        > current_page_info.full_span_bounds.end
+                    ]
+                ### Process new elements. The order of element types in this if/else loop matches
+                ### the ordering by `ordered_element_span_info_list` and should not be changed.
+                if isinstance(element_info.element, DocumentSection):
+                    current_section_heirarchy_incremental_id = (
+                        element_info.section_heirarchy_incremental_id
+                    )
+                    full_output_list.extend(
+                        self._section_processor.convert_section(
+                            element_info, current_section_heirarchy_incremental_id
+                        )
+                    )
+                    # Skip adding section span to priority spans (this would skip all contained content)
+                    continue
+                elif isinstance(element_info.element, DocumentPage):
+                    # Export page image for use by this and other processors (e.g. page and figure processors)
+                    transformed_page_imgs[element_info.element.page_number] = (
+                        self._page_processor.export_page_img(
+                            pdf_page_img=doc_page_imgs[
+                                element_info.element.page_number
+                            ],
+                            di_page=element_info.element,
+                        )
+                    )
+                    current_page_info = element_info
+                    full_output_list.extend(
+                        self._page_processor.convert_page_start(
+                            element_info,
+                            transformed_page_imgs[
+                                current_page_info.element.page_number
+                            ],
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
+                    continue  # Skip adding span to priority spans
+                # Process high priority elements with text content
+                elif isinstance(element_info.element, DocumentTable):
+                    full_output_list.extend(
+                        self._table_processor.convert_table(
+                            element_info,
+                            all_formulas,
+                            self._selection_mark_formatter,
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
+                elif isinstance(element_info.element, DocumentFigure):
+                    full_output_list.extend(
+                        self._figure_processor.convert_figure(
+                            element_info,
+                            transformed_page_imgs[element_info.start_page_number],
+                            analyze_result,
+                            all_formulas,
+                            self._selection_mark_formatter,
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
+                elif isinstance(element_info.element, DocumentSelectionMark):
+                    # Skip selection marks as these are processed by each individual processor
+                    continue
+                elif isinstance(element_info.element, DocumentParagraph):
+                    full_output_list.extend(
+                        self._paragraph_processor.convert_paragraph(
+                            element_info,
+                            all_formulas,
+                            self._selection_mark_formatter,
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
+                elif isinstance(element_info.element, DocumentLine):
+                    full_output_list.extend(
+                        self._line_processor.convert_line(
+                            element_info,
+                            all_formulas,
+                            self._selection_mark_formatter,
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
+                elif isinstance(element_info.element, DocumentWord):
+                    full_output_list.extend(
+                        self._word_processor.convert_word(
+                            element_info,
+                            all_formulas,
+                            self._selection_mark_formatter,
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
+                # elif isinstance(element.element, DocumentBarcode):
+                #     # TODO: Implement processor
+                # elif isinstance(element.element, Document):
+                #     # TODO: Implement processor
+                # elif isinstance(element.element, DocumentKeyValueElement):
+                #     # TODO: Implement processor
+                else:
+                    unprocessed_element_counter[
+                        element_info.element.__class__.__name__
+                    ] += 1
+                    raise NotImplementedError(
+                        f"Processor for {element_info.element.__class__.__name__} is not supported."
+                    )
+                # Save span start and end for the current element so we can skip lower-priority elements
+                current_page_priority_spans.extend(element_info.spans)
+                all_spans.extend(element_info.spans)
+                if element_idx > break_after_element_idx:
+                    break
+            except Exception as _e:
+                print(
+                    f"Error processing element {element_info.element_id} (start_page_number: {element_info.start_page_number}).\nException: {_e}\nElement info: {element_info}"
+                )
+                if on_error == "raise":
+                    raise
+        # All content processed, add the final page output and the last chunk
+        if current_page_info is not None:
+            full_output_list.extend(
+                self._page_processor.convert_page_end(
+                    current_page_info,
+                    transformed_page_imgs[current_page_info.element.page_number],
+                    current_section_heirarchy_incremental_id,
+                )
+            )
+        if unprocessed_element_counter:
+            print(
+                f"Warning: Some elements were not processed due to a lack of support: {dict(unprocessed_element_counter)}"
+            )
+        return full_output_list
+
+    def merge_subchunk_text_content(
+        self,
+        chunk_content_list: List[List[HaystackDocument]],
+        text_merge_separator: str = "\n",
+    ) -> List[List[HaystackDocument]]:
+        """
+        Merges a list of content chunks together so that adjacent text content
+        is combined into a single document, with images and other non-text
+        content separated into their own documents. This is useful for
+        minimizing the number of separate messages that are required when
+        sending the content to an LLM.
+
+        Example result:
+        Input documents: [text, text, image, text, table, text, image]
+        Output documents: [text, image, text, image]
+
+        :param chunk_content_list: List of lists of Haystack Documents, where
+            each sublist contains the content for a single chunk.
+        :type chunk_content_list: List[List[HaystackDocument]]
+        :return: A list of lists, with all adjacent text content documents
+            merged together.
+        :rtype: List[List[HaystackDocument]]
+        """
+        chunk_outputs = list()
+
+        # Join chunks together
+        for chunk in chunk_content_list:
+            current_text_snippets: List[str] = list()
+            current_chunk_content_list = list()
+            for haystack_doc in chunk:
+                if haystack_doc.content and haystack_doc.blob is None:
+                    # Content is text-only, so add it to the current chunk
+                    current_text_snippets.append(haystack_doc.content)
+                    current_text_snippets.append(
+                        haystack_doc.meta.get(
+                            "following_separator", text_merge_separator
+                        )
+                    )
+                else:
+                    # We have hit a non-text document.
+                    if haystack_doc.content:
+                        # If the data has accompanying text, add it to the current chunk
+                        current_text_snippets.append(haystack_doc.content)
+                    # Join all text in the current chunk into a single str, then add the image bytestream.
+                    current_chunk_content_list.append(
+                        HaystackDocument(content="".join(current_text_snippets))
+                    )
+                    current_text_snippets = list()
+                    current_chunk_content_list.append(haystack_doc)
+            # Add the last chunk
+            if current_text_snippets:
+                current_chunk_content_list.append(
+                    HaystackDocument(content="".join(current_text_snippets))
+                )
+            chunk_outputs.append(current_chunk_content_list)
+        return chunk_outputs
+
+
+class DocumentListSplitter(ABC):
+    @abstractmethod
+    def split_document_list(
+        self, documents: List[HaystackDocument]
+    ) -> List[List[HaystackDocument]]:
+        """
+        Splits a list of Haystack Documents into separate chunks.
+
+        :param documents: A list of Haystack Documents.
+        :type documents: List[HaystackDocument]
+        :return: A list of lists, where each sublist contains the content for a
+            single chunk of content.
+        :rtype: List[List[HaystackDocument]]
+        """
+        pass
+
+
+class PageDocumentListSplitter(DocumentListSplitter):
+    def __init__(self, pages_per_chunk: int = 1):
+        self.pages_per_chunk = pages_per_chunk
+
+    def split_document_list(
+        self, documents: List[HaystackDocument]
+    ) -> List[List[HaystackDocument]]:
+        """
+        Splits a list of Haystack Documents into separate chunks, where each
+        chunk based on the
+        specified splitting method.
+
+        :param documents: A list of Haystack Documents.
+        :type documents: List[HaystackDocument]
+        :param split_on: The method used to split the content, defaults to "page_number"
+        :type split_on: Literal[None, "page_number", "section_heirarchy"], optional
+        :return: A list of lists, where each sublist contains the content for a
+            single chunk of content.
+        :rtype: List[List[HaystackDocument]]
+        """
+        split_outputs = list()
+        current_chunk = list()
+        current_chunk_page_numbers = set()
+        for content_doc in documents:
+            current_page_number = content_doc.meta.get("page_number", None)
+            num_pages_in_current_chunk = len(current_chunk_page_numbers)
+            if (
+                current_page_number is not None
+                and num_pages_in_current_chunk == self.pages_per_chunk
+                and current_page_number not in current_chunk_page_numbers
+            ):
+                if current_chunk:
+                    split_outputs.append(current_chunk)
+                    current_chunk = list()
+                    current_chunk_page_numbers = set()
+            current_chunk_page_numbers.add(current_page_number)
+            # Add the current content to the current chunk
+            current_chunk.append(content_doc)
+        # All content is completed. Add the last chunk
+        if current_chunk:
+            split_outputs.append(current_chunk)
+        return split_outputs
+
+
+def convert_content_chunks_to_openai_messages(
+    chunked_content_docs: List[List[HaystackDocument]],
+    role: str,
+    img_detail: Literal["auto", "low", "high"] = "auto",
+) -> List[List[dict]]:
+    """
+    Converts a list of lists of HaystackDocument objects into a list of OpenAI
+    message objects, ready for sending to an OpenAI LLM API endpoint.
+
+    :param chunked_content_docs: List of lists of HaystackDocument objects.
+    :type chunked_content_docs: List[List[HaystackDocument]]
+    :param role: Role to be used for the messages.
+    :type role: str
+    :param img_detail: Details to be used for image messages, defaults to "auto"
+    :type img_detail: Literal["auto", "low", "high"], optional
+    :return: A list of messages dictionaries
+    :rtype: List[List[dict]]
+    """
+    msg_content_list = list()
+    for chunk_output in chunked_content_docs:
+        for content_doc in chunk_output:
+            if content_doc.blob and content_doc.blob.mime_type.startswith("image"):
+                # Image content
+                if content_doc.content:
+                    msg_content_list.append(
+                        {"type": "text", "text": content_doc.content}
+                    )
+                msg_content_list.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/{content_doc.blob.mime_type};base64,{content_doc.blob.data}",
+                            "detail": img_detail,
+                        },
+                    }
+                )
+            else:
+                # All other types (content field should be populated with everything that is required)
+                msg_content_list.append({"type": "text", "text": content_doc.content})
+    # Combine into a single message
+    return {"role": role, "content": msg_content_list}

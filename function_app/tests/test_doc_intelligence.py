@@ -28,6 +28,7 @@ from src.components.doc_intelligence import (
     DocumentTableLoaderBase,
     PageFormatConfig,
     TableFormatConfig,
+    latex_to_text,
     _convert_section_heirarchy_to_incremental_numbering,
     convert_element_heirarchy_to_incremental_numbering,
     get_element_heirarchy_mapper,
@@ -535,12 +536,11 @@ class TestTableFormatConfig:
         print(expected)
         assert result == expected
 
-
 @pytest.mark.parametrize(
-    "content,matching_formulas,expected",
+    "latex_str,expected",
     [
-        ["", [], ""],
-        ["rest of string", [], "rest of string"],
+        ["", ""],
+        ['\\left( \\beta \\% = 8 0 \\% \\right.', "rest of string"],
         [
             ":formula: rest of string",
             [
@@ -549,7 +549,7 @@ class TestTableFormatConfig:
                     span=DocumentSpan(offset=0, length=8),
                 )
             ],
-            "\\left( \\beta \\% = 8 0 \\% \\right. rest of string",
+            f"{latex_to_text('\\left( \\beta \\% = 8 0 \\% \\right.')} rest of string",
         ],
         [
             ":formula: rest :formula: of string",
@@ -562,7 +562,7 @@ class TestTableFormatConfig:
                     value="second substitution", span=DocumentSpan(offset=15, length=8)
                 ),
             ],
-            "\\left( \\beta \\% = 8 0 \\% \\right. rest second substitution of string",
+            f"{latex_to_text('\\left( \\beta \\% = 8 0 \\% \\right.')} rest second substitution of string",
         ],
         [
             ":formula: rest :formula: of string :formula:",
@@ -578,7 +578,59 @@ class TestTableFormatConfig:
                     value="final substitution", span=DocumentSpan(offset=30, length=8)
                 ),
             ],
-            "\\left( \\beta \\% = 8 0 \\% \\right. rest second substitution of string final substitution",
+            f"{latex_to_text('\\left( \\beta \\% = 8 0 \\% \\right.')} rest second substitution of string final substitution",
+        ],
+    ],
+)
+def test_latex_to_text(latex_str, expected):
+    result = latex_to_text(latex_str)
+    print(result)
+    print(expected)
+    assert result == expected
+
+@pytest.mark.parametrize(
+    "content,matching_formulas,expected",
+    [
+        ["", [], ""],
+        ["rest of string", [], "rest of string"],
+        [
+            ":formula: rest of string",
+            [
+                DocumentFormula(
+                    value="\\left( \\beta \\% = 8 0 \\% \\right.",
+                    span=DocumentSpan(offset=0, length=8),
+                )
+            ],
+            f"{latex_to_text('\\left( \\beta \\% = 8 0 \\% \\right.')} rest of string",
+        ],
+        [
+            ":formula: rest :formula: of string",
+            [
+                DocumentFormula(
+                    value="\\left( \\beta \\% = 8 0 \\% \\right.",
+                    span=DocumentSpan(offset=0, length=8),
+                ),
+                DocumentFormula(
+                    value="second substitution", span=DocumentSpan(offset=15, length=8)
+                ),
+            ],
+            f"{latex_to_text('\\left( \\beta \\% = 8 0 \\% \\right.')} rest second substitution of string",
+        ],
+        [
+            ":formula: rest :formula: of string :formula:",
+            [
+                DocumentFormula(
+                    value="\\left( \\beta \\% = 8 0 \\% \\right.",
+                    span=DocumentSpan(offset=0, length=8),
+                ),
+                DocumentFormula(
+                    value="second substitution", span=DocumentSpan(offset=15, length=8)
+                ),
+                DocumentFormula(
+                    value="final substitution", span=DocumentSpan(offset=30, length=8)
+                ),
+            ],
+            f"{latex_to_text('\\left( \\beta \\% = 8 0 \\% \\right.')} rest second substitution of string final substitution",
         ],
     ],
 )

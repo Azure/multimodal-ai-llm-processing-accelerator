@@ -481,8 +481,8 @@ def form_extraction_with_confidence(
                         pil_img,
                         polygon,
                         polygon_type="normalized",
-                        outline="blue",
-                        width=3,
+                        outline_color="blue",
+                        outline_width=3,
                     )
             # Resize the image to a max of 500x500
             pil_img = resize_img_by_max(pil_img, max_height=1000, max_width=1000)
