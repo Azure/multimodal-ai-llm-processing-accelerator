@@ -225,7 +225,7 @@ class FunctionReponseModel(BaseModel):
         default=None,
         description="The raw text content extracted by Document Intelligence.",
     )
-    di_raw_response: Optional[list[dict]] = Field(
+    di_raw_response: Optional[dict] = Field(
         default=None, description="The raw API response from Document Intelligence."
     )
     di_time_taken_secs: Optional[float] = Field(
@@ -235,8 +235,8 @@ class FunctionReponseModel(BaseModel):
     llm_input_messages: Optional[list[dict]] = Field(
         default=None, description="The messages that were sent to the LLM."
     )
-    llm_reply_messages: Optional[dict] = Field(
-        default=None, description="The messages that were received from the LLM."
+    llm_reply_message: Optional[dict] = Field(
+        default=None, description="The message that was received from the LLM."
     )
     llm_raw_response: Optional[str] = Field(
         default=None, description="The raw text response from the LLM."
@@ -373,7 +373,7 @@ def form_extraction_with_confidence(
         output_model.llm_time_taken_secs = llm_timer.time_taken
         ### 5. Validate that the LLM response matches the expected schema
         error_text = "An error occurred when validating the LLM's returned response into the expected schema."
-        output_model.llm_reply_messages = llm_result.choices[0].to_dict()
+        output_model.llm_reply_message = llm_result.choices[0].to_dict()
         output_model.llm_raw_response = llm_result.choices[0].message.content
         llm_structured_response = LLMExtractedFieldsModel(
             **json.loads(llm_result.choices[0].message.content)

@@ -105,10 +105,10 @@ class FunctionReponseModel(BaseModel):
         None,
         description="If an error occurred, this field will contain the error message.",
     )
-    di_extracted_text: Optional[list[dict]] = Field(
+    di_extracted_text: Optional[str] = Field(
         None, description="The raw text content extracted by Document Intelligence."
     )
-    di_raw_response: Optional[list[dict]] = Field(
+    di_raw_response: Optional[dict] = Field(
         None, description="The raw API response from Document Intelligence."
     )
     di_time_taken_secs: Optional[float] = Field(
@@ -118,8 +118,8 @@ class FunctionReponseModel(BaseModel):
     llm_input_messages: Optional[list[dict]] = Field(
         None, description="The messages that were sent to the LLM."
     )
-    llm_reply_messages: Optional[dict] = Field(
-        None, description="The messages that were received from the LLM."
+    llm_reply_message: Optional[dict] = Field(
+        default=None, description="The message that was received from the LLM."
     )
     llm_raw_response: Optional[str] = Field(
         None, description="The raw text response from the LLM."
@@ -228,7 +228,7 @@ def doc_intel_extract_city_names(req: func.HttpRequest) -> func.HttpResponse:
         output_model.llm_time_taken_secs = llm_timer.time_taken
         ### 5. Validate that the LLM response matches the expected schema
         error_text = "An error occurred when validating the LLM's returned response into the expected schema."
-        output_model.llm_reply_messages = llm_result.choices[0].to_dict()
+        output_model.llm_reply_message = llm_result.choices[0].to_dict()
         output_model.llm_raw_response = llm_result.choices[0].message.content
         llm_structured_response = LLMCityNamesModel(
             **json.loads(llm_result.choices[0].message.content)

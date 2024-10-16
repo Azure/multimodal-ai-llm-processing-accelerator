@@ -1,3 +1,6 @@
+### TODO: This pipeline will be updated to use the standard openai library
+### (instead of haystack), along with a rework of the PyMuPDF class.
+
 import json
 import logging
 import os
@@ -10,7 +13,7 @@ from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
 from haystack.dataclasses import ByteStream, ChatMessage
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
-from src.components.pymupdf import PyMuPDFConverter, VALID_PYMUPDF_MIME_TYPES
+from src.components.pymupdf import VALID_PYMUPDF_MIME_TYPES, PyMuPDFConverter
 from src.helpers.common import (
     MeasureRunTime,
     clean_openai_msg,
@@ -92,8 +95,8 @@ class FunctionReponseModel(BaseModel):
     llm_input_messages: Optional[list[dict]] = Field(
         None, description="The messages that were sent to the LLM."
     )
-    llm_reply_messages: Optional[list[dict]] = Field(
-        None, description="The messages that were received from the LLM."
+    llm_reply_message: Optional[dict] = Field(
+        default=None, description="The message that was received from the LLM."
     )
     llm_raw_response: Optional[str] = Field(
         None, description="The raw text response from the LLM."
@@ -216,13 +219,11 @@ def pymupdf_extract_city_names(
             )
         # Validate that the LLM response matches the expected schema
         try:
-            output_model.llm_reply_messages = [
-                msg.to_openai_format() for msg in llm_result["replies"]
-            ]
             if len(llm_result["replies"]) != 1:
                 raise ValueError(
                     "The LLM response did not contain exactly one message."
                 )
+            output_model.llm_reply_message = llm_result["replies"][0].to_openai_format()
             output_model.llm_raw_response = llm_result["replies"][0].content
             llm_structured_response = LLMCityNamesModel(
                 **json.loads(output_model.llm_raw_response)
