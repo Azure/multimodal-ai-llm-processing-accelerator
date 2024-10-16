@@ -6,10 +6,7 @@ from typing import Optional
 
 import azure.functions as func
 from dotenv import load_dotenv
-from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
-from haystack.dataclasses import ChatMessage
-from haystack.utils import Secret
-from openai import AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI, AzureOpenAI
 from pydantic import BaseModel, Field
 from src.components.speech import (
     AOAI_WHISPER_MIME_TYPE_MAPPER,
@@ -17,11 +14,7 @@ from src.components.speech import (
     AzureSpeechTranscriber,
     is_phrase_start_time_match,
 )
-from src.components.utils import (
-    InvalidFileTypeError,
-    base64_file_to_buffer,
-    get_file_ext_and_mime_type,
-)
+from src.components.utils import base64_bytes_to_buffer, get_file_ext_and_mime_type
 from src.helpers.common import MeasureRunTime
 from src.result_enrichment.common import is_value_in_content
 from src.schema import LLMResponseBaseModel
@@ -29,6 +22,7 @@ from src.schema import LLMResponseBaseModel
 load_dotenv()
 
 bp_call_center_audio_analysis = func.Blueprint()
+FUNCTION_ROUTE = "call_center_audio_analysis"
 
 SPEECH_REGION = os.getenv("SPEECH_REGION")
 SPEECH_API_KEY = os.getenv("SPEECH_API_KEY")
@@ -36,8 +30,6 @@ AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
 AOAI_WHISPER_DEPLOYMENT = os.getenv("AOAI_WHISPER_DEPLOYMENT")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_API_KEY = os.getenv("AOAI_API_KEY")
-# Load the API key as a Secret, so that it is not logged in any traces or saved if the Haystack component is exported.
-AOAI_API_KEY_SECRET = Secret.from_token(AOAI_API_KEY)
 
 ### Setup components
 aoai_whisper_async_client = AsyncAzureOpenAI(
@@ -68,14 +60,13 @@ aoai_whisper_kwargs = {
     "timeout": 60,
 }
 
-azure_generator = AzureOpenAIChatGenerator(
+aoai_client = AzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY_SECRET,
+    api_key=AOAI_API_KEY,
     api_version="2024-06-01",
-    generation_kwargs={
-        "response_format": {"type": "json_object"}
-    },  # Ensure we get JSON responses
+    timeout=30,
+    max_retries=0,
 )
 
 # Create mappers to handle different types of transcription methods
@@ -240,8 +231,8 @@ class FunctionReponseModel(BaseModel):
     llm_input_messages: Optional[list[dict]] = Field(
         default=None, description="The messages that were sent to the LLM."
     )
-    llm_reply_messages: Optional[list[dict]] = Field(
-        default=None, description="The messages that were received from the LLM."
+    llm_reply_message: Optional[dict] = Field(
+        default=None, description="The message that was received from the LLM."
     )
     llm_raw_response: Optional[str] = Field(
         default=None, description="The raw text response from the LLM."
@@ -267,12 +258,21 @@ LLM_SYSTEM_PROMPT = (
 )
 
 
-@bp_call_center_audio_analysis.route(route="call_center_audio_analysis")
+@bp_call_center_audio_analysis.route(route=FUNCTION_ROUTE)
 async def call_center_audio_analysis(
     req: func.HttpRequest,
 ) -> func.HttpResponse:
-    logging.info("Python HTTP trigger function processed a request.")
     try:
+        logging.info(
+            f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request."
+        )
+        # Create error_text and error_code variables. These will be updated as
+        # we move through the pipeline so that if a step fails, the vars reflect
+        # what has failed. If all steps complete successfully, the vars are
+        # never used.
+        error_text = "An error occurred during processing."
+        error_code = 422
+
         func_timer = MeasureRunTime()
         func_timer.start()
         # Create the object to hold all intermediate and final values. We will progressively update
@@ -290,186 +290,129 @@ async def call_center_audio_analysis(
             return func.HttpResponse(
                 body=output_model.model_dump_json(),
                 mimetype="application/json",
-                status_code=500,
+                status_code=error_code,
             )
+        # Audio file & type
         valid_mime_to_filetype_mapper = TRANSCRIPTION_METHOD_TO_MIME_MAPPER[
             transcription_method
         ]
-        # Audio file & type
+        error_text = "Invalid audio file. Please sbumit a file with a valid filename and content type."
         audio_file = req.files["audio"]
         audio_file_b64 = audio_file.read()
-        try:
-            audio_file_ext, _audio_file_content_type = get_file_ext_and_mime_type(
-                valid_mimes_to_file_ext_mapper=valid_mime_to_filetype_mapper,
-                filename=audio_file.filename,
-                content_type=audio_file.content_type,
-            )
-            audio_filename = (
-                audio_file.filename if audio_file.filename else f"file.{audio_file_ext}"
-            )
-        except InvalidFileTypeError as e:
-            output_model.error_text = (
-                "Please sbumit a file with a valid filename or content type. " + str(e)
-            )
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
+        audio_file_ext, _audio_file_content_type = get_file_ext_and_mime_type(
+            valid_mimes_to_file_ext_mapper=valid_mime_to_filetype_mapper,
+            filename=audio_file.filename,
+            content_type=audio_file.content_type,
+        )
+        audio_filename = (
+            audio_file.filename if audio_file.filename else f"file.{audio_file_ext}"
+        )
         # Get the transcription result
-        try:
-            with MeasureRunTime() as speech_timer:
-                if transcription_method == "fast":
-                    transcription, raw_transcription_api_response = (
-                        await transcriber.get_fast_transcription_async(
-                            audio_file=audio_file_b64,
-                            definition=fast_transcription_definition,
-                        )
+        error_text = "An error occurred during audio transcription."
+        error_code = 500
+        with MeasureRunTime() as speech_timer:
+            if transcription_method == "fast":
+                transcription, raw_transcription_api_response = (
+                    await transcriber.get_fast_transcription_async(
+                        audio_file=audio_file_b64,
+                        definition=fast_transcription_definition,
                     )
-                else:
-                    audio_file = base64_file_to_buffer(
-                        b64_str=audio_file_b64, name=audio_filename
+                )
+            else:
+                audio_file = base64_bytes_to_buffer(
+                    b64_str=audio_file_b64, name=audio_filename
+                )
+                transcription, raw_transcription_api_response = (
+                    await transcriber.get_aoai_whisper_transcription_async(
+                        audio_file=audio_file,
+                        **aoai_whisper_kwargs,
                     )
-                    transcription, raw_transcription_api_response = (
-                        await transcriber.get_aoai_whisper_transcription_async(
-                            audio_file=audio_file,
-                            **aoai_whisper_kwargs,
-                        )
-                    )
-            formatted_transcription_text = transcription.to_formatted_str(
-                transcription_prefix_format="Language: {language}\nDuration: {formatted_duration} minutes\n\nConversation:\n",
-                phrase_format="[{start_min}:{start_sub_sec}] {auto_phrase_source_name} {auto_phrase_source_id}: {display_text}",
-            )
-            output_model.speech_extracted_text = formatted_transcription_text
-            output_model.speech_raw_response = raw_transcription_api_response
-            output_model.speech_time_taken_secs = speech_timer.time_taken
-        except Exception as _e:
-            output_model.error_text = "An error occurred during audio transcription."
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
+                )
+        formatted_transcription_text = transcription.to_formatted_str(
+            transcription_prefix_format="Language: {language}\nDuration: {formatted_duration} minutes\n\nConversation:\n",
+            phrase_format="[{start_min}:{start_sub_sec}] {auto_phrase_source_name} {auto_phrase_source_id}: {display_text}",
+        )
+        output_model.speech_extracted_text = formatted_transcription_text
+        output_model.speech_raw_response = raw_transcription_api_response
+        output_model.speech_time_taken_secs = speech_timer.time_taken
         # Create the messages to send to the LLM in the following order:
         # 1. System prompt
         # 2. Audio transcription, formatted in a clear way
-        try:
-            input_messages = [
-                ChatMessage.from_system(LLM_SYSTEM_PROMPT),
-                ChatMessage.from_user(formatted_transcription_text),
-            ]
-            output_model.llm_input_messages = [
-                msg.to_openai_format() for msg in input_messages
-            ]
-        except Exception as _e:
-            output_model.error_text = (
-                "An error occurred while creating the LLM input messages."
-            )
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
+        error_text = "An error occurred while creating the LLM input messages."
+        input_messages = [
+            {
+                "role": "system",
+                "content": LLM_SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": formatted_transcription_text,
+            },
+        ]
+        output_model.llm_input_messages = input_messages
         # Send request to LLM
-        try:
-            with MeasureRunTime() as llm_timer:
-                llm_result = azure_generator.run(messages=input_messages)
-            output_model.llm_time_taken_secs = llm_timer.time_taken
-        except Exception as _e:
-            output_model.error_text = "An error occurred when sending the LLM request."
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
+        error_text = "An error occurred when sending the LLM request."
+        with MeasureRunTime() as llm_timer:
+            llm_result = aoai_client.chat.completions.create(
+                messages=input_messages,
+                model=AOAI_LLM_DEPLOYMENT,
+                response_format={"type": "json_object"},  # Ensure we get JSON responses
             )
+        output_model.llm_time_taken_secs = llm_timer.time_taken
         # Validate that the LLM response matches the expected schema
-        try:
-            output_model.llm_reply_messages = [
-                msg.to_openai_format() for msg in llm_result["replies"]
-            ]
-            if len(llm_result["replies"]) != 1:
-                raise ValueError(
-                    "The LLM response did not contain exactly one message."
-                )
-            output_model.llm_raw_response = llm_result["replies"][0].content
-            llm_structured_response = LLMRawResponseModel(
-                **json.loads(llm_result["replies"][0].content)
-            )
-        except Exception as _e:
-            output_model.error_text = "An error occurred when validating the LLM's returned response into the expected schema."
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
+        error_text = "An error occurred when validating the LLM's returned response into the expected schema."
+        output_model.llm_reply_message = llm_result.choices[0].to_dict()
+        output_model.llm_raw_response = llm_result.choices[0].message.content
+        llm_structured_response = LLMRawResponseModel(
+            **json.loads(llm_result.choices[0].message.content)
+        )
         # Process each keyword and add additional metadata from the transcription and return a processed result
-        try:
-            processed_keywords = list()
-            for keyword in llm_structured_response.keywords:
-                # Find the sentence in the transcription that contains the keyword.
-                # Search for all sentences with the same timestamp and where the LLM's
-                # text was contained in the sentence. If not available, mark the keyword as not matched.
-                keyword_sentence_start_time_secs = int(
-                    keyword.timestamp.split(":")[0]
-                ) * 60 + int(keyword.timestamp.split(":")[1])
-                matching_phrases = [
-                    phrase
-                    for phrase in transcription.phrases
-                    if is_value_in_content(
-                        keyword.keyword.lower(), phrase.display_text.lower()
+        error_text = "An error occurred when post-processing the keywords."
+        processed_keywords = list()
+        for keyword in llm_structured_response.keywords:
+            # Find the sentence in the transcription that contains the keyword.
+            # Search for all sentences with the same timestamp and where the LLM's
+            # text was contained in the sentence. If not available, mark the keyword as not matched.
+            keyword_sentence_start_time_secs = int(
+                keyword.timestamp.split(":")[0]
+            ) * 60 + int(keyword.timestamp.split(":")[1])
+            matching_phrases = [
+                phrase
+                for phrase in transcription.phrases
+                if is_value_in_content(
+                    keyword.keyword.lower(), phrase.display_text.lower()
+                )
+                and is_phrase_start_time_match(
+                    expected_start_time_secs=keyword_sentence_start_time_secs,
+                    phrase=phrase,
+                    start_time_tolerance_secs=1,
+                )
+            ]
+            if len(matching_phrases) == 1:
+                processed_keywords.append(
+                    ProcessedKeyWord(
+                        **keyword.dict(),
+                        keyword_matched_to_transcription_sentence=True,
+                        full_sentence_text=matching_phrases[0].display_text,
+                        sentence_confidence=matching_phrases[0].confidence,
+                        sentence_start_time_secs=matching_phrases[0].start_secs,
+                        sentence_end_time_secs=matching_phrases[0].end_secs,
                     )
-                    and is_phrase_start_time_match(
-                        expected_start_time_secs=keyword_sentence_start_time_secs,
-                        phrase=phrase,
-                        start_time_tolerance_secs=1,
+                )
+            else:
+                processed_keywords.append(
+                    ProcessedKeyWord(
+                        **keyword.dict(),
+                        keyword_matched_to_transcription_sentence=False,
                     )
-                ]
-                if len(matching_phrases) == 1:
-                    processed_keywords.append(
-                        ProcessedKeyWord(
-                            **keyword.dict(),
-                            keyword_matched_to_transcription_sentence=True,
-                            full_sentence_text=matching_phrases[0].display_text,
-                            sentence_confidence=matching_phrases[0].confidence,
-                            sentence_start_time_secs=matching_phrases[0].start_secs,
-                            sentence_end_time_secs=matching_phrases[0].end_secs,
-                        )
-                    )
-                else:
-                    processed_keywords.append(
-                        ProcessedKeyWord(
-                            **keyword.dict(),
-                            keyword_matched_to_transcription_sentence=False,
-                        )
-                    )
-            # Construct processed model, replacing the raw keywords with the processed keywords
-            llm_structured_response_dict = llm_structured_response.dict()
-            llm_structured_response_dict.pop("keywords")
-            output_model.result = ProcessedResultModel(
-                **llm_structured_response_dict,
-                keywords=processed_keywords,
-            )
-        except Exception as _e:
-            output_model.error_text = (
-                "An error occurred when post-processing the keywords."
-            )
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
-
+                )
+        # Construct processed model, replacing the raw keywords with the processed keywords
+        llm_structured_response_dict = llm_structured_response.dict()
+        llm_structured_response_dict.pop("keywords")
+        output_model.result = ProcessedResultModel(
+            **llm_structured_response_dict,
+            keywords=processed_keywords,
+        )
         # All steps completed successfully, set success=True and return the final result
         output_model.success = True
         output_model.func_time_taken_secs = func_timer.stop()
@@ -480,7 +423,10 @@ async def call_center_audio_analysis(
         )
     except Exception as _e:
         logging.exception("An error occurred during processing.")
+        output_model.error_text = error_text
+        output_model.func_time_taken_secs = func_timer.stop()
         return func.HttpResponse(
-            "An error occurred during processing.",
-            status_code=500,
+            body=output_model.model_dump_json(),
+            mimetype="application/json",
+            status_code=error_code,
         )

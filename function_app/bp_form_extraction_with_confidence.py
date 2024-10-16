@@ -374,8 +374,6 @@ def form_extraction_with_confidence(
         ### 5. Validate that the LLM response matches the expected schema
         error_text = "An error occurred when validating the LLM's returned response into the expected schema."
         output_model.llm_reply_messages = llm_result.choices[0].to_dict()
-        if len(llm_result.choices) != 1:
-            raise ValueError("The LLM response did not contain exactly one message.")
         output_model.llm_raw_response = llm_result.choices[0].message.content
         llm_structured_response = LLMExtractedFieldsModel(
             **json.loads(llm_result.choices[0].message.content)
