@@ -277,6 +277,10 @@ def get_element_heirarchy_mapper(
         contain a mapping of element ID to a tuple of parent section IDs.
     :rtype: dict[str, dict[int, tuple[int]]]
     """
+    if not analyze_result.sections:
+        # Sections do not appear in result (it might be the read model result).
+        # Return an empty dict
+        return dict()
     # Get section mapper, mapping sections to their direct children
     sections = analyze_result.sections
     section_direct_children_mapper = {
@@ -2678,9 +2682,9 @@ class DocumentIntelligenceProcessor:
                     )
                 else:
                     # We have hit a non-text document.
-                    if haystack_doc.content:
-                        # If the data has accompanying text, add it to the current chunk
-                        current_text_snippets.append(haystack_doc.content)
+                    # if haystack_doc.content:
+                    #     # If the data has accompanying text, add it to the current chunk
+                    #     current_text_snippets.append(haystack_doc.content)
                     # Join all text in the current chunk into a single str, then add the image bytestream.
                     current_chunk_content_list.append(
                         HaystackDocument(content="".join(current_text_snippets))

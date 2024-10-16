@@ -7,7 +7,8 @@ from typing import Any, Dict, List, Optional, Union
 from httpx import AsyncClient, Timeout
 from openai import AsyncAzureOpenAI
 from pydantic import BaseModel, Field, computed_field
-from src.result_enrichment.common import is_value_in_content
+
+from ..result_enrichment.common import is_value_in_content
 
 
 class AzureSpeechTranscriptionEnum(Enum):

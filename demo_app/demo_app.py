@@ -195,6 +195,11 @@ def render_visual_media_input(file: str):
 with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block:
     # Define requesting function, which reshapes the input into the correct schema
     def form_ext_w_conf_upload(file: str):
+        if file is None:
+            gr.Warning(
+                "Please select or upload a PDF/image file, then click 'Process File'."
+            )
+            return ("", "", None, {})
         # Get response from the API
         mime_type = mimetypes.guess_type(file)[0]
         with open(file, "rb") as f:

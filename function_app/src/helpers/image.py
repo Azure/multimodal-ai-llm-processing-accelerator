@@ -2,7 +2,7 @@ import base64
 import itertools
 from dataclasses import dataclass
 from io import BytesIO
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -239,17 +239,6 @@ def scale_flat_poly_list(
     return list(itertools.chain.from_iterable(zip(x_coords, y_coords)))
 
 
-def convert_normalized_to_pixel_based_polygon(
-    normalized_polygon: List[dict], page_width: int, page_height: int
-) -> List[dict]:
-    pixel_polygon = list()
-    for point in normalized_polygon:
-        x = round(point["x"] * page_width)
-        y = round(point["y"] * page_height)
-        pixel_polygon.append({"x": x, "y": y})
-    return pixel_polygon
-
-
 def resize_img_by_max(
     pil_img: PILImage,
     max_width: Optional[int] = None,
@@ -276,6 +265,39 @@ def resize_img_by_max(
     return pil_img.resize(
         (int(pil_img.width / reduction_factor), int(pil_img.height / reduction_factor))
     )
+
+
+def flat_poly_list_to_poly_dict_list(
+    flat_poly_list: List[float],
+) -> List[Dict[str, float]]:
+    """
+    Converts a flat poly list (e.g. [x0, y0, x1, y1, ...]) to a list of
+    dictionaries with "x" and "y" keys.
+
+    :param flat_poly_list: The flat polygon list.
+    :type flat_poly_list: List[float]
+    :return: The polygon list as a list of dictionaries.
+    :rtype: List[Dict[str, float]]
+    """
+    return [
+        {"x": flat_poly_list[i], "y": flat_poly_list[i + 1]}
+        for i in range(0, len(flat_poly_list), 2)
+    ]
+
+
+def poly_dict_list_to_flat_poly_list(
+    poly_dict_list: List[Dict[str, float]]
+) -> List[float]:
+    """
+    Converts a list of dictionaries with "x" and "y" keys to a flat poly list
+    (e.g. [x0, y0, x1, y1, ...]).
+
+    :param poly_dict_list: The polygon list as a list of dictionaries.
+    :type poly_dict_list: List[Dict[str, float]]
+    :return: The flat polygon list.
+    :rtype: List[float]
+    """
+    return [coord for poly in poly_dict_list for coord in [poly["x"], poly["y"]]]
 
 
 def draw_polygon_on_pil_img(

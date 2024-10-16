@@ -1,10 +1,8 @@
 import io
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import fitz
-import requests
 from haystack import Document, component, default_from_dict, default_to_dict, logging
 from haystack.components.converters.utils import (
     get_bytestream_from_source,
@@ -13,8 +11,8 @@ from haystack.components.converters.utils import (
 from haystack.dataclasses import ByteStream
 from haystack.lazy_imports import LazyImport
 from haystack.utils import deserialize_type
-from PIL import Image
 
+from ..helpers.data_loading import pymupdf_pdf_page_to_img_pil
 from ..helpers.image import pil_img_to_base64
 
 with LazyImport("Run 'pip install fitz'") as fitz_import:
@@ -25,44 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 VALID_PYMUPDF_MIME_TYPES = {"application/pdf"}
-
-
-def pymupdf_pdf_page_to_img_pil(
-    pymupdf_page: fitz.Page, img_dpi: int, rotation: int
-) -> Image.Image:
-    pix = pymupdf_page.get_pixmap(dpi=img_dpi)
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    return img.rotate(rotation, expand=True)
-
-
-def load_fitz_pdf(
-    pdf_path: Optional[Union[str, os.PathLike]] = None,
-    pdf_url: Optional[str] = None,
-) -> "fitz.Document":
-    """
-    Loads a PDF file using PyMuPDF (fitz).
-
-    :param pdf_path: Path to local PDF, defaults to None
-    :type pdf_path: Optional[Union[str, os.PathLike]], optional
-    :param pdf_url: URL path to PDF, defaults to None
-    :type pdf_url: Optional[str], optional
-    :raises ValueError: Raised when neither `pdf_path` nor `pdf_url` are
-        provided
-    :return: The loaded fitz/PyMuPDF Document object
-    :rtype: fitz.Document
-    """
-    if pdf_path and pdf_url:
-        raise ValueError(
-            "Both `pdf_path` and `pdf_url` cannot be provided at the same time."
-        )
-    if pdf_path is not None:
-        return fitz.open(pdf_path)
-    elif pdf_url is not None:
-        r = requests.get(pdf_url)
-        data = r.content
-        return fitz.open(stream=data, filetype="pdf")
-    else:
-        raise ValueError("Either `pdf_path` or `pdf_url` must be provided.")
 
 
 @component

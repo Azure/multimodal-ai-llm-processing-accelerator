@@ -6,6 +6,7 @@ httpx==0.27.0
 pydantic==2.8.2
 pandas==2.2.2
 jsonschema==4.23.0
+jellyfish==1.0.3
 pypdf==4.2.0
 PyMuPDF==1.24.4
 pillow==10.3.0
