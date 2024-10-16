@@ -4,43 +4,64 @@ import os
 from typing import Optional
 
 import azure.functions as func
+from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
+from azure.core.credentials import AzureKeyCredential
 from dotenv import load_dotenv
 from haystack import Document
-from haystack.components.converters import AzureOCRDocumentConverter
-from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
-from haystack.dataclasses import ByteStream, ChatMessage
-from haystack.utils import Secret
+from openai import AzureOpenAI
 from pydantic import BaseModel, Field
-from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES
-from src.helpers.common import MeasureRunTime, haystack_doc_to_string
+from src.components.doc_intelligence import (
+    VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES,
+    DefaultDocumentFigureProcessor,
+    DefaultDocumentPageProcessor,
+    DocumentIntelligenceProcessor,
+    convert_content_chunks_to_openai_messages,
+)
+from src.helpers.common import MeasureRunTime
+from src.helpers.data_loading import load_visual_obj_bytes_to_pil_imgs_dict
 from src.schema import LLMResponseBaseModel
 
 load_dotenv()
 
 bp_doc_intel_extract_city_names = func.Blueprint()
 
+FUNCTION_ROUTE = "doc_intel_extract_city_names"
+
 # Load environment variables
 DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
+DOC_INTEL_API_KEY = os.getenv("DOC_INTEL_API_KEY")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
-# Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
-DOC_INTEL_API_KEY_SECRET = Secret.from_env_var("DOC_INTEL_API_KEY")
-AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
+AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 
-# Setup Haystack components
-di_converter = AzureOCRDocumentConverter(
+# Create the clients for Document Intelligence and Azure OpenAI
+DOC_INTEL_MODEL_ID = "prebuilt-read"  # Set Document Intelligence model ID
+
+di_client = DocumentIntelligenceClient(
     endpoint=DOC_INTEL_ENDPOINT,
-    api_key=DOC_INTEL_API_KEY_SECRET,
-    model_id="prebuilt-layout",
+    credential=AzureKeyCredential(DOC_INTEL_API_KEY),
+    api_version="2024-07-31-preview",
 )
-azure_generator = AzureOpenAIChatGenerator(
+aoai_client = AzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY_SECRET,
+    api_key=AOAI_API_KEY,
     api_version="2024-06-01",
-    generation_kwargs={
-        "response_format": {"type": "json_object"}
-    },  # Ensure we get JSON responses
+    timeout=30,
+    max_retries=0,
+)
+
+# Create the Doc Intelligence result processor. This can be configured to
+# process the raw Doc Intelligence result into a format that is easier
+# to work with downstream.
+doc_intel_result_processor = DocumentIntelligenceProcessor(
+    page_processor=DefaultDocumentPageProcessor(
+        page_img_order="after",  # Include each page image after the page's text content"
+    ),
+    figure_processor=DefaultDocumentFigureProcessor(
+        output_figure_img=False,  # Exclude cropped figure images from the output
+    ),
 )
 
 
@@ -97,7 +118,7 @@ class FunctionReponseModel(BaseModel):
     llm_input_messages: Optional[list[dict]] = Field(
         None, description="The messages that were sent to the LLM."
     )
-    llm_reply_messages: Optional[list[dict]] = Field(
+    llm_reply_messages: Optional[dict] = Field(
         None, description="The messages that were received from the LLM."
     )
     llm_raw_response: Optional[str] = Field(
@@ -114,10 +135,18 @@ LLM_SYSTEM_PROMPT = (
 )
 
 
-@bp_doc_intel_extract_city_names.route(route="doc_intel_extract_city_names")
+@bp_doc_intel_extract_city_names.route(route=FUNCTION_ROUTE)
 def doc_intel_extract_city_names(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info("Python HTTP trigger function processed a request.")
     try:
+        logging.info(
+            f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request."
+        )
+        # Create an error_text variable. This will be updated as we move through
+        # the pipeline so that if a step fails, the error_text var reflects what
+        # has failed. If all steps complete successfully, the var is never used.
+        error_text = "An error occurred during processing."
+        error_code = 422
+
         func_timer = MeasureRunTime()
         func_timer.start()
         # Create the object to hold all intermediate and final values. We will progressively update
@@ -131,104 +160,83 @@ def doc_intel_extract_city_names(req: func.HttpRequest) -> func.HttpResponse:
                 "This function only supports a Content-Type of {}. Supplied file is of type {}".format(
                     ", ".join(VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES), mime_type
                 ),
-                status_code=400,
+                status_code=422,
             )
 
-        # Check the request body
+        ### Check the request body
         req_body = req.get_body()
         if len(req_body) == 0:
             return func.HttpResponse(
                 "Please provide a base64 encoded PDF in the request body.",
-                status_code=400,
+                status_code=422,
             )
-        # Load the data into a ByteStream object, as expected by Haystack components
-        try:
-            bytestream = ByteStream(data=req_body, mime_type=mime_type)
-        except Exception as _e:
-            output_model.error_text = "An error occurred while loading the document."
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
+        ### 1. Load the images from the PDF/image input
+        error_text = "An error occurred during image extraction."
+        error_code = 500
+        doc_page_imgs = load_visual_obj_bytes_to_pil_imgs_dict(
+            req_body, mime_type, starting_idx=1, pdf_img_dpi=100
+        )
+        ### Extract the text using Document Intelligence
+        error_text = "An error occurred during Document Intelligence extraction."
+        with MeasureRunTime() as di_timer:
+            poller = di_client.begin_analyze_document(
+                model_id=DOC_INTEL_MODEL_ID,
+                analyze_request=AnalyzeDocumentRequest(bytes_source=req_body),
             )
-        # Extract the text using Document Intelligence
-        try:
-            with MeasureRunTime() as di_timer:
-                di_result = di_converter.run(sources=[bytestream])
-            di_result_docs: list[Document] = di_result["documents"]
-            output_model.di_extracted_text = [doc.to_dict() for doc in di_result_docs]
-            output_model.di_raw_response = di_result["raw_azure_response"]
-            output_model.di_time_taken_secs = di_timer.time_taken
-        except Exception as _e:
-            output_model.error_text = (
-                "An error occurred during Document Intelligence extraction."
+            di_result = poller.result()
+            output_model.di_raw_response = di_result.as_dict()
+            processed_content_docs = doc_intel_result_processor.process_analyze_result(
+                analyze_result=di_result,
+                doc_page_imgs=doc_page_imgs,
+                on_error="raise",
             )
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
+            merged_subchunk_content_docs = (
+                doc_intel_result_processor.merge_subchunk_text_content(
+                    processed_content_docs
+                )
             )
-        # Create the messages to send to the LLM
-        try:
-            input_messages = [
-                ChatMessage.from_system(LLM_SYSTEM_PROMPT),
-                *[
-                    ChatMessage.from_user(haystack_doc_to_string(doc))
-                    for doc in di_result_docs
-                ],
-            ]
-            output_model.llm_input_messages = [
-                msg.to_openai_format() for msg in input_messages
-            ]
-        except Exception as _e:
-            output_model.error_text = (
-                "An error occurred while creating the LLM input messages."
+        di_result_docs: list[Document] = processed_content_docs
+        output_model.di_extracted_text = "\n".join(
+            doc.content for doc in di_result_docs if doc.content is not None
+        )
+        output_model.di_time_taken_secs = di_timer.time_taken
+        ### 3. Create the messages to send to the LLM in the following order:
+        #      i. System prompt
+        #      ii. Extracted text and images from Document Intelligence
+        error_text = "An error occurred while creating the LLM input messages."
+        # Convert chunk content to OpenAI messages
+        content_openai_messages = convert_content_chunks_to_openai_messages(
+            merged_subchunk_content_docs, role="user"
+        )
+        input_messages = [
+            {
+                "role": "system",
+                "content": LLM_SYSTEM_PROMPT,
+            },
+            *content_openai_messages,
+        ]
+        output_model.llm_input_messages = input_messages
+
+        ### 4. Send request to LLM
+        error_text = "An error occurred when sending the LLM request."
+        with MeasureRunTime() as llm_timer:
+            llm_result = aoai_client.chat.completions.create(
+                messages=input_messages,
+                model=AOAI_LLM_DEPLOYMENT,
+                response_format={"type": "json_object"},  # Ensure we get JSON responses
             )
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
-        # Send request to LLM
-        try:
-            with MeasureRunTime() as llm_timer:
-                llm_result = azure_generator.run(messages=input_messages)
-            output_model.llm_time_taken_secs = llm_timer.time_taken
-        except Exception as _e:
-            output_model.error_text = "An error occurred when sending the LLM request."
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
-        # Validate that the LLM response matches the expected schema
-        try:
-            output_model.llm_reply_messages = [
-                msg.to_openai_format() for msg in llm_result["replies"]
-            ]
-            output_model.llm_raw_response = llm_result["replies"][0].content
-            llm_structured_response = LLMCityNamesModel(
-                **json.loads(llm_result["replies"][0].content)
-            )
-            output_model.result = llm_structured_response
-        except Exception as _e:
-            output_model.error_text = "An error occurred when validating the LLM's returned response into the expected schema."
-            output_model.func_time_taken_secs = func_timer.stop()
-            logging.exception(output_model.error_text)
-            return func.HttpResponse(
-                body=output_model.model_dump_json(),
-                mimetype="application/json",
-                status_code=500,
-            )
-        # All steps completed successfully, set success=True and return the final result
+        output_model.llm_time_taken_secs = llm_timer.time_taken
+        ### 5. Validate that the LLM response matches the expected schema
+        error_text = "An error occurred when validating the LLM's returned response into the expected schema."
+        output_model.llm_reply_messages = llm_result.choices[0].to_dict()
+        if len(llm_result.choices) != 1:
+            raise ValueError("The LLM response did not contain exactly one message.")
+        output_model.llm_raw_response = llm_result.choices[0].message.content
+        llm_structured_response = LLMCityNamesModel(
+            **json.loads(llm_result.choices[0].message.content)
+        )
+        output_model.result = llm_structured_response
+        ### 8. All steps completed successfully, set success=True and return the final result
         output_model.success = True
         output_model.func_time_taken_secs = func_timer.stop()
         return func.HttpResponse(
@@ -237,8 +245,14 @@ def doc_intel_extract_city_names(req: func.HttpRequest) -> func.HttpResponse:
             status_code=200,
         )
     except Exception as _e:
-        logging.exception("An error occurred during processing.")
+        # If an error occurred at any stage, return the partial response. Update the error_text
+        # field to contain the error message, and ensure success=False.
+        output_model.success = False
+        output_model.error_text = error_text
+        output_model.func_time_taken_secs = func_timer.stop()
+        logging.exception(output_model.error_text)
         return func.HttpResponse(
-            "An error occurred during processing.",
-            status_code=500,
+            body=output_model.model_dump_json(),
+            mimetype="application/json",
+            status_code=error_code,
         )
