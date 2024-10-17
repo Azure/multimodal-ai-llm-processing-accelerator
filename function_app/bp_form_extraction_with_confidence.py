@@ -17,7 +17,7 @@ from src.components.doc_intelligence import (
     DefaultDocumentFigureProcessor,
     DefaultDocumentPageProcessor,
     DocumentIntelligenceProcessor,
-    convert_content_chunks_to_openai_messages,
+    convert_processed_di_docs_to_openai_message,
 )
 from src.helpers.common import MeasureRunTime
 from src.helpers.data_loading import load_visual_obj_bytes_to_pil_imgs_dict
@@ -333,8 +333,8 @@ def form_extraction_with_confidence(
                 doc_page_imgs=doc_page_imgs,
                 on_error="raise",
             )
-            merged_subchunk_content_docs = (
-                doc_intel_result_processor.merge_subchunk_text_content(
+            merged_processed_content_docs = (
+                doc_intel_result_processor.merge_adjacent_text_content_docs(
                     processed_content_docs
                 )
             )
@@ -350,15 +350,15 @@ def form_extraction_with_confidence(
         #      ii. Extracted text and images from Document Intelligence
         error_text = "An error occurred while creating the LLM input messages."
         # Convert chunk content to OpenAI messages
-        content_openai_messages = convert_content_chunks_to_openai_messages(
-            merged_subchunk_content_docs, role="user"
+        content_openai_message = convert_processed_di_docs_to_openai_message(
+            merged_processed_content_docs, role="user"
         )
         input_messages = [
             {
                 "role": "system",
                 "content": LLM_SYSTEM_PROMPT,
             },
-            *content_openai_messages,
+            content_openai_message,
         ]
         output_model.llm_input_messages = input_messages
 

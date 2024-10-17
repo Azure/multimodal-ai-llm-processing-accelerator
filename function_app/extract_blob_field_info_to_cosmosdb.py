@@ -17,7 +17,7 @@ from src.components.doc_intelligence import (
     VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES,
     DefaultDocumentPageProcessor,
     DocumentIntelligenceProcessor,
-    convert_content_chunks_to_openai_messages,
+    convert_processed_di_docs_to_openai_message,
 )
 from src.helpers.data_loading import load_visual_obj_bytes_to_pil_imgs_dict
 from src.schema import LLMResponseBaseModel
@@ -188,23 +188,23 @@ def get_structured_extraction_func_outputs(
             doc_page_imgs=doc_page_imgs,
             on_error="raise",
         )
-        merged_subchunk_content_docs = (
-            doc_intel_result_processor.merge_subchunk_text_content(
+        merged_processed_content_docs = (
+            doc_intel_result_processor.merge_adjacent_text_content_docs(
                 processed_content_docs
             )
         )
         ### 3. Create the messages to send to the LLM in the following order:
         #      i. System prompt
         #      ii. Extracted text and images from Document Intelligence
-        content_openai_messages = convert_content_chunks_to_openai_messages(
-            merged_subchunk_content_docs, role="user"
+        content_openai_message = convert_processed_di_docs_to_openai_message(
+            merged_processed_content_docs, role="user"
         )
         input_messages = [
             {
                 "role": "system",
                 "content": LLM_SYSTEM_PROMPT,
             },
-            *content_openai_messages,
+            content_openai_message,
         ]
         ### 4. Send request to LLM
         llm_result = aoai_client.chat.completions.create(

@@ -4,6 +4,7 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 import pandas as pd
@@ -29,6 +30,15 @@ from azure.ai.documentintelligence.models import (
 from fitz import Document as PyMuPDFDocument
 from haystack.dataclasses import ByteStream as HaystackByteStream
 from haystack.dataclasses import Document as HaystackDocument
+from openai.types.chat import (
+    ChatCompletionContentPartImageParam,
+    ChatCompletionContentPartTextParam,
+    ChatCompletionUserMessageParam,
+)
+from openai.types.chat.chat_completion_assistant_message_param import (
+    ChatCompletionAssistantMessageParam,
+)
+from openai.types.chat.chat_completion_content_part_image_param import ImageURL
 from PIL.Image import Image as PILImage
 from pylatexenc.latex2text import LatexNodes2Text
 from src.components.pymupdf import pymupdf_pdf_page_to_img_pil
@@ -277,7 +287,7 @@ def get_element_heirarchy_mapper(
         contain a mapping of element ID to a tuple of parent section IDs.
     :rtype: dict[str, dict[int, tuple[int]]]
     """
-    if not analyze_result.sections:
+    if not getattr(analyze_result, "sections", None):
         # Sections do not appear in result (it might be the read model result).
         # Return an empty dict
         return dict()
@@ -715,7 +725,7 @@ def get_element_span_info_list(
             DocumentKeyValueElement,
             Document,
         ] = (
-            getattr(analyze_result, attr) or list()
+            getattr(analyze_result, attr, list()) or list()
         )
         for elem_idx, element in enumerate(elements):
             spans = get_document_element_spans(element)
@@ -1106,11 +1116,11 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
     def __init__(
         self,
         page_start_text_formats: Optional[List[str]] = [
-            "*Page {page_number} content:*\n"
+            "\n*Page {page_number} content:*\n"
         ],
         page_end_text_formats: Optional[str] = None,
         page_img_order: Optional[Literal["before", "after"]] = "after",
-        page_img_text_intro: Optional[str] = "*Page Image:*",
+        page_img_text_intro: Optional[str] = "*Page {page_number} Image:*",
         img_export_dpi: int = 100,
         adjust_rotation: bool = True,
         rotated_fill_color: Tuple[int] = (255, 255, 255),
@@ -1672,7 +1682,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
     def __init__(
         self,
         before_table_text_formats: Optional[List[str]] = [
-            "\n",
+            "**Table {table_number} Info**\n",
             "*Table Caption:* {caption}",
             "*Table Footnotes:* {footnotes}",
             "*Table Content:*",
@@ -1868,22 +1878,19 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         if num_index_cols > 0:
             table_df.set_index(list(range(0, num_index_cols)), inplace=True)
         index = num_index_cols > 0
-        # Set headers:
-        # Leaving headers blank results in different behaviour than the default value.
-        # This means we have to process tables differently based on whether they have headers.
+        # Set headers
         if num_header_rows > 0:
             table_df = table_df.T
-            # headers = list(range(0, num_index_cols + 1))
             table_df.set_index(list(range(0, num_header_rows)), inplace=True)
-            # else:
-            # headers = []
-            # Set index to first column
-            # table_df.set_index(0, inplace=True)
             table_df = table_df.T
             table_md = table_df.to_markdown(index=index, tablefmt=table_fmt)
         else:
-            table_md = table_df.to_markdown(index=index, tablefmt=table_fmt, headers=())
-        return table_md, table_df
+            # Table has no header rows. We will create a dummy header row that has empty cells
+            table_df_temp = table_df.copy()
+            table_df_temp.columns = ["<!-- -->"] * table_df.shape[1]
+            table_md = table_df_temp.to_markdown(index=index, tablefmt=table_fmt)
+        # Add new line to end of table markdown
+        return table_md + "\n", table_df
 
 
 class DocumentFigureProcessor(DocumentElementProcessor):
@@ -1965,7 +1972,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
     def __init__(
         self,
         before_figure_text_formats: Optional[List[str]] = [
-            "\n",
+            "**Figure {figure_number} Info**\n",
             "*Figure Caption:* {caption}",
             "*Figure Footnotes:* {footnotes}",
             "*Figure Content:*\n{content}",
@@ -2218,19 +2225,15 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         matched_spans = list()
         for content_span in content_spans:
             content_min_max_span_bounds = get_min_and_max_span_bounds(content_spans)
-            # print(content_span)
             span_perfect_match = False
-            # print("PARAGRAPHS")
             for para in analyze_result.paragraphs or []:
                 if para.spans[0].offset > content_min_max_span_bounds.end:
                     break
-                # print(para)
                 span_perfect_match = para.spans[0] == content_span
                 span_perfect_match = False
                 if span_perfect_match or all(
                     is_span_in_span(para_span, content_span) for para_span in para.spans
                 ):
-                    # print("para match")
                     matched_spans.extend(para.spans)
                     if current_line_strings:
                         output_line_strings.append(" ".join(current_line_strings))
@@ -2245,9 +2248,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
             if span_perfect_match:
                 continue
             for page_number in figure_page_numbers:
-                # print("LINES - page {}".format(page_number))
                 for line in analyze_result.pages[page_number - 1].lines or []:
-                    # print(line)
                     # If we have already matched the span, we can skip the rest of the lines
                     if line.spans[0].offset > content_min_max_span_bounds.end:
                         break
@@ -2257,14 +2258,12 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                         for matched_span in matched_spans
                         for line_span in line.spans
                     ):
-                        # print("Line already contained")
                         continue
                     span_perfect_match = line.spans[0] == content_span
                     if span_perfect_match or all(
                         is_span_in_span(line_span, content_span)
                         for line_span in line.spans
                     ):
-                        # print("line match")
                         matched_spans.extend(line.spans)
                         if current_line_strings:
                             output_line_strings.append(" ".join(current_line_strings))
@@ -2278,9 +2277,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                         )
                 if span_perfect_match:
                     continue
-                # print("WORDS - page {}".format(page_number))
                 for word in analyze_result.pages[page_number - 1].words or []:
-                    # print(word)
                     # If we have already matched the span, we can skip the rest of the lines
                     if word.span.offset > content_min_max_span_bounds.end:
                         break
@@ -2289,11 +2286,9 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                         is_span_in_span(word.span, matched_span)
                         for matched_span in matched_spans
                     ):
-                        # print("Word already contained")
                         continue
                     span_perfect_match = word.span == content_span
                     if span_perfect_match or is_span_in_span(word.span, content_span):
-                        # print("word match")
                         current_line_strings.append(
                             selection_mark_formatter.format_content(
                                 replace_content_formulas(
@@ -2305,9 +2300,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                 output_line_strings.append(" ".join(current_line_strings))
                 current_line_strings = list()
         if output_line_strings:
-            # print("Figure text content for img:", "\n".join(output_line_strings))
             return "\n".join(output_line_strings)
-        # print("No text content for img")
         return ""
 
     def convert_figure_to_img(
@@ -2639,11 +2632,11 @@ class DocumentIntelligenceProcessor:
             )
         return full_output_list
 
-    def merge_subchunk_text_content(
+    def merge_adjacent_text_content_docs(
         self,
         chunk_content_list: Union[List[List[HaystackDocument]], List[HaystackDocument]],
-        text_merge_separator: str = "\n",
-    ) -> List[List[HaystackDocument]]:
+        default_text_merge_separator: str = "\n",
+    ) -> Union[List[HaystackDocument], List[List[HaystackDocument]]]:
         """
         Merges a list of content chunks together so that adjacent text content
         is combined into a single document, with images and other non-text
@@ -2655,49 +2648,160 @@ class DocumentIntelligenceProcessor:
         Input documents: [text, text, image, text, table, text, image]
         Output documents: [text, image, text, image]
 
-        :param chunk_content_list: List of lists of Haystack Documents, where
+        :param chunk_content_list: A single list of Haystack Documents, or a
+            list of lists of Haystack Documents, where
             each sublist contains the content for a single chunk.
-        :type chunk_content_list: List[List[HaystackDocument]]
-        :return: A list of lists, with all adjacent text content documents
-            merged together.
-        :rtype: List[List[HaystackDocument]]
+        :type chunk_content_list: Union[List[List[HaystackDocument]], List[HaystackDocument]]
+        :param default_text_merge_separator: The default separator to use when
+            merging text content, defaults to "\n"
+        :type default_text_merge_separator: str, optional
+        :return: Returns the content in the same format as the input, with
+            adjacent text content merged together.
+        :rtype: Union[List[HaystackDocument], List[List[HaystackDocument]]]
         """
-        # If a single list is provided, convert it to a list of lists
-        if not all(isinstance(list_item, list) for list_item in chunk_content_list):
-            chunk_content_list = [chunk_content_list]
+        is_input_single_list = all(
+            isinstance(list_item, HaystackDocument) for list_item in chunk_content_list
+        )
+        # If a single list is provided, convert it to a list of lists for processing.
+        if is_input_single_list:
+            temp_chunk_content_list = [chunk_content_list]
+        else:
+            temp_chunk_content_list = chunk_content_list
         chunk_outputs = list()
 
         # Join chunks together
-        for chunk in chunk_content_list:
+        for chunk in temp_chunk_content_list:
             current_text_snippets: List[str] = list()
             current_chunk_content_list = list()
-            for haystack_doc in chunk:
-                if haystack_doc.content and haystack_doc.blob is None:
+            for content_doc in chunk:
+                doc_type = get_processed_di_doc_type(content_doc)
+                if doc_type in [
+                    ProcessedDocIntelElementDocumentType.TEXT,
+                    ProcessedDocIntelElementDocumentType.TABLE,
+                ]:
                     # Content is text-only, so add it to the current chunk
-                    current_text_snippets.append(haystack_doc.content)
+                    current_text_snippets.append(content_doc.content)
                     current_text_snippets.append(
-                        haystack_doc.meta.get(
-                            "following_separator", text_merge_separator
+                        content_doc.meta.get(
+                            "following_separator", default_text_merge_separator
                         )
                     )
-                else:
+                elif doc_type is ProcessedDocIntelElementDocumentType.IMAGE:
                     # We have hit a non-text document.
-                    # if haystack_doc.content:
-                    #     # If the data has accompanying text, add it to the current chunk
-                    #     current_text_snippets.append(haystack_doc.content)
                     # Join all text in the current chunk into a single str, then add the image bytestream.
                     current_chunk_content_list.append(
                         HaystackDocument(content="".join(current_text_snippets))
                     )
                     current_text_snippets = list()
-                    current_chunk_content_list.append(haystack_doc)
+                    current_chunk_content_list.append(content_doc)
+
+                else:
+                    raise ValueError("Unknown processed DI document type.")
             # Add the last chunk
             if current_text_snippets:
                 current_chunk_content_list.append(
                     HaystackDocument(content="".join(current_text_snippets))
                 )
             chunk_outputs.append(current_chunk_content_list)
+        # Return result in same format as input (either list[Document] or list[list[Document]])
+        if is_input_single_list:
+            return chunk_outputs[0]
         return chunk_outputs
+
+
+class ProcessedDocIntelElementDocumentType(Enum):
+    """
+    Contains the simplified list of element types that result from processing
+    Document Intelligence result.
+    """
+
+    TEXT = "text"
+    TABLE = "table"
+    IMAGE = "image"
+
+
+def get_processed_di_doc_type(
+    processed_di_doc: HaystackDocument,
+) -> ProcessedDocIntelElementDocumentType:
+    if processed_di_doc.dataframe is not None:
+        return ProcessedDocIntelElementDocumentType.TABLE
+    elif (
+        processed_di_doc.blob is not None
+        and processed_di_doc.blob.mime_type.startswith("image")
+    ):
+        return ProcessedDocIntelElementDocumentType.IMAGE
+    elif processed_di_doc.content is not None:
+        return ProcessedDocIntelElementDocumentType.TEXT
+    else:
+        raise ValueError(f"Unknown processed DI document type: {processed_di_doc}")
+
+
+def convert_processed_di_docs_to_markdown(
+    processed_content_docs: List[HaystackDocument],
+    default_text_merge_separator: str = "\n",
+) -> str:
+    output_texts = []
+    for content_doc in processed_content_docs:
+        # Check if content is italicized or bolded, and add newlines if necessary
+        text_content_requires_newlines = content_doc.content is not None and any(
+            [
+                content_doc.content.startswith("*"),
+                content_doc.content.endswith("*"),
+                content_doc.content.startswith("_"),
+            ]
+        )
+        doc_type = get_processed_di_doc_type(content_doc)
+        if doc_type in [
+            ProcessedDocIntelElementDocumentType.TEXT,
+            ProcessedDocIntelElementDocumentType.TABLE,
+        ]:
+            # Text and table elements can be directly added to the output
+            if text_content_requires_newlines:
+                output_texts.append("\n\n")
+            output_texts.append(content_doc.content)
+            output_texts.append(
+                content_doc.meta.get(
+                    "following_separator", default_text_merge_separator
+                )
+            )
+        elif doc_type is ProcessedDocIntelElementDocumentType.IMAGE:
+            # We have hit an image element.
+            # Hardcode the image into the markdown output so it can be rendered inline.
+            if content_doc.content is not None:
+                if text_content_requires_newlines:
+                    output_texts.append("\n\n")
+                output_texts.append(content_doc.content)
+                output_texts.append("\n")
+            # Pad image with extra newline before and after image
+            output_texts.append("\n")
+            output_texts.append(
+                f"![]({base64_img_str_to_url(content_doc.blob.data.decode(), content_doc.blob.mime_type)})"
+            )
+            output_texts.append("\n")
+            output_texts.append(
+                content_doc.meta.get(
+                    "following_separator", default_text_merge_separator
+                )
+            )
+        else:
+            raise ValueError("Unknown processed DI document type.")
+    return "".join(output_texts).strip()
+
+
+def convert_processed_di_doc_chunks_to_markdown(
+    content_doc_chunks: List[List[HaystackDocument]],
+    chunk_prefix: str = "###### New Chunk ######",
+    default_text_merge_separator: str = "\n",
+) -> str:
+    chunked_outputs = list()
+    for chunk_docs in content_doc_chunks:
+        chunked_outputs.append(chunk_prefix)
+        chunked_outputs.append(
+            convert_processed_di_docs_to_markdown(
+                chunk_docs, default_text_merge_separator=default_text_merge_separator
+            )
+        )
+    return "".join(chunked_outputs)
 
 
 class DocumentListSplitter(ABC):
@@ -2761,17 +2865,31 @@ class PageDocumentListSplitter(DocumentListSplitter):
         return split_outputs
 
 
-def convert_content_chunks_to_openai_messages(
-    chunked_content_docs: List[List[HaystackDocument]],
-    role: str,
-    img_detail: Literal["auto", "low", "high"] = "auto",
-) -> List[dict]:
+def base64_img_str_to_url(base64_img_str: str, mime_type: str) -> str:
     """
-    Converts a list of lists of HaystackDocument objects into a list of OpenAI
-    message objects, ready for sending to an OpenAI LLM API endpoint.
+    Converts a base64 image string into a data URL.
 
-    :param chunked_content_docs: List of lists of HaystackDocument objects.
-    :type chunked_content_docs: List[List[HaystackDocument]]
+    :param base64_img_str: A base64 image string.
+    :type base64_img_str: str
+    :param mime_type: The MIME type of the image.
+    :type mime_type: str
+    :return: A data URL for the image.
+    :rtype: str
+    """
+    return f"data:{mime_type};base64,{base64_img_str}"
+
+
+def convert_processed_di_docs_to_openai_message(
+    content_docs: List[HaystackDocument],
+    role: Literal["user", "assistant"] = "user",
+    img_detail: Literal["auto", "low", "high"] = "auto",
+) -> Union[ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam]:
+    """
+    Converts a list of Haystack Document objects into an OpenAI message dict
+    object, ready for sending to an OpenAI LLM API endpoint.
+
+    :param chunked_content_docs: List of HaystackDocument objects.
+    :type chunked_content_docs: List[HaystackDocument]
     :param role: Role to be used for the messages.
     :type role: str
     :param img_detail: Details to be used for image messages, defaults to "auto"
@@ -2780,25 +2898,45 @@ def convert_content_chunks_to_openai_messages(
     :rtype: List[List[dict]]
     """
     msg_content_list = list()
-    for chunk_output in chunked_content_docs:
-        for content_doc in chunk_output:
-            if content_doc.blob and content_doc.blob.mime_type.startswith("image"):
-                # Image content
-                if content_doc.content:
-                    msg_content_list.append(
-                        {"type": "text", "text": content_doc.content}
-                    )
+    for content_doc in content_docs:
+        doc_type = get_processed_di_doc_type(content_doc)
+        if doc_type is ProcessedDocIntelElementDocumentType.IMAGE:
+            # Image content
+            if content_doc.content:
                 msg_content_list.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{content_doc.blob.mime_type};base64,{content_doc.blob.data.decode()}",
-                            "detail": img_detail,
-                        },
-                    }
+                    ChatCompletionContentPartTextParam(
+                        type="text", text=content_doc.content
+                    )
                 )
-            else:
-                # All other types (content field should be populated with everything that is required)
-                msg_content_list.append({"type": "text", "text": content_doc.content})
-    # Combine into a single message
-    return [{"role": role, "content": msg_content_list}]
+            msg_content_list.append(
+                ChatCompletionContentPartImageParam(
+                    type="image_url",
+                    image_url=ImageURL(
+                        url=base64_img_str_to_url(
+                            base64_img_str=content_doc.blob.data.decode(),
+                            mime_type=content_doc.blob.mime_type,
+                        ),
+                        detail=img_detail,
+                    ),
+                )
+            )
+        elif doc_type in [
+            ProcessedDocIntelElementDocumentType.TEXT,
+            ProcessedDocIntelElementDocumentType.TABLE,
+        ]:
+            # All other types with text-only output (the content field should be
+            # populated with the text content to be exported). Ignore it if
+            # the content field is None or ""
+            if content_doc.content:
+                ChatCompletionContentPartTextParam(
+                    type="text", text=content_doc.content
+                )
+        else:
+            raise ValueError("Unknown processed DI document type.")
+    # Combine into a single message and transform into an OpenAI message to ensure the format is correct
+    message_dict = {"role": role, "content": msg_content_list}
+    role_to_output_type_mapper = {
+        "user": ChatCompletionUserMessageParam,
+        "assistant": ChatCompletionAssistantMessageParam,
+    }
+    return role_to_output_type_mapper[role](message_dict)
