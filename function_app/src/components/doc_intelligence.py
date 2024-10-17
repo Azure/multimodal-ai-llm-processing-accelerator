@@ -2723,6 +2723,17 @@ class ProcessedDocIntelElementDocumentType(Enum):
 def get_processed_di_doc_type(
     processed_di_doc: HaystackDocument,
 ) -> ProcessedDocIntelElementDocumentType:
+    """
+    Classifies a processing Document Intelligence document into a simplified
+    element type.
+
+    :param processed_di_doc: Document containing processed Document Intelligence
+        element content.
+    :type processed_di_doc: Document
+    :raises ValueError: In case the DI document type is unknown.
+    :return: ProcessedDocIntelElementDocumentType Enum.
+    :rtype: ProcessedDocIntelElementDocumentType
+    """
     if processed_di_doc.dataframe is not None:
         return ProcessedDocIntelElementDocumentType.TABLE
     elif (
@@ -2740,6 +2751,22 @@ def convert_processed_di_docs_to_markdown(
     processed_content_docs: List[HaystackDocument],
     default_text_merge_separator: str = "\n",
 ) -> str:
+    """
+    Converts a list of processed Document Intelligence documents into a single
+    Markdown string. This is useful for rendering the content in a human-readable
+    format.
+
+    :param processed_content_docs: List of Documents containing processed
+        Document Intelligence element content.
+    :type processed_content_docs: List[Document]
+    :param default_text_merge_separator: Default text separator to be used when
+        joining content, defaults to "\n"
+    :type default_text_merge_separator: str
+    :raises ValueError: In cases where the processed DI document type is
+        unknown.
+    :return: A single Markdown string containing the processed content.
+    :rtype: str
+    """
     output_texts = []
     for content_doc in processed_content_docs:
         # Check if content is italicized or bolded, and add newlines if necessary
@@ -2790,9 +2817,28 @@ def convert_processed_di_docs_to_markdown(
 
 def convert_processed_di_doc_chunks_to_markdown(
     content_doc_chunks: List[List[HaystackDocument]],
-    chunk_prefix: str = "###### New Chunk ######",
+    chunk_prefix: str = "###### Start of New Chunk ######",
     default_text_merge_separator: str = "\n",
 ) -> str:
+    """
+    Converts a list of lists of processed Document Intelligence documents into
+    a single Markdown string, with a prefix shown at the start of each chunk.
+    This is useful for rendering the content in a human-readable format.
+
+    :param processed_content_docs: List of lists of Documents containing
+        processed  Document Intelligence element content.
+    :type processed_content_docs: List[List[Document]]
+    :param chunk_prefix: Text prefix to be inserted at the beginning of each
+        chunk
+    :type chunk_prefix: str
+    :param default_text_merge_separator: Default text separator to be used when
+        joining content, defaults to "\n"
+    :type default_text_merge_separator: str
+    :raises ValueError: In cases where the processed DI document type is
+        unknown.
+    :return: A single Markdown string containing the processed content.
+    :rtype: str
+    """
     chunked_outputs = list()
     for chunk_docs in content_doc_chunks:
         chunked_outputs.append(chunk_prefix)

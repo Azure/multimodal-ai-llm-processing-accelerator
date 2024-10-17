@@ -837,8 +837,10 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             "and chunking of files processed with Azure Document Intelligence, and to easily convert the API response into multimodal "
             "formats that interleave text, image and dataframe data. This makes it easy to extract images from PDFs while "
             "automatically correcting for rotation of the document (which will destroy LLM performance if not corrected)."
-            "\n\nThis demo is an extremely simple example, and more information on how it works can be found in the "
-            "[Code walkthrough notebook](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/notebooks/Document%20Intelligence%20Processor%20Walkthrough.py)."
+            "\nThe processor also makes it easy to convert the processed data to OpenAI message objects, ready to be "
+            "sent to an LLM for further processing."
+            "\n\nThis demo is a simple example, and a more detailed deep dive can be found in the "
+            "[Code walkthrough notebook](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/notebooks/Document%20Intelligence%20Processor%20Walkthrough.ipynb)."
         ),
         show_label=False,
     )
