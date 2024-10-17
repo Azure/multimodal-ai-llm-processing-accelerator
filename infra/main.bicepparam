@@ -30,6 +30,11 @@ param storageAccountName = 'llmprocstorage'
 // 2. https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create#prerequisites
 param speechLocation = 'eastus'
 
+// Doc Intelligence API v4.0 is only supported in some regions. To make use of the custom
+// DocumentIntelligenceProcessor, make sure to select a region where v4.0 is supported. See:
+// 1. https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/versioning/changelog-release-history
+param docIntelLocation = 'eastus'
+
 // Azure OpenAI
 // Ensure your OpenAI service locations have model availability - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/openai/quotas-limits#regional-quota-limits
