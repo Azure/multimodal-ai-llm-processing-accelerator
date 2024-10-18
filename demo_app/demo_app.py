@@ -431,8 +431,8 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
     # Input components
     blob_form_to_cosmosdb_instructions = gr.Markdown(
         (
-            "This example extracts key information from Bank Account application forms, triggered by uploading the document to blob storage and with the results written to a CosmosDB NoSQL database."
-            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_form_extraction_with_confidence.py))."
+            "This example extracts key information from Bank Account application forms, triggered by uploading the document to blob storage and with the results written to a CosmosDB NoSQL database "
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/extract_blob_field_info_to_cosmosdb.py))."
             "\n\nThe pipeline is as follows:\n"
             "1. The PDF is uploaded to a blob storage container, triggering the pipeline.\n"
             "2. PyMuPDF is used to convert the PDFs into images.\n"
@@ -518,7 +518,7 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
     cc_audio_proc_instructions = gr.Markdown(
         (
             "This example transcribes call center audio records and extract key information "
-            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_call_center_audio_analytics.py))."
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_call_center_audio_analysis.py))."
             "\n\nThe pipeline is as follows:\n"
             "1. Azure AI Speech or Azure OpenAI Whisper is used to transcribe a call center recording.\n"
             "2. The result is formatted into a more readable format (with timestamps, speaker IDs and the text).\n"
@@ -834,7 +834,7 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
         (
             "This example uses showcases a custom-built Azure Document Intelligence Processor for converting raw API "
             "responses into more usable and useful formats "
-            "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/multimodal_doc_intel_processing.py))."
+            "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_multimodal_doc_intel_processing.py))."
             "\n\nThis processor is fully configurable and can be used to completely customize the processing, formatting, "
             "and chunking of files processed with Azure Document Intelligence. Some features include:\n"
             "* Automatic extraction of rich content from images and PDF/documents, including tables, figures and more.\n"
