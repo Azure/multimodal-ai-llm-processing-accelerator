@@ -9,7 +9,6 @@ from PIL import Image
 from PIL.Image import Image as PILImage
 
 from ..components.utils import base64_bytes_to_buffer
-from .image import base64_to_pil_img
 
 
 def load_pymupdf_pdf(

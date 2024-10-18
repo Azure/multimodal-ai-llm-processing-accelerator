@@ -41,8 +41,9 @@ from openai.types.chat.chat_completion_assistant_message_param import (
 from openai.types.chat.chat_completion_content_part_image_param import ImageURL
 from PIL.Image import Image as PILImage
 from pylatexenc.latex2text import LatexNodes2Text
-from src.components.pymupdf import pymupdf_pdf_page_to_img_pil
-from src.helpers.image import (
+
+from ..components.pymupdf import pymupdf_pdf_page_to_img_pil
+from ..helpers.image import (
     TransformedImage,
     crop_img,
     get_flat_poly_lists_convex_hull,

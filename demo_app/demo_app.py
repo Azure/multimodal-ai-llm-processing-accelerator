@@ -839,7 +839,8 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             "automatically correcting for rotation of the document (which will destroy LLM performance if not corrected)."
             "\nThe processor also makes it easy to convert the processed data to OpenAI message objects, ready to be "
             "sent to an LLM for further processing."
-            "\n\nThis demo is a simple example, and a more detailed deep dive can be found in the "
+            "\n\nTo try it out, upload a document or select one of the demo documents from the dropdown below. "
+            "While the demo below is a very simple example of what is possible with the component, a more detailed deep dive can be found in the "
             "[Code walkthrough notebook](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/notebooks/Document%20Intelligence%20Processor%20Walkthrough.ipynb)."
         ),
         show_label=False,
