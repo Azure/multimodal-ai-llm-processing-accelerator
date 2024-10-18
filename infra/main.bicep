@@ -459,6 +459,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
       WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
+      APPINSIGHTS_INSTRUMENTATIONKEY: appInsights.properties.InstrumentationKey
       APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
       CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
       COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
