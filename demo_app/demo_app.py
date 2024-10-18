@@ -802,6 +802,7 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
         file: str,
         include_page_images_after_content: bool,
         extract_and_crop_inline_figures: bool,
+        pages_per_chunk: int,
     ):
         if file is None:
             gr.Warning(
@@ -813,6 +814,7 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             payload = {
                 "include_page_images_after_content": include_page_images_after_content,
                 "extract_and_crop_inline_figures": extract_and_crop_inline_figures,
+                "pages_per_chunk": pages_per_chunk,
             }
             file_mime_type = mimetypes.guess_type(file)[0]
             files = {
@@ -831,14 +833,16 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
     di_proc_instructions = gr.Markdown(
         (
             "This example uses showcases a custom-built Azure Document Intelligence Processor for converting raw API "
-            "responses into more usable and useful formats."
+            "responses into more usable and useful formats "
             "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/multimodal_doc_intel_processing.py))."
             "\n\nThis processor is fully configurable and can be used to completely customize the processing, formatting, "
-            "and chunking of files processed with Azure Document Intelligence, and to easily convert the API response into multimodal "
-            "formats that interleave text, image and dataframe data. This makes it easy to extract images from PDFs while "
-            "automatically correcting for rotation of the document (which will destroy LLM performance if not corrected)."
-            "\nThe processor also makes it easy to convert the processed data to OpenAI message objects, ready to be "
-            "sent to an LLM for further processing."
+            "and chunking of files processed with Azure Document Intelligence. Some features include:\n"
+            "* Automatic extraction of rich content from images and PDF/documents, including tables, figures and more.\n"
+            "* Conversion and formatting of text content, images for each page and figure, and pandas dataframes for tables.\n"
+            "* Automatic correction of image rotation when extracting page and figure images (if not corrected, this can completely destroy LLM extraction accuracy)\n"
+            "* Custom formatting of all content outputs, allowing for completely dynamic formatting and inclusion/exclusion of content.\n"
+            "* Chunking of content into smaller parts (e.g. into chunks of X pages) which can then be processed in parallel (e.g. the Map Reduce pattern).\n"
+            "* Automatic conversion of the content to the OpenAI message format, ready for processing with an LLM.\n"
             "\n\nTo try it out, upload a document or select one of the demo documents from the dropdown below. "
             "While the demo below is a very simple example of what is possible with the component, a more detailed deep dive can be found in the "
             "[Code walkthrough notebook](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/notebooks/Document%20Intelligence%20Processor%20Walkthrough.ipynb)."
@@ -850,7 +854,7 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             label="Upload File",
             file_count="single",
             type="filepath",
-            value=next(iter(DEMO_DOC_INTEL_PROCESSING_FILES.values())),
+            value=lambda: next(iter(DEMO_DOC_INTEL_PROCESSING_FILES.values())),
         )
         di_proc_input_thumbs = render_visual_media_input(
             next(iter(DEMO_DOC_INTEL_PROCESSING_FILES.values()))
@@ -859,11 +863,6 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
     di_proc_example_dropdown = gr.Dropdown(
         label="Select a demo PDF or image file",
         choices=DEMO_DOC_INTEL_PROCESSING_FILES.items(),
-    )
-    di_proc_example_dropdown.change(
-        fn=echo_input,
-        inputs=[di_proc_example_dropdown],
-        outputs=[di_proc_file_upload],
     )
     with gr.Row():
         di_proc_output_page_checkbox = gr.Checkbox(
@@ -874,7 +873,15 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
         di_proc_output_figures_inline_checkbox = gr.Checkbox(
             label="Extract & crop inline figures",
             value=True,
-            info="If checked, any figures that were identified within the document will be extracted/cropped and included in the outputs as an image file.",
+            info="If checked, any figures that were identified within the document will be cropped from the page image and inserted into the outputs as an image file.",
+        )
+        di_proc_pages_per_chunk_number = gr.Number(
+            label="Pages per chunk of content",
+            value=3,
+            minimum=1,
+            maximum=1000,
+            precision=0,
+            info="The demo automatically splits the output content into chunks. This sets the number of pages of content per chunk.",
         )
     di_proc_process_btn = gr.Button("Process File")
     # Output components
@@ -889,6 +896,11 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             label="Processed Markdown Content", line_breaks=True
         )
     # Actions
+    di_proc_example_dropdown.change(
+        fn=echo_input,
+        inputs=[di_proc_example_dropdown],
+        outputs=[di_proc_file_upload],
+    )
     di_proc_file_upload.change(
         fn=render_visual_media_input,
         inputs=[di_proc_file_upload],
@@ -900,6 +912,7 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             di_proc_file_upload,
             di_proc_output_page_checkbox,
             di_proc_output_figures_inline_checkbox,
+            di_proc_pages_per_chunk_number,
         ],
         outputs=[
             di_proc_status_code,
@@ -928,12 +941,12 @@ with gr.Blocks(
         form_extraction_with_confidence_block.render()
     with gr.Tab("Call Center Audio Processing (HTTP)"):
         call_center_audio_processing_block.render()
+    with gr.Tab("Multimodal Document Intelligence Processing (HTTP)"):
+        di_proc_block.render()
     with gr.Tab("Form Extraction (Blob -> CosmosDB)"):
         blob_form_extraction_to_cosmosdb_block.render()
     with gr.Tab("Summarize Text (HTTP)"):
         sum_text_block.render()
-    with gr.Tab("Document Intelligence Multimodal Processing (HTTP)"):
-        di_proc_block.render()
     with gr.Tab("City Names Extraction, Doc Intel (HTTP)"):
         di_llm_ext_names_block.render()
     with gr.Tab("City Names Extraction, PyMuPDF (HTTP)"):

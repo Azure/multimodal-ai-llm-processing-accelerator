@@ -2818,7 +2818,7 @@ def convert_processed_di_docs_to_markdown(
 
 def convert_processed_di_doc_chunks_to_markdown(
     content_doc_chunks: List[List[HaystackDocument]],
-    chunk_prefix: str = "###### Start of New Chunk ######",
+    chunk_prefix: str = "**###### Start of New Chunk ######**",
     default_text_merge_separator: str = "\n",
 ) -> str:
     """
@@ -2843,12 +2843,13 @@ def convert_processed_di_doc_chunks_to_markdown(
     chunked_outputs = list()
     for chunk_docs in content_doc_chunks:
         chunked_outputs.append(chunk_prefix)
+        chunked_outputs.append("\n")
         chunked_outputs.append(
             convert_processed_di_docs_to_markdown(
                 chunk_docs, default_text_merge_separator=default_text_merge_separator
             )
         )
-    return "".join(chunked_outputs)
+    return "\n\n".join(chunked_outputs)
 
 
 class DocumentListSplitter(ABC):

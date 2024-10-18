@@ -13,7 +13,8 @@ from src.components.doc_intelligence import (
     DefaultDocumentFigureProcessor,
     DefaultDocumentPageProcessor,
     DocumentIntelligenceProcessor,
-    convert_processed_di_docs_to_markdown,
+    PageDocumentListSplitter,
+    convert_processed_di_doc_chunks_to_markdown,
 )
 from src.helpers.data_loading import load_visual_obj_bytes_to_pil_imgs_dict
 
@@ -88,6 +89,10 @@ def multimodal_doc_intel_processing(req: func.HttpRequest) -> func.HttpResponse:
             "extract_and_crop_inline_figures", False
         )
 
+        # Now construct the a splitter class which can separate the outputs into different chunks
+        pages_per_chunk = request_json_content.get("pages_per_chunk", 3)
+        page_chunk_splitter = PageDocumentListSplitter(pages_per_chunk=pages_per_chunk)
+
         file_bytes = req.files["doc_for_extraction"].read()
         file_mime_type = req.files["doc_for_extraction"].content_type
 
@@ -123,15 +128,19 @@ def multimodal_doc_intel_processing(req: func.HttpRequest) -> func.HttpResponse:
             doc_page_imgs=doc_page_imgs,
             on_error="raise",
         )
+        # Chunk the content by page
+        page_chunked_content_docs = page_chunk_splitter.split_document_list(
+            processed_content_docs
+        )
         # Merge adjacent text content together (reducing the number of objects)
-        merged_processed_content_docs = (
+        merged_page_chunked_content_docs = (
             doc_intel_result_processor.merge_adjacent_text_content_docs(
-                processed_content_docs
+                page_chunked_content_docs
             )
         )
-        # Convert to Markdown
-        di_processed_md = convert_processed_di_docs_to_markdown(
-            merged_processed_content_docs
+        # Convert the chunks into a single Markdown string
+        di_processed_md = convert_processed_di_doc_chunks_to_markdown(
+            merged_page_chunked_content_docs
         )
         return func.HttpResponse(
             body=di_processed_md,
