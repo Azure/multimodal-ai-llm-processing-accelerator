@@ -1,14 +1,16 @@
-import copy
-from typing import Any, Callable, Dict, List, Optional, Union, overload
+from typing import Any, Callable, List, Optional, overload
 
 from azure.ai.documentintelligence import models as _models
 from azure.ai.documentintelligence._model_base import rest_field
 from azure.ai.documentintelligence.models import (
+    AnalyzeResult,
     BoundingRegion,
     DocumentLine,
     DocumentWord,
 )
-from src.result_enrichment.common import is_exact_match
+
+from ..helpers.image import scale_flat_poly_list
+from .common import is_exact_match
 
 
 class EnrichedDocumentLine(DocumentLine):
@@ -36,7 +38,10 @@ class EnrichedDocumentLine(DocumentLine):
     """
 
     normalized_polygon: List[BoundingRegion] = rest_field()
-    """Confidence value between 0 and 1. Default value is 1.0."""
+    """Bounding polygon of the line, with coordinates specified relative to the
+     top-left of the page. The numbers represent the x, y values of the polygon
+     vertices, clockwise from the left (-180 degrees inclusive) relative to the
+     element orientation, and normalized to values between 0 and 1."""
     confidence: float = rest_field()
     """Confidence value between 0 and 1. Default value is 1.0."""
     page_number: int = rest_field()
@@ -50,8 +55,8 @@ class EnrichedDocumentLine(DocumentLine):
         *,
         content: str,
         spans: List["_models.DocumentSpan"],
-        polygon: Optional[List[BoundingRegion]] = None,
-        normalized_polygon: Optional[List[BoundingRegion]] = None,
+        polygon: Optional[List[float]] = None,
+        normalized_polygon: Optional[List[float]] = None,
         confidence: float,
         page_number: int,
         contained_words: List[DocumentWord],
@@ -90,7 +95,10 @@ class EnrichedDocumentWord(DocumentWord):
     """
 
     normalized_polygon: List[BoundingRegion] = rest_field()
-    """Confidence value between 0 and 1. Default value is 1.0."""
+    """Bounding polygon of the word, with coordinates specified relative to the
+     top-left of the page. The numbers represent the x, y values of the polygon
+     vertices, clockwise from the left (-180 degrees inclusive) relative to the
+     element orientation, and normalized to values between 0 and 1."""
     page_number: int = rest_field()
     """1-based index of the page where the line is present."""
 
@@ -112,29 +120,7 @@ class EnrichedDocumentWord(DocumentWord):
         super().__init__(*args, **kwargs)
 
 
-def normalize_doc_intel_polygon(
-    di_page: Dict, polygon: List[Dict]
-) -> List[Dict[str, int]]:
-    """
-    Normalize a polygon from pixel values to a percentage of the page size.
-
-    :param di_page:
-        The Document Intelligence page object containing the polygon.
-    :param polygon:
-        The polygon to normalize.
-
-    :return:
-        The normalized polygon.
-    """
-    result = list()
-    for point in polygon:
-        x = round(point["x"] / di_page["width"], 3)
-        y = round(point["y"] / di_page["height"], 3)
-        result.append({"x": x, "y": y})
-    return result
-
-
-def extract_di_words(raw_azure_doc_response: Dict) -> List[EnrichedDocumentWord]:
+def extract_di_words(di_result: AnalyzeResult) -> List[EnrichedDocumentWord]:
     """
     Extract all words from a Document Intelligence response, enriching them.
 
@@ -145,21 +131,23 @@ def extract_di_words(raw_azure_doc_response: Dict) -> List[EnrichedDocumentWord]
         A list of all words in the document.
     """
     di_words = list()
-    for page in raw_azure_doc_response["pages"]:
-        for word in page["words"]:
-            word_dict = copy.copy(word)
-            word_dict["normalized_polygon"] = normalize_doc_intel_polygon(
-                page, word_dict["polygon"]
+    for page in di_result.pages:
+        for word in page.words:
+            out_word = EnrichedDocumentWord(
+                normalized_polygon=scale_flat_poly_list(
+                    word.polygon,
+                    existing_scale=(page.width, page.height),
+                    new_scale=(1, 1),
+                ),
+                page_number=page.page_number,
+                **word,
             )
-            word_dict["content_type"] = "word"
-            word_dict["page_number"] = page["page_number"]
-            out_word = EnrichedDocumentWord(**word_dict)
             di_words.append(out_word)
     return di_words
 
 
 def extract_enriched_di_lines(
-    raw_azure_doc_response: dict,
+    di_result: AnalyzeResult,
     word_confidence_merg_func: Callable = min,
 ) -> List[EnrichedDocumentLine]:
     """
@@ -176,34 +164,33 @@ def extract_enriched_di_lines(
         A list of all lines in the document.
     """
     di_lines = list()
-    for page_number, page in enumerate(raw_azure_doc_response["pages"], start=1):
-        for line in page["lines"]:
-            out_line = copy.copy(line)
+    for page_number, page in enumerate(di_result.pages, start=1):
+        for line in page.lines:
+            # Calculate confidence score from the words in the line
             contained_words = list()
-            for span in out_line["spans"]:
-                span_offset_start = span["offset"]
-                span_offset_end = span_offset_start + span["length"]
+            for span in line.spans:
+                span_offset_start = span.offset
+                span_offset_end = span_offset_start + span.length
                 words_contained = [
                     word
-                    for word in page["words"]
-                    if word["span"]["offset"] >= span_offset_start
-                    and word["span"]["offset"] + word["span"]["length"]
-                    <= span_offset_end
+                    for word in page.words
+                    if word.span.offset >= span_offset_start
+                    and word.span.offset + word.span.length <= span_offset_end
                 ]
                 contained_words.extend(words_contained)
-            contained_words_conf_scores = [
-                word["confidence"] for word in words_contained
-            ]
-            out_line["normalized_polygon"] = normalize_doc_intel_polygon(
-                page, out_line["polygon"]
+            contained_words_conf_scores = [word.confidence for word in words_contained]
+            out_line = EnrichedDocumentLine(
+                confidence=word_confidence_merg_func(contained_words_conf_scores),
+                normalized_polygon=scale_flat_poly_list(
+                    line.polygon,
+                    existing_scale=(page.width, page.height),
+                    new_scale=(1, 1),
+                ),
+                contained_words=words_contained,
+                page_number=page_number,
+                **line,
             )
-            out_line["confidence"] = word_confidence_merg_func(
-                contained_words_conf_scores
-            )
-            out_line["page_number"] = page_number
-            out_line["contained_words"] = words_contained
-            out_doc_line = EnrichedDocumentLine(**out_line)
-            di_lines.append(out_doc_line)
+            di_lines.append(out_line)
     return di_lines
 
 
@@ -236,7 +223,7 @@ def find_matching_di_lines(
         raw_azure_doc_response, word_confidence_merg_func
     )
     # Find all content that matches
-    matching_lines = [line for line in di_lines if match_func(value, line["content"])]
+    matching_lines = [line for line in di_lines if match_func(value, line.content)]
     return matching_lines
 
 
@@ -261,5 +248,5 @@ def find_matching_di_words(
     # Get all pieces of content
     di_words = extract_di_words(raw_azure_doc_response)
     # Find all content that matches
-    matching_words = [word for word in di_words if match_func(value, word["content"])]
+    matching_words = [word for word in di_words if match_func(value, word.content)]
     return matching_words

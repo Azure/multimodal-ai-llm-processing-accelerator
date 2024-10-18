@@ -38,6 +38,9 @@ param cosmosDbDatabaseName string = 'default'
 @description('The name of the default CosmosDB containers to be created')
 param cosmosDbContainerNames array = ['blob-form-to-cosmosdb-container']
 
+@description('The location of the Azure Document Intelligence resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/versioning/changelog-release-history)')
+param docIntelLocation string = 'eastus'
+
 @description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
 param speechLocation string = 'eastus'
 
@@ -116,7 +119,7 @@ var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
 var openAITokenName = toLower('${resourcePrefix}-aoai-${openAILocation}-${resourceToken}')
 var openAILLMDeploymentName = toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
 var openAIWhisperDeploymentName = toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
-var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${resourceToken}')
+var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${docIntelLocation}-${resourceToken}')
 var speechTokenName = toLower('${resourcePrefix}-speech-${speechLocation}-${resourceToken}')
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
 var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToken}')
@@ -232,13 +235,11 @@ resource cosmosDbDataContributorRoleDefinition 'Microsoft.DocumentDB/databaseAcc
   name: '00000000-0000-0000-0000-000000000002' // Built-in Data Contributor Role
 }
 
-var cosmosDbConnectionString = cosmosDbAccount.listConnectionStrings().connectionStrings[0].connectionString
-
 // Cognitive services resources
 
 resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: docIntelTokenName
-  location: location
+  location: docIntelLocation
   kind: 'FormRecognizer'
   properties: {
     publicNetworkAccess: 'Enabled'
@@ -458,6 +459,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
       WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
+      APPINSIGHTS_INSTRUMENTATIONKEY: appInsights.properties.InstrumentationKey
       APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
       CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
       COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName

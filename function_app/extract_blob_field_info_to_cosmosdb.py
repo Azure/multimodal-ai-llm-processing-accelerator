@@ -7,46 +7,54 @@ from typing import Any, Dict, Optional
 from uuid import uuid4
 
 import azure.functions as func
+from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
+from azure.core.credentials import AzureKeyCredential
 from dotenv import load_dotenv
-from haystack import Document
-from haystack.components.converters import AzureOCRDocumentConverter
-from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
-from haystack.dataclasses import ByteStream, ChatMessage
-from haystack.utils import Secret
+from openai import AzureOpenAI
 from pydantic import Field
-from src.components.doc_intelligence import VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES
-from src.components.pymupdf import PyMuPDFConverter
-from src.helpers.common import haystack_doc_to_string
+from src.components.doc_intelligence import (
+    VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES,
+    DefaultDocumentPageProcessor,
+    DocumentIntelligenceProcessor,
+    convert_processed_di_docs_to_openai_message,
+)
+from src.helpers.data_loading import load_visual_obj_bytes_to_pil_imgs_dict
 from src.schema import LLMResponseBaseModel
 
 load_dotenv()
 
 # Load environment variables
 DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
+DOC_INTEL_API_KEY = os.getenv("DOC_INTEL_API_KEY")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
-# Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
-DOC_INTEL_API_KEY_SECRET = Secret.from_env_var("DOC_INTEL_API_KEY")
-AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
+AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 
-# Setup Haystack components
-pymupdf_converter = PyMuPDFConverter(
-    to_img_dpi=100,
-    correct_img_rotation=False,
-)
-di_converter = AzureOCRDocumentConverter(
+# Create the clients for Document Intelligence and Azure OpenAI
+DOC_INTEL_MODEL_ID = "prebuilt-layout"  # Set Document Intelligence model ID
+
+di_client = DocumentIntelligenceClient(
     endpoint=DOC_INTEL_ENDPOINT,
-    api_key=DOC_INTEL_API_KEY_SECRET,
-    model_id="prebuilt-read",
+    credential=AzureKeyCredential(DOC_INTEL_API_KEY),
+    api_version="2024-07-31-preview",
 )
-azure_generator = AzureOpenAIChatGenerator(
+aoai_client = AzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY_SECRET,
+    api_key=AOAI_API_KEY,
     api_version="2024-06-01",
-    generation_kwargs={
-        "response_format": {"type": "json_object"}
-    },  # Ensure we get JSON responses
+    timeout=30,
+    max_retries=0,
+)
+
+# Create the Doc Intelligence result processor. This can be configured to
+# process the raw Doc Intelligence result into a format that is easier
+# to work with downstream.
+doc_intel_result_processor = DocumentIntelligenceProcessor(
+    page_processor=DefaultDocumentPageProcessor(
+        page_img_order="after",  # Include each page image after the page's text content"
+    )
 )
 
 
@@ -152,7 +160,7 @@ LLM_SYSTEM_PROMPT = (
 def get_structured_extraction_func_outputs(
     input_blob: func.InputStream,
 ) -> Dict[str, Any]:
-    logging.info(f"Blob name: {input_blob.name}")
+    logging.info(f"Function triggered by blob name: {input_blob.name}")
 
     try:
         # Check mime_type of the request data
@@ -162,70 +170,62 @@ def get_structured_extraction_func_outputs(
                 "This function only supports a Content-Type of {}. Supplied file is of type {}".format(
                     ", ".join(VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES), mime_type
                 ),
-                status_code=400,
+                status_code=422,
             )
-        # Load the data into a ByteStream object, as expected by Haystack components
-        try:
-            bytestream = ByteStream(data=input_blob.read(), mime_type=mime_type)
-        except Exception as e:
-            raise RuntimeError("An error occurred while loading the document.") from e
-        # Extract the images from the PDF using PyMuPDF
-        try:
-            pymupdf_result = pymupdf_converter.run(sources=[bytestream])
-            pdf_images = pymupdf_result["images"]
-        except Exception as e:
-            raise RuntimeError(
-                "An error occurred during PyMuPDF image extraction."
-            ) from e
+        req_body = input_blob.read()
+        # Load the PDF into separate images
+        doc_page_imgs = load_visual_obj_bytes_to_pil_imgs_dict(
+            req_body, mime_type, starting_idx=1, pdf_img_dpi=100
+        )
         # Extract the text using Document Intelligence
-        try:
-            di_result = di_converter.run(sources=[bytestream])
-            di_result_docs: list[Document] = di_result["documents"]
-        except Exception as e:
-            raise RuntimeError(
-                "An error occurred during Document Intelligence extraction."
-            ) from e
-        # Create the messages to send to the LLM in the following order:
-        # 1. System prompt
-        # 2. Extracted text from Document Intelligence
-        # 3. Extracted images from PyMuPDF
-        try:
-            input_messages = [
-                ChatMessage.from_system(LLM_SYSTEM_PROMPT),
-                *[
-                    ChatMessage.from_user(haystack_doc_to_string(doc))
-                    for doc in di_result_docs
-                ],
-                *[ChatMessage.from_user(bytestream) for bytestream in pdf_images],
-            ]
-        except Exception as e:
-            raise RuntimeError(
-                "An error occurred while creating the LLM input messages."
-            ) from e
-        # Send request to LLM
-        try:
-            llm_result = azure_generator.run(messages=input_messages)
-        except Exception as e:
-            raise RuntimeError("An error occurred when sending the LLM request.") from e
-        # Validate that the LLM response matches the expected schema
-        try:
-            llm_structured_response = LLMExtractedFieldsModel(
-                **json.loads(llm_result["replies"][0].content)
+        poller = di_client.begin_analyze_document(
+            model_id=DOC_INTEL_MODEL_ID,
+            analyze_request=AnalyzeDocumentRequest(bytes_source=req_body),
+        )
+        di_result = poller.result()
+        processed_content_docs = doc_intel_result_processor.process_analyze_result(
+            analyze_result=di_result,
+            doc_page_imgs=doc_page_imgs,
+            on_error="raise",
+        )
+        merged_processed_content_docs = (
+            doc_intel_result_processor.merge_adjacent_text_content_docs(
+                processed_content_docs
             )
-        except Exception as e:
-            raise RuntimeError(
-                "An error occurred when validating the LLM's returned response into the expected schema."
-            ) from e
+        )
+        ### 3. Create the messages to send to the LLM in the following order:
+        #      i. System prompt
+        #      ii. Extracted text and images from Document Intelligence
+        content_openai_message = convert_processed_di_docs_to_openai_message(
+            merged_processed_content_docs, role="user"
+        )
+        input_messages = [
+            {
+                "role": "system",
+                "content": LLM_SYSTEM_PROMPT,
+            },
+            content_openai_message,
+        ]
+        ### 4. Send request to LLM
+        llm_result = aoai_client.chat.completions.create(
+            messages=input_messages,
+            model=AOAI_LLM_DEPLOYMENT,
+            response_format={"type": "json_object"},  # Ensure we get JSON responses
+        )
+        ### 5. Validate that the LLM response matches the expected schema
+        llm_structured_response = LLMExtractedFieldsModel(
+            **json.loads(llm_result.choices[0].message.content)
+        )
+        ### 8. All steps completed successfully, set success=True and return the final result
         # All steps completed successfully, set success=True and return the final result
         output_model = FunctionReponseModel(
             id=str(uuid4()),
             success=True,
             filename=os.path.basename(input_blob.name),
             blobname=input_blob.name,
-            ttl=300,  # Set time-to-live - item will expire in 5 minutes if container is configured to use TTL
+            ttl=300,  # Set time-to-live - item will expire in if container is configured to use TTL
             **llm_structured_response.dict(),
         )
-        result = output_model.model_dump(mode="python")
-        return result
+        return output_model.model_dump(mode="python")
     except Exception as e:
         raise RuntimeError("An error occurred during processing.") from e

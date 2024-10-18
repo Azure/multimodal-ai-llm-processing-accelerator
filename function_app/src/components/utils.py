@@ -32,8 +32,8 @@ def get_bytestream_from_source_with_mimetype(
         return bs
 
 
-def base64_file_to_buffer(b64_str: bytes, name: Optional[str] = None) -> io.BytesIO:
-    """Convert a base64 string to a BytesIO object."""
+def base64_bytes_to_buffer(b64_str: bytes, name: Optional[str] = None) -> io.BytesIO:
+    """Convert a base64 bytes object to a BytesIO object."""
     buffer = io.BytesIO(b64_str)
     if name is not None:
         buffer.name = name

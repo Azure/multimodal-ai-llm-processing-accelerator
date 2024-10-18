@@ -11,8 +11,8 @@ from haystack.components.converters.utils import (
 from haystack.dataclasses import ByteStream
 from haystack.lazy_imports import LazyImport
 from haystack.utils import deserialize_type
-from PIL import Image
 
+from ..helpers.data_loading import pymupdf_pdf_page_to_img_pil
 from ..helpers.image import pil_img_to_base64
 
 with LazyImport("Run 'pip install fitz'") as fitz_import:
@@ -78,13 +78,6 @@ class PyMuPDFConverter:
         )
         return default_from_dict(cls, data)
 
-    def _pymupdf_pdf_page_to_img_pil(
-        self, pymupdf_page: fitz.Page, rotation: int
-    ) -> Image:
-        pix = pymupdf_page.get_pixmap(dpi=self._to_img_dpi)
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        return img.rotate(rotation, expand=True)
-
     def convert(
         self, pymupdf_page: PyMuPDFDocument
     ) -> Tuple[List[Document], List[ByteStream]]:
@@ -104,7 +97,7 @@ class PyMuPDFConverter:
             current_rotation = 0 if self._correct_img_rotation else page.rotation
             rotation_factor = page.rotation if self._correct_img_rotation else 0
             base64_img = pil_img_to_base64(
-                self._pymupdf_pdf_page_to_img_pil(page, rotation_factor)
+                pymupdf_pdf_page_to_img_pil(page, self._to_img_dpi, rotation_factor)
             )
             bytestream = ByteStream.from_base64_image(
                 base64_img,

@@ -3,28 +3,25 @@ import os
 
 import azure.functions as func
 from dotenv import load_dotenv
-from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
-from haystack.dataclasses import ChatMessage
-from haystack.utils import Secret
+from openai import AzureOpenAI
 from pydantic import BaseModel, Field
 
 load_dotenv()
 
 bp_summarize_text = func.Blueprint()
 
+FUNCTION_ROUTE = "summarize_text"
+
 # Load environment variables
-DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
-# Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
-DOC_INTEL_API_KEY_SECRET = Secret.from_env_var("DOC_INTEL_API_KEY")
-AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
+AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 
 # Setup Haystack components
-azure_generator = AzureOpenAIChatGenerator(
+aoai_client = AzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY_SECRET,
+    api_key=AOAI_API_KEY,
     api_version="2024-06-01",
 )
 
@@ -51,34 +48,43 @@ LLM_SYSTEM_PROMPT = (
 )
 
 
-@bp_summarize_text.route(route="summarize_text")
+@bp_summarize_text.route(route=FUNCTION_ROUTE)
 def summarize_text(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info("Python HTTP trigger function processed a request.")
     try:
-        try:
-            # Check the request body
-            req_body = req.get_json()
-            request_obj = FunctionRequestModel(**req_body)
-        except Exception as _e:
-            return func.HttpResponse(
-                (
-                    "The request body was not in the expected format. Please ensure that it is "
-                    "a valid JSON object with the following fields: {}"
-                ).format(list(FunctionRequestModel.model_fields.keys())),
-                status_code=400,
-            )
+        logging.info(
+            f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request."
+        )
+        # Check the request body
+        req_body = req.get_json()
+        request_obj = FunctionRequestModel(**req_body)
+    except Exception as _e:
+        return func.HttpResponse(
+            (
+                "The request body was not in the expected format. Please ensure that it is "
+                "a valid JSON object with the following fields: {}"
+            ).format(list(FunctionRequestModel.model_fields.keys())),
+            status_code=422,
+        )
+    try:
         # Create the messages to send to the LLM
         input_messages = [
-            ChatMessage.from_system(
-                LLM_SYSTEM_PROMPT.format(
+            {
+                "role": "system",
+                "content": LLM_SYSTEM_PROMPT.format(
                     request_obj.num_sentences, request_obj.summary_style
-                )
-            ),
-            ChatMessage.from_user(request_obj.text),
+                ),
+            },
+            {
+                "role": "user",
+                "content": request_obj.text,
+            },
         ]
         # Send request to LLM
-        llm_result = azure_generator.run(messages=input_messages)
-        llm_text_response = llm_result["replies"][0].content
+        llm_result = aoai_client.chat.completions.create(
+            messages=input_messages,
+            model=AOAI_LLM_DEPLOYMENT,
+        )
+        llm_text_response = llm_result.choices[0].message.content
         # All steps completed successfully, set success=True and return the final result
         return func.HttpResponse(
             body=llm_text_response,

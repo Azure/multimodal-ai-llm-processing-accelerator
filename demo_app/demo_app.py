@@ -85,6 +85,42 @@ else:
     auth = None
 
 # Get list of various demo files
+with open("demo_files/doc_intel_processing_samples.json", "r") as json_file:
+    doc_intel_url_sources: dict[str, str] = json.load(json_file)
+
+
+def download_url_source_to_local(
+    url_source: str, output_folder: str, save_name: str = None
+) -> str:
+    # Download file to local path
+    basename = os.path.basename(url_source).split("?")[0]
+    if save_name:
+        # Clean the save_name automatically
+        accepted_chars = (
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_ "
+        )
+        save_name = save_name.replace(" ", "_").replace("-", "_").lower()
+        save_name = "".join([c for c in save_name if c in accepted_chars])
+        ext = os.path.splitext(basename)[1]
+        basename = f"{save_name}{ext}"
+    local_path = os.path.join(output_folder, basename)
+    if not os.path.exists(local_path):
+        os.makedirs(output_folder, exist_ok=True)
+        logging.info(f"Downloading {url_source} to {local_path}")
+        response = requests.get(url_source)
+        response.raise_for_status()
+        with open(local_path, "wb") as f:
+            f.write(response.content)
+    # Return local path
+    return local_path
+
+
+DEMO_DOC_INTEL_PROCESSING_FILES = {
+    name: download_url_source_to_local(
+        url_source, "demo_files/temp/doc_intel_processing", name
+    )
+    for name, url_source in doc_intel_url_sources.items()
+}
 DEMO_CALL_CENTER_AUDIO_FILES = [
     os.path.join("demo_files/call_center_audio", fn)
     for fn in os.listdir("demo_files/call_center_audio")
@@ -173,8 +209,14 @@ def fitz_pdf_to_images(file: str) -> list[Image.Image]:
     return imgs
 
 
-def render_visual_media_input(file: str):
+def render_visual_media_input(file: Optional[str]):
     """Renders visual media input into a Gradio component."""
+    if not file:
+        return gr.Gallery(
+            value=None,
+            type="pil",
+            visible=True,
+        )
     mime_type = mimetypes.guess_type(file)[0]
     if mime_type.startswith("image"):
         return gr.Gallery([file], columns=1, visible=True)
@@ -195,6 +237,11 @@ def render_visual_media_input(file: str):
 with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block:
     # Define requesting function, which reshapes the input into the correct schema
     def form_ext_w_conf_upload(file: str):
+        if file is None:
+            gr.Warning(
+                "Please select or upload a PDF/image file, then click 'Process File'."
+            )
+            return ("", "", None, {})
         # Get response from the API
         mime_type = mimetypes.guess_type(file)[0]
         with open(file, "rb") as f:
@@ -384,8 +431,8 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
     # Input components
     blob_form_to_cosmosdb_instructions = gr.Markdown(
         (
-            "This example extracts key information from Bank Account application forms, triggered by uploading the document to blob storage and with the results written to a CosmosDB NoSQL database."
-            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_form_extraction_with_confidence.py))."
+            "This example extracts key information from Bank Account application forms, triggered by uploading the document to blob storage and with the results written to a CosmosDB NoSQL database "
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/extract_blob_field_info_to_cosmosdb.py))."
             "\n\nThe pipeline is as follows:\n"
             "1. The PDF is uploaded to a blob storage container, triggering the pipeline.\n"
             "2. PyMuPDF is used to convert the PDFs into images.\n"
@@ -471,7 +518,7 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
     cc_audio_proc_instructions = gr.Markdown(
         (
             "This example transcribes call center audio records and extract key information "
-            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_call_center_audio_analytics.py))."
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_call_center_audio_analysis.py))."
             "\n\nThe pipeline is as follows:\n"
             "1. Azure AI Speech or Azure OpenAI Whisper is used to transcribe a call center recording.\n"
             "2. The result is formatted into a more readable format (with timestamps, speaker IDs and the text).\n"
@@ -748,66 +795,129 @@ with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
         ],
     )
 
-### Doc Intelligence: Extract Raw Text Only Example ###
-with gr.Blocks(analytics_enabled=False) as di_only_block:
+### Doc Intelligence Processing Example ###
+with gr.Blocks(analytics_enabled=False) as di_proc_block:
     # Define requesting function, which reshapes the input into the correct schema
-    def di_only_process_upload(file: str):
-        # Get response from the API
-        mime_type = mimetypes.guess_type(file)[0]
-        with open(file, "rb") as f:
-            data = f.read()
-            headers = {"Content-Type": mime_type}
-            return send_request(
-                route="doc_intel_only",
-                data=data,
-                headers=headers,
-                force_json_content_type=True,  # JSON gradio block requires this
+    def di_proc_process_upload(
+        file: str,
+        include_page_images_after_content: bool,
+        extract_and_crop_inline_figures: bool,
+        pages_per_chunk: int,
+    ):
+        if file is None:
+            gr.Warning(
+                "Please select or upload an audio file, then click 'Process File'."
             )
+            return ("", "", {})
+        # Get response from the API
+        with open(file, "rb") as f:
+            payload = {
+                "include_page_images_after_content": include_page_images_after_content,
+                "extract_and_crop_inline_figures": extract_and_crop_inline_figures,
+                "pages_per_chunk": pages_per_chunk,
+            }
+            file_mime_type = mimetypes.guess_type(file)[0]
+            files = {
+                "doc_for_extraction": (file, f, file_mime_type),
+                "json": ("payload.json", json.dumps(payload), "application/json"),
+            }
+
+            request_outputs = send_request(
+                route="multimodal_doc_intel_processing",
+                files=files,
+                force_json_content_type=False,
+            )
+        return request_outputs
 
     # Input components
-    di_only_instructions = gr.Markdown(
+    di_proc_instructions = gr.Markdown(
         (
-            "This example uses Azure Document Intelligence to extract the raw text from a PDF or image file "
-            "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_doc_intel_only.py))."
-            "\n\nNo further processing is completed on the output, and this example serves as a very basic example of "
-            "an decoupled endpoint which can be used as one step in a larger, multi-stage pipeline."
+            "This example uses showcases a custom-built Azure Document Intelligence Processor for converting raw API "
+            "responses into more usable and useful formats "
+            "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_multimodal_doc_intel_processing.py))."
+            "\n\nThis processor is fully configurable and can be used to completely customize the processing, formatting, "
+            "and chunking of files processed with Azure Document Intelligence. Some features include:\n"
+            "* Automatic extraction of rich content from images and PDF/documents, including tables, figures and more.\n"
+            "* Conversion and formatting of text content, images for each page and figure, and pandas dataframes for tables.\n"
+            "* Automatic correction of image rotation when extracting page and figure images (if not corrected, this can completely destroy LLM extraction accuracy)\n"
+            "* Custom formatting of all content outputs, allowing for completely dynamic formatting and inclusion/exclusion of content.\n"
+            "* Chunking of content into smaller parts (e.g. into chunks of X pages) which can then be processed in parallel (e.g. the Map Reduce pattern).\n"
+            "* Automatic conversion of the content to the OpenAI message format, ready for processing with an LLM.\n"
+            "\n\nTo try it out, upload a document or select one of the demo documents from the dropdown below. "
+            "While the demo below is a very simple example of what is possible with the component, a more detailed deep dive can be found in the "
+            "[Code walkthrough notebook](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/notebooks/Document%20Intelligence%20Processor%20Walkthrough.ipynb)."
         ),
         show_label=False,
     )
     with gr.Row():
-        di_only_file_upload = gr.File(
-            label="Upload File", file_count="single", type="filepath"
+        di_proc_file_upload = gr.File(
+            label="Upload File",
+            file_count="single",
+            type="filepath",
+            value=lambda: next(iter(DEMO_DOC_INTEL_PROCESSING_FILES.values())),
         )
-        di_only_input_thumbs = gr.Gallery(
-            label="File Preview", object_fit="contain", visible=True
+        di_proc_input_thumbs = render_visual_media_input(
+            next(iter(DEMO_DOC_INTEL_PROCESSING_FILES.values()))
         )
     # Examples
-    di_only_examples = gr.Examples(
-        label=FILE_EXAMPLES_LABEL,
-        examples=DEMO_VISION_FILES,
-        inputs=[di_only_file_upload],
-        outputs=[di_only_input_thumbs],
-        fn=render_visual_media_input,
-        run_on_click=True,
+    di_proc_example_dropdown = gr.Dropdown(
+        label="Select a demo PDF or image file",
+        choices=DEMO_DOC_INTEL_PROCESSING_FILES.items(),
     )
-    di_only_process_btn = gr.Button("Process File")
+    with gr.Row():
+        di_proc_output_page_checkbox = gr.Checkbox(
+            label="Include page images after each page's content",
+            value=True,
+            info="If checked, the output will include the page image after each page's text content.",
+        )
+        di_proc_output_figures_inline_checkbox = gr.Checkbox(
+            label="Extract & crop inline figures",
+            value=True,
+            info="If checked, any figures that were identified within the document will be cropped from the page image and inserted into the outputs as an image file.",
+        )
+        di_proc_pages_per_chunk_number = gr.Number(
+            label="Pages per chunk of content",
+            value=3,
+            minimum=1,
+            maximum=1000,
+            precision=0,
+            info="The demo automatically splits the output content into chunks. This sets the number of pages of content per chunk.",
+        )
+    di_proc_process_btn = gr.Button("Process File")
     # Output components
-    with gr.Column() as di_only_output_row:
-        di_only_output_label = gr.Label(value="API Response", show_label=False)
+    with gr.Column() as di_proc_output_row:
+        di_proc_output_label = gr.Label(value="API Response", show_label=False)
         with gr.Row():
-            di_only_status_code = gr.Textbox(
+            di_proc_status_code = gr.Textbox(
                 label="Response Status Code", interactive=False
             )
-            di_only_time_taken = gr.Textbox(label="Time Taken", interactive=False)
-        di_only_output_text = gr.JSON(label="API Response")
+            di_proc_time_taken = gr.Textbox(label="Time Taken", interactive=False)
+        di_proc_output_md = gr.Markdown(
+            label="Processed Markdown Content", line_breaks=True
+        )
     # Actions
-    di_only_process_btn.click(
-        fn=di_only_process_upload,
-        inputs=[di_only_file_upload],
+    di_proc_example_dropdown.change(
+        fn=echo_input,
+        inputs=[di_proc_example_dropdown],
+        outputs=[di_proc_file_upload],
+    )
+    di_proc_file_upload.change(
+        fn=render_visual_media_input,
+        inputs=[di_proc_file_upload],
+        outputs=[di_proc_input_thumbs],
+    )
+    di_proc_process_btn.click(
+        fn=di_proc_process_upload,
+        inputs=[
+            di_proc_file_upload,
+            di_proc_output_page_checkbox,
+            di_proc_output_figures_inline_checkbox,
+            di_proc_pages_per_chunk_number,
+        ],
         outputs=[
-            di_only_status_code,
-            di_only_time_taken,
-            di_only_output_text,
+            di_proc_status_code,
+            di_proc_time_taken,
+            di_proc_output_md,
         ],
     )
 
@@ -831,6 +941,8 @@ with gr.Blocks(
         form_extraction_with_confidence_block.render()
     with gr.Tab("Call Center Audio Processing (HTTP)"):
         call_center_audio_processing_block.render()
+    with gr.Tab("Multimodal Document Intelligence Processing (HTTP)"):
+        di_proc_block.render()
     with gr.Tab("Form Extraction (Blob -> CosmosDB)"):
         blob_form_extraction_to_cosmosdb_block.render()
     with gr.Tab("Summarize Text (HTTP)"):
@@ -839,8 +951,6 @@ with gr.Blocks(
         di_llm_ext_names_block.render()
     with gr.Tab("City Names Extraction, PyMuPDF (HTTP)"):
         local_pdf_prc_block.render()
-    with gr.Tab("Doc Intelligence Only (HTTP)"):
-        di_only_block.render()
 
 if __name__ == "__main__":
     # Start server by running: `gradio demo_app.py`, then navigate to http://localhost:8000
