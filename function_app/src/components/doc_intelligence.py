@@ -2953,7 +2953,7 @@ def convert_processed_di_docs_to_openai_message(
             if content_doc.content:
                 msg_content_list.append(
                     ChatCompletionContentPartTextParam(
-                        type="text", text=content_doc.content
+                        type="text", text=content_doc.content.strip()
                     )
                 )
             msg_content_list.append(
@@ -2976,8 +2976,10 @@ def convert_processed_di_docs_to_openai_message(
             # populated with the text content to be exported). Ignore it if
             # the content field is None or ""
             if content_doc.content:
-                ChatCompletionContentPartTextParam(
-                    type="text", text=content_doc.content
+                msg_content_list.append(
+                    ChatCompletionContentPartTextParam(
+                        type="text", text=content_doc.content.strip()
+                    )
                 )
         else:
             raise ValueError("Unknown processed DI document type.")
