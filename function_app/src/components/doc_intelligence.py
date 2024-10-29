@@ -13,9 +13,10 @@ from azure.ai.documentintelligence.models import (
     AnalyzeResult,
     Document,
     DocumentBarcode,
+    DocumentBarcodeKind,
     DocumentFigure,
     DocumentFormula,
-    DocumentKeyValueElement,
+    DocumentKeyValuePair,
     DocumentLine,
     DocumentList,
     DocumentPage,
@@ -27,6 +28,17 @@ from azure.ai.documentintelligence.models import (
     DocumentWord,
     ParagraphRole,
 )
+from azure.ai.formrecognizer import AnalyzeResult as FRAnalyzeResult
+from azure.ai.formrecognizer import DocumentBarcode as FRDocumentBarcode
+from azure.ai.formrecognizer import DocumentFormula as FRDocumentFormula
+from azure.ai.formrecognizer import DocumentKeyValuePair as FRDocumentKeyValuePair
+from azure.ai.formrecognizer import DocumentLine as FRDocumentLine
+from azure.ai.formrecognizer import DocumentPage as FRDocumentPage
+from azure.ai.formrecognizer import DocumentParagraph as FRDocumentParagraph
+from azure.ai.formrecognizer import DocumentSelectionMark as FRDocumentSelectionMark
+from azure.ai.formrecognizer import DocumentSpan as FRDocumentSpan
+from azure.ai.formrecognizer import DocumentTable as FRDocumentTable
+from azure.ai.formrecognizer import DocumentWord as FRDocumentWord
 from fitz import Document as PyMuPDFDocument
 from haystack.dataclasses import ByteStream as HaystackByteStream
 from haystack.dataclasses import Document as HaystackDocument
@@ -67,7 +79,10 @@ VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES = {
 LATEX_NODES_TO_TEXT = LatexNodes2Text()
 
 
-def is_span_in_span(span: DocumentSpan, parent_span: DocumentSpan) -> bool:
+def is_span_in_span(
+    span: Union[DocumentSpan, FRDocumentSpan],
+    parent_span: Union[DocumentSpan, FRDocumentSpan],
+) -> bool:
     """
     Checks if a given span is contained by a parent span.
 
@@ -87,8 +102,8 @@ def get_all_formulas(analyze_result: AnalyzeResult) -> List[DocumentFormula]:
     """
     Returns all formulas from the Document Intelligence result.
 
-    :param analyze_result: AnalyzeResult object returned by the `begin_analyze_document`
-        method.
+    :param analyze_result: AnalyzeResult object returned by the
+        `begin_analyze_document` method.
     :type analyze_result: AnalyzeResult
     :return: A list of all formulas in the result.
     :rtype: List[DocumentFormula]
@@ -100,51 +115,36 @@ def get_all_formulas(analyze_result: AnalyzeResult) -> List[DocumentFormula]:
     )
 
 
-def get_formula(
-    all_formulas: List[DocumentFormula], span: DocumentSpan
-) -> DocumentFormula:
+def get_all_barcodes(analyze_result: AnalyzeResult) -> List[DocumentBarcode]:
     """
-    Get the formula that matches the given span.
+    Returns all barcodes from the Document Intelligence result.
 
-    :param all_formulas: A list of all formulas in the document.
-    :type all_formulas: List[DocumentFormula]
-    :param span: The span to match.
-    :type span: DocumentSpan
-    :raises ValueError: If no formula is found for the given span.
-    :raises NotImplementedError: If multiple formulas are found for the given
-        span.
-    :return: The formula that matches the given span.
-    :rtype: DocumentFormula
+    :param analyze_result: AnalyzeResult object returned by the
+        `begin_analyze_document` method.
+    :type analyze_result: AnalyzeResult
+    :return: A list of all barcodes in the result.
+    :rtype: List[DocumentBarcode]
     """
-    matching_formulas = [
-        formula for formula in all_formulas if is_span_in_span(formula.span, span)
-    ]
-    if not matching_formulas:
-        raise ValueError(f"No formula found for span {span}")
-    if len(matching_formulas) > 1:
-        raise NotImplementedError(
-            "Support for multiple matched formulas is not yet available."
+    return list(
+        itertools.chain.from_iterable(
+            page.barcodes for page in analyze_result.pages if page.barcodes
         )
-    return matching_formulas[0]
+    )
 
 
 def get_formulas_in_spans(
-    all_formulas: List[DocumentFormula], spans: List[DocumentSpan]
+    all_formulas: List[DocumentFormula],
+    spans: List[Union[DocumentSpan, FRDocumentSpan]],
 ) -> List[DocumentFormula]:
     """
-    Get the formula that matches the given span.
-
-    TODO: update docs
+    Get all formulas contained within a list of given spans.
 
     :param all_formulas: A list of all formulas in the document.
     :type all_formulas: List[DocumentFormula]
     :param span: The span to match.
     :type span: DocumentSpan
-    :raises ValueError: If no formula is found for the given span.
-    :raises NotImplementedError: If multiple formulas are found for the given
-        span.
-    :return: The formula that matches the given span.
-    :rtype: DocumentFormula
+    :return: The formulas contained within the given span.
+    :rtype: List[DocumentFormula]
     """
     matching_formulas = list()
     for span in spans:
@@ -152,6 +152,28 @@ def get_formulas_in_spans(
             [formula for formula in all_formulas if is_span_in_span(formula.span, span)]
         )
     return matching_formulas
+
+
+def get_barcodes_in_spans(
+    all_barcodes: List[DocumentBarcode],
+    spans: List[Union[DocumentSpan, FRDocumentSpan]],
+) -> List[DocumentBarcode]:
+    """
+    Get all barcodes contained within a list of given spans.
+
+    :param all_barcodes: A list of all barcodes in the document.
+    :type all_barcodes: List[DocumentBarcode]
+    :param span: The span to match.
+    :type span: DocumentSpan
+    :return: The barcodes contained within the given span.
+    :rtype: List[DocumentBarcode]
+    """
+    matching_barcodes = list()
+    for span in spans:
+        matching_barcodes.extend(
+            [barcode for barcode in all_barcodes if is_span_in_span(barcode.span, span)]
+        )
+    return matching_barcodes
 
 
 def latex_to_text(latex_str: str) -> str:
@@ -202,8 +224,52 @@ def substitute_content_formulas(
     return new_content
 
 
-def replace_content_formulas(
-    content: str, content_spans: List[DocumentSpan], all_formulas: List[DocumentFormula]
+def substitute_content_barcodes(
+    content: str, matching_barcodes: list[DocumentBarcode]
+) -> str:
+    """
+    Substitute barcodes in the content with their actual values.
+
+    :param content: The content to substitute barcodes in.
+    :type content: str
+    :param matching_barcodes: The barcodes to substitute.
+    :type matching_barcodes: list[DocumentBarcode]
+    :returns: The content with the barcodes substituted.
+    :rtype: str
+    """
+    # Get all string indices of :barcode: in the content
+    match_bounds = [
+        (match.start(), match.end()) for match in re.finditer(r":barcode:", content)
+    ]
+    if not len(match_bounds) == len(matching_barcodes):
+        raise ValueError(
+            "The number of barcodes to substitute does not match the number of :barcode: placeholders in the content."
+        )
+    # Regex may throw issues with certain characters (e.g. double backslashes), so do the replacement manually
+    new_content = ""
+    last_idx = 0
+    for match_bounds, matching_barcode in zip(match_bounds, matching_barcodes):
+        kind_str = (
+            matching_barcode.kind.value
+            if isinstance(matching_barcode.kind, DocumentBarcodeKind)
+            else matching_barcode.kind
+        )
+        if match_bounds[0] == last_idx:
+            new_content += f"*Barcode value:* {matching_barcode.value} (*Barcode kind:* {kind_str})"
+            last_idx = match_bounds[1]
+        else:
+            new_content += content[last_idx : match_bounds[0]]
+            new_content += f"*Barcode value:* {matching_barcode.value} (*Barcode kind:* {kind_str})"
+            last_idx = match_bounds[1]
+    new_content += content[last_idx:]
+    return new_content
+
+
+def replace_content_formulas_and_barcodes(
+    content: str,
+    content_spans: List[Union[DocumentSpan, FRDocumentSpan]],
+    all_formulas: List[DocumentFormula],
+    all_barcodes: List[DocumentBarcode],
 ) -> str:
     """
     Replace formulas in the content with their actual values.
@@ -214,12 +280,17 @@ def replace_content_formulas(
     :type content_spans: List[DocumentSpan]
     :param all_formulas: A list of all formulas in the document.
     :type all_formulas: List[DocumentFormula]
-    :returns: The content with the formulas replaced.
+    :param all_barcodes: A list of all barcodes in the document.
+    :type all_barcodes: List[DocumentBarcode]
+    :returns: The content with the formulas and barcdoes replaced.
     :rtype: str
     """
     if ":formula:" in content:
         matching_formulas = get_formulas_in_spans(all_formulas, content_spans)
-        return substitute_content_formulas(content, matching_formulas)
+        content = substitute_content_formulas(content, matching_formulas)
+    if ":barcode:" in content:
+        matching_barcodes = get_barcodes_in_spans(all_barcodes, content_spans)
+        content = substitute_content_barcodes(content, matching_barcodes)
     return content
 
 
@@ -427,7 +498,7 @@ def convert_element_heirarchy_to_incremental_numbering(
 
 def get_document_element_spans(
     document_element: DocumentModelBase,
-) -> list[DocumentSpan]:
+) -> list[Union[DocumentSpan, FRDocumentSpan]]:
     """
     Get the spans of a document element.
 
@@ -438,6 +509,12 @@ def get_document_element_spans(
     :return: The spans of the document element.
     :rtype: list[DocumentSpan]
     """
+    if isinstance(document_element, DocumentKeyValuePair) or isinstance(
+        document_element, FRDocumentKeyValuePair
+    ):
+        return document_element.key.spans + (
+            document_element.value.spans if document_element.value else list()
+        )
     if hasattr(document_element, "span"):
         return [document_element.span] or list()
     elif hasattr(document_element, "spans"):
@@ -468,13 +545,15 @@ def span_bounds_to_document_span(span_bounds: SpanBounds) -> DocumentSpan:
     )
 
 
-def document_span_to_span_bounds(span: DocumentSpan) -> SpanBounds:
+def document_span_to_span_bounds(
+    span: Union[DocumentSpan, FRDocumentSpan]
+) -> SpanBounds:
     """Converts a DocumentSpan object to a SpanBounds object."""
     return SpanBounds(span.offset, span.offset + span.length)
 
 
 def get_span_bounds_to_ordered_idx_mapper(
-    analyze_result: "AnalyzeResult",
+    analyze_result: Union[AnalyzeResult, FRAnalyzeResult],
 ) -> Dict[SpanBounds, int]:
     """
     Create a mapping of each span start location to the overall position of
@@ -593,7 +672,9 @@ class PageSpanCalculator:
         return page_span_bounds
 
 
-def get_min_and_max_span_bounds(spans: List[DocumentSpan]) -> SpanBounds:
+def get_min_and_max_span_bounds(
+    spans: List[Union[DocumentSpan, FRDocumentSpan]]
+) -> SpanBounds:
     """
     Get the minimum and maximum offsets of a list of spans.
 
@@ -647,12 +728,21 @@ class ElementInfo:
         DocumentTable,
         DocumentFormula,
         DocumentBarcode,
-        DocumentKeyValueElement,
+        DocumentKeyValuePair,
         Document,
         DocumentSelectionMark,
+        FRDocumentBarcode,
+        FRDocumentFormula,
+        FRDocumentKeyValuePair,
+        FRDocumentLine,
+        FRDocumentPage,
+        FRDocumentParagraph,
+        FRDocumentSelectionMark,
+        FRDocumentTable,
+        FRDocumentWord,
     ]
     full_span_bounds: SpanBounds
-    spans: List[DocumentSpan]
+    spans: List[Union[DocumentSpan, FRDocumentSpan]]
     start_page_number: int
     section_heirarchy_incremental_id: tuple[int]
 
@@ -660,12 +750,16 @@ class ElementInfo:
 def get_element_page_number(
     element: Union[
         DocumentPage,
+        FRDocumentPage,
         DocumentSection,
         DocumentParagraph,
+        FRDocumentParagraph,
         DocumentTable,
+        FRDocumentTable,
         DocumentFigure,
         DocumentList,
-        DocumentKeyValueElement,
+        DocumentKeyValuePair,
+        FRDocumentKeyValuePair,
         Document,
     ]
 ) -> int:
@@ -679,7 +773,7 @@ def get_element_page_number(
     :return: The page number of the document element.
     :rtype: int
     """
-    if isinstance(element, DocumentPage):
+    if isinstance(element, DocumentPage) or isinstance(element, FRDocumentPage):
         return element.page_number
     return element.bounding_regions[0].page_number
 
@@ -688,7 +782,7 @@ def get_element_span_info_list(
     analyze_result: "AnalyzeResult",
     page_span_calculator: PageSpanCalculator,
     section_to_incremental_id_mapper: Dict[int, tuple[int]],
-) -> Dict[DocumentSpan, ElementInfo]:
+) -> Dict[Union[DocumentSpan, FRDocumentSpan], ElementInfo]:
     """
     Create a mapping of each span start location to the overall position of
     the content. This is used to order the content logically.
@@ -704,6 +798,9 @@ def get_element_span_info_list(
     :type section_to_incremental_id_mapper: Dict[int, tuple[int]]
     :returns: A dictionary with the element ID as key and the order as value.
     """
+    # Note: Formula and Barcode elements are not processed by this function as
+    # they are processed automatically by the `substitute_content_formulas` and
+    # `substitute_content_barcodes` functions.
     # Get info for every unique element
     element_span_info_list = list()
     for attr in [
@@ -718,12 +815,16 @@ def get_element_span_info_list(
     ]:
         elements: List[
             DocumentPage,
+            FRDocumentPage,
             DocumentSection,
             DocumentParagraph,
+            FRDocumentParagraph,
             DocumentTable,
+            FRDocumentTable,
             DocumentFigure,
             DocumentList,
-            DocumentKeyValueElement,
+            DocumentKeyValuePair,
+            FRDocumentKeyValuePair,
             Document,
         ] = (
             getattr(analyze_result, attr, list()) or list()
@@ -749,10 +850,17 @@ def get_element_span_info_list(
             )
     page_sub_element_counter = defaultdict(int)
     for page_num, page in enumerate(analyze_result.pages):
-        for attr in ["barcodes", "lines", "words", "selection_marks"]:
+        for attr in ["lines", "words", "selection_marks"]:
             elements: List[
-                DocumentBarcode, DocumentLine, DocumentWord, DocumentSelectionMark
-            ] = (getattr(page, attr) or list())
+                DocumentLine,
+                FRDocumentLine,
+                DocumentWord,
+                FRDocumentWord,
+                DocumentSelectionMark,
+                FRDocumentSelectionMark,
+            ] = (
+                getattr(page, attr) or list()
+            )
             for element in elements:
                 element_idx = page_sub_element_counter[attr]
                 page_sub_element_counter[attr] += 1
@@ -794,17 +902,22 @@ def order_element_info_list(
     # e.g. pages should appear before any contained content, and paragraphs should always be processed before lines or words
     priority_mapper = {
         DocumentPage: 0,
+        FRDocumentPage: 0,
         DocumentSection: 1,
         DocumentTable: 2,
+        FRDocumentTable: 2,
         DocumentFigure: 2,
-        DocumentFormula: 2,
-        DocumentBarcode: 2,
         Document: 2,
-        DocumentKeyValueElement: 2,
+        DocumentKeyValuePair: 2,
+        FRDocumentKeyValuePair: 2,
         DocumentParagraph: 3,
+        FRDocumentParagraph: 3,
         DocumentLine: 4,
+        FRDocumentLine: 4,
         DocumentSelectionMark: 4,
+        FRDocumentSelectionMark: 4,
         DocumentWord: 5,
+        FRDocumentWord: 5,
     }
 
     return sorted(
@@ -894,7 +1007,7 @@ class DocumentElementProcessor(ABC):
     Intelligence.
     """
 
-    expected_element = None
+    expected_elements = []
 
     def _validate_element_type(self, element_info: ElementInfo):
         """
@@ -906,12 +1019,15 @@ class DocumentElementProcessor(ABC):
         :raises ValueError: If the element of the ElementInfo object is not of
             the expected type.
         """
-        if not self.expected_element:
+        if not self.expected_elements:
             raise ValueError("expected_element has not been set for this processor.")
 
-        if not isinstance(element_info.element, self.expected_element):
+        if not any(
+            isinstance(element_info.element, expected_element)
+            for expected_element in self.expected_elements
+        ):
             raise ValueError(
-                f"Element is incorrect type - {type(element_info.element)}. It should be of `{type(self.expected_element)}` type"
+                f"Element is incorrect type - {type(element_info.element)}. It should be one of `{self.expected_elements}` types."
             )
 
     def _format_str_contains_placeholders(
@@ -935,7 +1051,7 @@ class DocumentSectionProcessor(DocumentElementProcessor):
     Base processor class for DocumentSection elements.
     """
 
-    expected_element = DocumentSection
+    expected_elements = [DocumentSection]
 
     @abstractmethod
     def convert_section(
@@ -1042,7 +1158,7 @@ class DocumentPageProcessor(DocumentElementProcessor):
     Base processor class for DocumentPage elements.
     """
 
-    expected_element = DocumentPage
+    expected_elements = [DocumentPage, FRDocumentPage]
 
     @abstractmethod
     def export_page_img(
@@ -1061,7 +1177,7 @@ class DocumentPageProcessor(DocumentElementProcessor):
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
-        Method for exporting element for the beginning of the page.
+        Method for exporting content for the beginning of the page.
         """
         pass
 
@@ -1073,7 +1189,7 @@ class DocumentPageProcessor(DocumentElementProcessor):
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
-        Method for exporting element for the beginning of the page.
+        Method for exporting content for the end of the page.
         """
         pass
 
@@ -1150,7 +1266,7 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
         """
         if self.adjust_rotation:
             transformed_img = rotate_img_pil(
-                pdf_page_img, di_page.angle, self.rotated_fill_color
+                pdf_page_img, di_page.angle or 0, self.rotated_fill_color
             )
         else:
             transformed_img = pdf_page_img
@@ -1337,18 +1453,18 @@ class DocumentParagraphProcessor(DocumentElementProcessor):
     Base processor class for DocumentParagraph elements.
     """
 
-    expected_element = DocumentParagraph
+    expected_elements = [DocumentParagraph, FRDocumentParagraph]
 
     @abstractmethod
     def convert_paragraph(
         self,
         element_info: ElementInfo,
-        all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
-        Method for exporting element for the beginning of the page.
+        Method for exporting paragraph content.
         """
         pass
 
@@ -1391,8 +1507,8 @@ class DefaultDocumentParagraphProcessor(DocumentParagraphProcessor):
         general_text_format: Optional[str] = "{content}",
         page_header_format: Optional[str] = None,
         page_footer_format: Optional[str] = None,
-        title_format: Optional[str] = "\n{heading_hashes} {content}",
-        section_heading_format: Optional[str] = "\n{heading_hashes} {content}",
+        title_format: Optional[str] = "\n{heading_hashes} **{content}**",
+        section_heading_format: Optional[str] = "\n{heading_hashes} **{content}**",
         footnote_format: Optional[str] = "*Footnote:* {content}",
         formula_format: Optional[str] = "*Formula:* {content}",
         page_number_format: Optional[str] = None,
@@ -1412,16 +1528,37 @@ class DefaultDocumentParagraphProcessor(DocumentParagraphProcessor):
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
+        """
+        Converts a paragraph element into a Haystack Document object containing
+        the text content of the paragraph.
+
+        :param element_info: Element information for the paragraph.
+        :type element_info: ElementInfo
+        :param all_formulas: List of all formulas extracted from the document.
+        :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: A list of all barcodes extracted from the document.
+        :type all_barcodes: List[DocumentBarcode]
+        :param selection_mark_formatter: A formatter for selection marks.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param section_heirarchy: The section heirarchy of the line.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: A list of Haystack Documents containing the paragraph content.
+        :rtype: List[HaystackDocument]
+        """
         self._validate_element_type(element_info)
         format_mapper = self.paragraph_format_mapper[element_info.element.role]
         heading_hashes = get_heading_hashes(
             element_info.section_heirarchy_incremental_id
         )
-        content = replace_content_formulas(
-            element_info.element.content, element_info.element.spans, all_formulas
+        content = replace_content_formulas_and_barcodes(
+            element_info.element.content,
+            element_info.element.spans,
+            all_formulas,
+            all_barcodes,
         )
         content = selection_mark_formatter.format_content(content)
         if format_mapper:
@@ -1450,18 +1587,19 @@ class DocumentLineProcessor(DocumentElementProcessor):
     Base processor class for DocumentLine elements.
     """
 
-    expected_element = DocumentLine
+    expected_elements = [DocumentLine, FRDocumentLine]
 
     @abstractmethod
     def convert_line(
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
-        Method for exporting element for the beginning of the page.
+        Method for exporting line content.
         """
         pass
 
@@ -1491,6 +1629,7 @@ class DefaultDocumentLineProcessor(DocumentLineProcessor):
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
@@ -1502,6 +1641,8 @@ class DefaultDocumentLineProcessor(DocumentLineProcessor):
         :type element_info: ElementInfo
         :param all_formulas: List of all formulas extracted from the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: A list of all barcodes extracted from the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: A formatter for selection marks.
         :type selection_mark_formatter: SelectionMarkFormatter
         :param section_heirarchy: The section heirarchy of the line.
@@ -1510,8 +1651,11 @@ class DefaultDocumentLineProcessor(DocumentLineProcessor):
         :rtype: List[HaystackDocument]
         """
         self._validate_element_type(element_info)
-        content = replace_content_formulas(
-            element_info.element.content, element_info.element.spans, all_formulas
+        content = replace_content_formulas_and_barcodes(
+            element_info.element.content,
+            element_info.element.spans,
+            all_formulas,
+            all_barcodes,
         )
         content = selection_mark_formatter.format_content(content)
         if self.text_format:
@@ -1538,18 +1682,19 @@ class DocumentWordProcessor(DocumentElementProcessor):
     Base processor class for DocumentWord elements.
     """
 
-    expected_element = DocumentWord
+    expected_elements = [DocumentWord, FRDocumentWord]
 
     @abstractmethod
     def convert_word(
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
         """
-        Method for exporting element for the beginning of the page.
+        Method for exporting word content.
         """
         pass
 
@@ -1579,6 +1724,7 @@ class DefaultDocumentWordProcessor(DocumentWordProcessor):
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
@@ -1590,6 +1736,8 @@ class DefaultDocumentWordProcessor(DocumentWordProcessor):
         :type element_info: ElementInfo
         :param all_formulas: List of all formulas extracted from the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: A list of all barcodes extracted from the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: A formatter for selection marks.
         :type selection_mark_formatter: SelectionMarkFormatter
         :param section_heirarchy: The section heirarchy of the word.
@@ -1598,8 +1746,11 @@ class DefaultDocumentWordProcessor(DocumentWordProcessor):
         :rtype: List[HaystackDocument]
         """
         self._validate_element_type(element_info)
-        content = replace_content_formulas(
-            element_info.element.content, [element_info.element.span], all_formulas
+        content = replace_content_formulas_and_barcodes(
+            element_info.element.content,
+            [element_info.element.span],
+            all_formulas,
+            all_barcodes,
         )
         content = selection_mark_formatter.format_content(content)
         if self.text_format:
@@ -1621,18 +1772,126 @@ class DefaultDocumentWordProcessor(DocumentWordProcessor):
         return list()
 
 
+class DocumentKeyValuePairProcessor(DocumentElementProcessor):
+    """
+    Base processor class for DocumentKeyValuePair elements.
+    """
+
+    expected_elements = [DocumentKeyValuePair, FRDocumentKeyValuePair]
+
+    @abstractmethod
+    def convert_kv_pair(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
+        selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
+    ) -> List[HaystackDocument]:
+        """
+        Method for exporting Key Value pairs.
+        """
+        pass
+
+
+class DefaultDocumentKeyValuePairProcessor(DocumentKeyValuePairProcessor):
+    """
+    The default processor for DocumentKeyValuePair elements. This class provides
+    a method for converting a DocumentKeyValuePair element into a
+    Haystack Document object that contains the text content.
+
+    The text format string can contain placeholders for the following:
+    - {key_content}: The text content of the key.
+    - {value_content}: The text content of the value.
+
+    :param text_format: Text format string for text content.
+    :type text_format: str, optional
+    """
+
+    expected_format_placeholders = ["{key_content}", "{value_content}"]
+
+    def __init__(
+        self,
+        text_format: Optional[str] = "*Key Value Pair*: {key_content}: {value_content}",
+    ):
+        self.text_format = text_format
+
+    def convert_kv_pair(
+        self,
+        element_info: ElementInfo,
+        all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
+        selection_mark_formatter: SelectionMarkFormatter,
+        section_heirarchy: Optional[tuple[int]],
+    ) -> List[HaystackDocument]:
+        """
+        Converts a DocumentKeyValuePair element into a Haystack Document object
+        containing the text contents of the element.
+
+        :param element_info: Element information for the KV pair.
+        :type element_info: ElementInfo
+        :param all_formulas: List of all formulas extracted from the document.
+        :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: A list of all barcodes extracted from the document.
+        :type all_barcodes: List[DocumentBarcode]
+        :param selection_mark_formatter: A formatter for selection marks.
+        :type selection_mark_formatter: SelectionMarkFormatter
+        :param section_heirarchy: The section heirarchy of the word.
+        :type section_heirarchy: Optional[tuple[int]]
+        :return: A list of Haystack Documents containing the KV pair content.
+        :rtype: List[HaystackDocument]
+        """
+        self._validate_element_type(element_info)
+        key_content = replace_content_formulas_and_barcodes(
+            element_info.element.key.content,
+            element_info.element.key.spans,
+            all_formulas,
+            all_barcodes,
+        )
+        key_content = selection_mark_formatter.format_content(key_content)
+        value_content = replace_content_formulas_and_barcodes(
+            element_info.element.value.content,
+            element_info.element.value.spans,
+            all_formulas,
+            all_barcodes,
+        )
+        value_content = selection_mark_formatter.format_content(value_content)
+        if self.text_format:
+            formatted_text = self.text_format.format(
+                key_content=key_content, value_content=value_content
+            )
+            formatted_if_null = self.text_format.format(
+                key_content="", value_content=""
+            )
+            if formatted_text != formatted_if_null:
+                return [
+                    HaystackDocument(
+                        id=f"{element_info.element_id}",
+                        content=formatted_text,
+                        meta={
+                            "element_id": element_info.element_id,
+                            "element_type": type(element_info.element).__name__,
+                            "page_number": element_info.start_page_number,
+                            "section_heirarchy": section_heirarchy,
+                        },
+                    )
+                ]
+        return list()
+
+
 class DocumentTableProcessor(DocumentElementProcessor):
     """
     Base processor class for DocumentTable element.
     """
 
-    expected_element = DocumentTable
+    expected_elements = [DocumentTable, FRDocumentTable]
 
     @abstractmethod
     def convert_table(
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
@@ -1697,6 +1956,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
@@ -1708,6 +1968,8 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         :type element_info: ElementInfo
         :param all_formulas: List of all formulas extracted from the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: A list of all barcodes extracted from the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: A formatter for selection marks.
         :type selection_mark_formatter: SelectionMarkFormatter
         :param section_heirarchy: The section heirarchy of the table.
@@ -1728,6 +1990,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
                 self._export_table_text(
                     element_info,
                     all_formulas,
+                    all_barcodes,
                     selection_mark_formatter,
                     f"{element_info.element_id}_before_table_text",
                     self.before_table_text_formats,
@@ -1736,7 +1999,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
             )
         # Convert table content
         table_md, table_df = self._convert_table_content(
-            element_info.element, all_formulas, selection_mark_formatter
+            element_info.element, all_formulas, all_barcodes, selection_mark_formatter
         )
         outputs.append(
             HaystackDocument(
@@ -1751,6 +2014,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
                 self._export_table_text(
                     element_info,
                     all_formulas,
+                    all_barcodes,
                     selection_mark_formatter,
                     f"{element_info.element_id}_after_table_text",
                     self.after_table_text_formats,
@@ -1764,6 +2028,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         self,
         element_info: ElementInfo,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         id: str,
         text_formats: List[str],
@@ -1776,6 +2041,8 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         :type element_info: ElementInfo
         :param all_formulas: List of all formulas extracted from the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: A list of all barcodes extracted from the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: A formatter for selection marks.
         :type selection_mark_formatter: SelectionMarkFormatter
         :param id: ID of the table element.
@@ -1792,22 +2059,24 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         table_number_text = get_element_number(element_info)
         caption_text = (
             selection_mark_formatter.format_content(
-                replace_content_formulas(
+                replace_content_formulas_and_barcodes(
                     element_info.element.caption.content,
                     element_info.element.caption.spans,
                     all_formulas,
+                    all_barcodes,
                 )
             )
-            if element_info.element.caption
+            if getattr(element_info.element, "caption", None)
             else ""
         )
         footnotes_text = selection_mark_formatter.format_content(
             "\n".join(
                 [
-                    replace_content_formulas(
-                        footnote.content, footnote.spans, all_formulas
+                    replace_content_formulas_and_barcodes(
+                        footnote.content, footnote.spans, all_formulas, all_barcodes
                     )
-                    for footnote in element_info.element.footnotes or []
+                    for footnote in getattr(element_info.element, "footnotes", None)
+                    or []
                 ]
             )
         )
@@ -1838,6 +2107,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         self,
         table: DocumentTable,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
     ) -> tuple[str, pd.DataFrame]:
         """
@@ -1849,6 +2119,8 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
         :type table: DocumentTable
         :param all_formulas: A list of all formulas extracted from the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: A list of all barcodes extracted from the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: A formatter for selection marks.
         :type selection_mark_formatter: SelectionMarkFormatter
         :return: A tuple of the markdown string and the pandas DataFrame.
@@ -1869,7 +2141,9 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
                 num_index_cols = max(num_index_cols, cell.column_index + 1)
             # Get text content
             cell_content = selection_mark_formatter.format_content(
-                replace_content_formulas(cell.content, cell.spans, all_formulas)
+                replace_content_formulas_and_barcodes(
+                    cell.content, cell.spans, all_formulas, all_barcodes
+                )
             )
             cell_dict[cell.row_index].append(cell_content)
         table_df = pd.DataFrame.from_dict(cell_dict, orient="index")
@@ -1891,7 +2165,7 @@ class DefaultDocumentTableProcessor(DocumentTableProcessor):
             table_df_temp.columns = ["<!-- -->"] * table_df.shape[1]
             table_md = table_df_temp.to_markdown(index=index, tablefmt=table_fmt)
         # Add new line to end of table markdown
-        return table_md + "\n", table_df
+        return "\n" + table_md + "\n\n", table_df
 
 
 class DocumentFigureProcessor(DocumentElementProcessor):
@@ -1899,7 +2173,7 @@ class DocumentFigureProcessor(DocumentElementProcessor):
     Base processor class for DocumentFigure elements.
     """
 
-    expected_element = DocumentFigure
+    expected_elements = [DocumentFigure]
 
     @abstractmethod
     def convert_figure(
@@ -1908,6 +2182,7 @@ class DocumentFigureProcessor(DocumentElementProcessor):
         transformed_page_img: TransformedImage,
         analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
@@ -1993,6 +2268,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         transformed_page_img: TransformedImage,
         analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         section_heirarchy: Optional[tuple[int]],
     ) -> List[HaystackDocument]:
@@ -2009,6 +2285,8 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         :type analyze_result: AnalyzeResult
         :param all_formulas: List of all formulas in the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: List of all barcodes in the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: SelectionMarkFormatter object.
         :type selection_mark_formatter: SelectionMarkFormatter
         :param section_heirarchy: Section heirarchy of the figure.
@@ -2039,6 +2317,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                     element_info,
                     analyze_result,
                     all_formulas,
+                    all_barcodes,
                     selection_mark_formatter,
                     f"{element_info.element_id}_before_figure_text",
                     self.before_figure_text_formats,
@@ -2056,6 +2335,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                 element_info,
                 analyze_result,
                 all_formulas,
+                all_barcodes,
                 selection_mark_formatter,
                 id="NOT_REQUIRED",
                 text_formats=[self.figure_img_text_format],
@@ -2081,6 +2361,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                     element_info,
                     analyze_result,
                     all_formulas,
+                    all_barcodes,
                     selection_mark_formatter,
                     f"{element_info.element_id}_after_figure_text",
                     self.after_figure_text_formats,
@@ -2095,6 +2376,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         element_info: ElementInfo,
         analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
         id: str,
         text_formats: List[str],
@@ -2109,6 +2391,8 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         :type analyze_result: AnalyzeResult
         :param all_formulas: List of all formulas in the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: List of all barcodes in the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: SelectionMarkFormatter object.
         :type selection_mark_formatter: SelectionMarkFormatter
         :param id: ID of the figure element.
@@ -2122,10 +2406,11 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         """
         figure_number_text = get_element_number(element_info)
         caption_text = selection_mark_formatter.format_content(
-            replace_content_formulas(
+            replace_content_formulas_and_barcodes(
                 element_info.element.caption.content,
                 element_info.element.caption.spans,
                 all_formulas,
+                all_barcodes,
             )
             if element_info.element.caption
             else ""
@@ -2134,8 +2419,8 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
             footnotes_text = selection_mark_formatter.format_content(
                 "\n".join(
                     [
-                        replace_content_formulas(
-                            footnote.content, footnote.spans, all_formulas
+                        replace_content_formulas_and_barcodes(
+                            footnote.content, footnote.spans, all_formulas, all_barcodes
                         )
                         for footnote in element_info.element.footnotes
                     ]
@@ -2149,6 +2434,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                 element_info.element,
                 analyze_result,
                 all_formulas,
+                all_barcodes,
                 selection_mark_formatter,
             )
             if any("{content}" in format for format in text_formats)
@@ -2186,6 +2472,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         figure_element: DocumentFigure,
         analyze_result: AnalyzeResult,
         all_formulas: List[DocumentFormula],
+        all_barcodes: List[DocumentBarcode],
         selection_mark_formatter: SelectionMarkFormatter,
     ) -> str:
         """
@@ -2198,6 +2485,8 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
         :type analyze_result: AnalyzeResult
         :param all_formulas: List of all formulas in the document.
         :type all_formulas: List[DocumentFormula]
+        :param all_barcodes: List of all barcodes in the document.
+        :type all_barcodes: List[DocumentBarcode]
         :param selection_mark_formatter: SelectionMarkFormatter object.
         :type selection_mark_formatter: SelectionMarkFormatter
         :return: The text content of the figure element.
@@ -2241,8 +2530,8 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                         current_line_strings = list()
                     output_line_strings.append(
                         selection_mark_formatter.format_content(
-                            replace_content_formulas(
-                                para.content, para.spans, all_formulas
+                            replace_content_formulas_and_barcodes(
+                                para.content, para.spans, all_formulas, all_barcodes
                             )
                         )
                     )
@@ -2271,8 +2560,8 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                             current_line_strings = list()
                         output_line_strings.append(
                             selection_mark_formatter.format_content(
-                                replace_content_formulas(
-                                    line.content, line.spans, all_formulas
+                                replace_content_formulas_and_barcodes(
+                                    line.content, line.spans, all_formulas, all_barcodes
                                 )
                             )
                         )
@@ -2292,8 +2581,11 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                     if span_perfect_match or is_span_in_span(word.span, content_span):
                         current_line_strings.append(
                             selection_mark_formatter.format_content(
-                                replace_content_formulas(
-                                    word.content, [word.span], all_formulas
+                                replace_content_formulas_and_barcodes(
+                                    word.content,
+                                    [word.span],
+                                    all_formulas,
+                                    all_barcodes,
                                 )
                             )
                         )
@@ -2370,6 +2662,7 @@ class DocumentIntelligenceProcessor:
         section_processor: DocumentSectionProcessor = DefaultDocumentSectionProcessor(),
         table_processor: DocumentTableProcessor = DefaultDocumentTableProcessor(),
         figure_processor: DocumentFigureProcessor = DefaultDocumentFigureProcessor(),
+        key_value_pair_processor: DocumentKeyValuePairProcessor = DefaultDocumentKeyValuePairProcessor(),
         paragraph_processor: DocumentParagraphProcessor = DefaultDocumentParagraphProcessor(),
         line_processor: DocumentLineProcessor = DefaultDocumentLineProcessor(),
         word_processor: DocumentWordProcessor = DefaultDocumentWordProcessor(),
@@ -2379,6 +2672,7 @@ class DocumentIntelligenceProcessor:
         self._section_processor = section_processor
         self._table_processor = table_processor
         self._figure_processor = figure_processor
+        self._key_value_pair_processor = key_value_pair_processor
         self._paragraph_processor = paragraph_processor
         self._line_processor = line_processor
         self._word_processor = word_processor
@@ -2386,7 +2680,7 @@ class DocumentIntelligenceProcessor:
 
     def process_analyze_result(
         self,
-        analyze_result: AnalyzeResult,
+        analyze_result: Union[AnalyzeResult, FRAnalyzeResult],
         doc_page_imgs: Optional[Dict[int, PILImage]] = None,
         on_error: Literal["ignore", "raise"] = "ignore",
         break_after_element_idx: Optional[int] = None,
@@ -2405,7 +2699,7 @@ class DocumentIntelligenceProcessor:
         processor responsible for how the content is processed.
 
         :param analyze_result: The result of an analyze operation.
-        :type analyze_result: AnalyzeResult
+        :type analyze_result: Union[AnalyzeResult, FormRecognizerAnalyzeResult]
         :param pdf_path: Local path of the PDF, defaults to None
         :type pdf_path: Union[str, os.PathLike], optional
         :param pdf_url: URL path to PDF, defaults to None
@@ -2431,7 +2725,6 @@ class DocumentIntelligenceProcessor:
                 )
         # Get mapper of element to section heirarchy
         elem_heirarchy_mapper = get_element_heirarchy_mapper(analyze_result)
-        # span_to_ordered_idx_mapper = get_span_bounds_to_ordered_idx_mapper(analyze_result)
         section_to_incremental_id_mapper = (
             convert_element_heirarchy_to_incremental_numbering(elem_heirarchy_mapper)
         )
@@ -2444,9 +2737,8 @@ class DocumentIntelligenceProcessor:
         )
         ordered_element_span_info_list = order_element_info_list(element_span_info_list)
 
-        # pdf = load_fitz_pdf(pdf_path=pdf_path, pdf_url=pdf_url)
-
         all_formulas = get_all_formulas(analyze_result)
+        all_barcodes = get_all_barcodes(analyze_result)
 
         # Create outputs
         full_output_list: List[HaystackDocument] = list()
@@ -2458,8 +2750,7 @@ class DocumentIntelligenceProcessor:
         # skip low-priority elements that may already be contained in higher-priority
         # elements (e.g. ignoring paragraphs/lines/words that already appear in a table
         # or figure, or lines/words that were already part of a paragraph).
-        current_page_priority_spans: List[DocumentSpan] = list()
-        all_spans: List[DocumentSpan] = list()
+        current_page_priority_spans: List[Union[DocumentSpan, FRDocumentSpan]] = list()
         unprocessed_element_counter = defaultdict(int)
         # Work through all elements and add to output
         for element_idx, element_info in enumerate(ordered_element_span_info_list):
@@ -2467,7 +2758,16 @@ class DocumentIntelligenceProcessor:
                 # Skip lower priority elements if their content is already processed as part of a higher-priority element
                 if any(
                     isinstance(element_info.element, element_type)
-                    for element_type in [DocumentParagraph, DocumentLine, DocumentWord]
+                    for element_type in [
+                        DocumentKeyValuePair,
+                        FRDocumentKeyValuePair,
+                        DocumentParagraph,
+                        FRDocumentParagraph,
+                        DocumentLine,
+                        FRDocumentLine,
+                        DocumentWord,
+                        FRDocumentWord,
+                    ]
                 ):
                     span_already_processed = False
                     for element_span in element_info.spans:
@@ -2514,7 +2814,9 @@ class DocumentIntelligenceProcessor:
                     )
                     # Skip adding section span to priority spans (this would skip all contained content)
                     continue
-                elif isinstance(element_info.element, DocumentPage):
+                elif isinstance(element_info.element, DocumentPage) or isinstance(
+                    element_info.element, FRDocumentPage
+                ):
                     # Export page image for use by this and other processors (e.g. page and figure processors)
                     transformed_page_imgs[element_info.element.page_number] = (
                         self._page_processor.export_page_img(
@@ -2536,11 +2838,14 @@ class DocumentIntelligenceProcessor:
                     )
                     continue  # Skip adding span to priority spans
                 # Process high priority elements with text content
-                elif isinstance(element_info.element, DocumentTable):
+                elif isinstance(element_info.element, DocumentTable) or isinstance(
+                    element_info.element, FRDocumentTable
+                ):
                     full_output_list.extend(
                         self._table_processor.convert_table(
                             element_info,
                             all_formulas,
+                            all_barcodes,
                             self._selection_mark_formatter,
                             current_section_heirarchy_incremental_id,
                         )
@@ -2552,45 +2857,65 @@ class DocumentIntelligenceProcessor:
                             transformed_page_imgs[element_info.start_page_number],
                             analyze_result,
                             all_formulas,
+                            all_barcodes,
                             self._selection_mark_formatter,
                             current_section_heirarchy_incremental_id,
                         )
                     )
-                elif isinstance(element_info.element, DocumentSelectionMark):
+                elif isinstance(
+                    element_info.element, DocumentSelectionMark
+                ) or isinstance(element_info.element, FRDocumentSelectionMark):
                     # Skip selection marks as these are processed by each individual processor
                     continue
-                elif isinstance(element_info.element, DocumentParagraph):
+                elif isinstance(element_info.element, DocumentParagraph) or isinstance(
+                    element_info.element, FRDocumentParagraph
+                ):
                     full_output_list.extend(
                         self._paragraph_processor.convert_paragraph(
                             element_info,
                             all_formulas,
+                            all_barcodes,
                             self._selection_mark_formatter,
                             current_section_heirarchy_incremental_id,
                         )
                     )
-                elif isinstance(element_info.element, DocumentLine):
+                elif isinstance(element_info.element, DocumentLine) or isinstance(
+                    element_info.element, FRDocumentLine
+                ):
                     full_output_list.extend(
                         self._line_processor.convert_line(
                             element_info,
                             all_formulas,
+                            all_barcodes,
                             self._selection_mark_formatter,
                             current_section_heirarchy_incremental_id,
                         )
                     )
-                elif isinstance(element_info.element, DocumentWord):
+                elif isinstance(element_info.element, DocumentWord) or isinstance(
+                    element_info.element, FRDocumentWord
+                ):
                     full_output_list.extend(
                         self._word_processor.convert_word(
                             element_info,
                             all_formulas,
+                            all_barcodes,
                             self._selection_mark_formatter,
                             current_section_heirarchy_incremental_id,
                         )
                     )
-                # elif isinstance(element.element, DocumentBarcode):
-                #     # TODO: Implement processor
+                elif isinstance(
+                    element_info.element, DocumentKeyValuePair
+                ) or isinstance(element_info.element, FRDocumentKeyValuePair):
+                    full_output_list.extend(
+                        self._key_value_pair_processor.convert_kv_pair(
+                            element_info,
+                            all_formulas,
+                            all_barcodes,
+                            self._selection_mark_formatter,
+                            current_section_heirarchy_incremental_id,
+                        )
+                    )
                 # elif isinstance(element.element, Document):
-                #     # TODO: Implement processor
-                # elif isinstance(element.element, DocumentKeyValueElement):
                 #     # TODO: Implement processor
                 else:
                     unprocessed_element_counter[
@@ -2601,7 +2926,6 @@ class DocumentIntelligenceProcessor:
                     )
                 # Save span start and end for the current element so we can skip lower-priority elements
                 current_page_priority_spans.extend(element_info.spans)
-                all_spans.extend(element_info.spans)
                 if (
                     break_after_element_idx is not None
                     and element_idx > break_after_element_idx
@@ -2636,7 +2960,7 @@ class DocumentIntelligenceProcessor:
     def merge_adjacent_text_content_docs(
         self,
         chunk_content_list: Union[List[List[HaystackDocument]], List[HaystackDocument]],
-        default_text_merge_separator: str = "\n",
+        default_text_merge_separator: str = "\n\n",
     ) -> Union[List[HaystackDocument], List[List[HaystackDocument]]]:
         """
         Merges a list of content chunks together so that adjacent text content
@@ -2787,6 +3111,8 @@ def convert_processed_di_docs_to_markdown(
             if text_content_requires_newlines:
                 output_texts.append("\n\n")
             output_texts.append(content_doc.content)
+            if text_content_requires_newlines:
+                output_texts.append("\n")
             output_texts.append(
                 content_doc.meta.get(
                     "following_separator", default_text_merge_separator
