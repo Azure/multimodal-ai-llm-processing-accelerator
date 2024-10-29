@@ -34,6 +34,10 @@ AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 # Create the clients for Document Intelligence and Azure OpenAI
 DOC_INTEL_MODEL_ID = "prebuilt-layout"  # Set Document Intelligence model ID
 
+# Set up the Document Intelligence v4.0 preview client. This will allow us to
+# use the latest features of the Document Intelligence service. Check out the
+# Document Intelligence Processor Walkthrough Notebook for more information
+# (within the `notebooks` folder).
 di_client = DocumentIntelligenceClient(
     endpoint=DOC_INTEL_ENDPOINT,
     credential=AzureKeyCredential(DOC_INTEL_API_KEY),
