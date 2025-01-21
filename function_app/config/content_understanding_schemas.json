@@ -1,0 +1,518 @@
+{
+    "document": {
+        "general_document_extraction": {
+            "name": "General document extraction",
+            "description": "Extracts general information from the document.",
+            "scenario": "document",
+            "config": {
+                "returnDetails": true
+            },
+            "fieldSchema": {
+                "name": "DocumentSummarizer",
+                "descriptions": "Extract summary and key information from a document",
+                "fields": {
+                    "DocumentTitle": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Title of the Document"
+                    },
+                    "AuthorCompany": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Name of the company that authored the document."
+                    },
+                    "DocumentDate": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Date that the document was created or published."
+                    }
+                }
+            }
+        },
+        "business_invoice_document": {
+            "name": "Invoice data extraction",
+            "description": "Extracts detailed information from a business invoice",
+            "scenario": "document",
+            "config": {
+                "returnDetails": true
+            },
+            "fieldSchema": {
+                "name": "BusinessInvoiceExtraction",
+                "descriptions": "Extracted fields and content from a business invoice",
+                "fields": {
+                    "BusinessNumber": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Business number of the company"
+                    },
+                    "CompanyName": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Name of the company"
+                    },
+                    "CompanyAddress": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Address of the company"
+                    },
+                    "InvoiceNumber": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Invoice number"
+                    },
+                    "DateOfInvoiceIssue": {
+                        "type": "string",
+                        "method": "extract",
+                        "description": "Date when the invoice was issued"
+                    },
+                    "BillItems": {
+                        "type": "array",
+                        "method": "extract",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "Description": {
+                                    "type": "string",
+                                    "method": "extract",
+                                    "description": "Description of the billed item"
+                                },
+                                "Quantity": {
+                                    "type": "number",
+                                    "method": "extract",
+                                    "description": "Quantity of the billed item"
+                                },
+                                "Rate": {
+                                    "type": "number",
+                                    "method": "extract",
+                                    "description": "Rate of the billed item"
+                                },
+                                "Amount": {
+                                    "type": "number",
+                                    "method": "extract",
+                                    "description": "Amount of the billed item"
+                                }
+                            }
+                        }
+                    },
+                    "Subtotal": {
+                        "type": "number",
+                        "method": "extract",
+                        "description": "Subtotal amount of the invoice"
+                    },
+                    "TaxAmount": {
+                        "type": "number",
+                        "method": "extract",
+                        "description": "Tax amount of the invoice"
+                    },
+                    "TotalBill": {
+                        "type": "number",
+                        "method": "extract",
+                        "description": "Total bill amount of the invoice"
+                    }
+                }
+            }
+        }
+    },
+    "audio": {
+        "call_center_analysis_audio": {
+            "name": "Call center post-call analysis",
+            "description": "Post call analytics for call center",
+            "scenario": "callCenter",
+            "config": {
+                "returnDetails": false,
+                "locales": [
+                    "en-US"
+                ]
+            },
+            "fieldSchema": {
+                "name": "CallCenterConversationAnalysis",
+                "descriptions": "Summary, sentiment, and more analyses from a call center conversation",
+                "fields": {
+                    "Summary": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "A one-paragraph summary of the call"
+                    },
+                    "Topics": {
+                        "type": "array",
+                        "method": "generate",
+                        "description": "Top 5 topics mentioned",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "Companies": {
+                        "type": "array",
+                        "method": "generate",
+                        "description": "List of companies mentioned",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "People": {
+                        "type": "array",
+                        "method": "generate",
+                        "description": "List of people mentioned",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "Name": {
+                                    "type": "string",
+                                    "description": "Person's name"
+                                },
+                                "Role": {
+                                    "type": "string",
+                                    "description": "Person's title/role"
+                                }
+                            }
+                        }
+                    },
+                    "Sentiment": {
+                        "type": "string",
+                        "method": "classify",
+                        "description": "Overall sentiment",
+                        "enum": [
+                            "Positive",
+                            "Neutral",
+                            "Negative"
+                        ]
+                    },
+                    "Categories": {
+                        "type": "array",
+                        "method": "classify",
+                        "description": "List of relevant categories",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "Agriculture",
+                                "Business",
+                                "Finance",
+                                "Health",
+                                "Insurance",
+                                "Mining",
+                                "Pharmaceutical",
+                                "Retail",
+                                "Technology",
+                                "Transportation"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "insurance_call_analysis_audio": {
+            "name": "Car insurance call processing",
+            "description": "Extracts detailed information from an insurance call relating to a car accident",
+            "scenario": "callCenter",
+            "config": {
+                "returnDetails": true,
+                "locales": [
+                    "en-US"
+                ]
+            },
+            "fieldSchema": {
+                "name": "InsuranceCallAnalysis",
+                "descriptions": "Extracted fields and content from an insurance call relating to a car accident",
+                "fields": {
+                    "DescriptionOfIncident": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Description of the incident"
+                    },
+                    "DateOfIncident": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Date that the incident occurred"
+                    },
+                    "VehicleMake": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Make of the vehicle in the incident"
+                    },
+                    "VehicleYear": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Year of the vehicle in the incident"
+                    },
+                    "VehicleModel": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Model of the vehicle in the incident"
+                    },
+                    "VehicleColor": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Color of the vehicle in the incident"
+                    },
+                    "DriverName": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Name of the driver"
+                    },
+                    "AnotherVehicleInvolved": {
+                        "type": "string",
+                        "method": "classify",
+                        "description": "Whether another vehicle was involved",
+                        "enum": [
+                            "true",
+                            "false"
+                        ]
+                    },
+                    "OtherVehicleDetails": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Details of the other vehicle (if available)"
+                    },
+                    "FaultInIncident": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Who was at fault in the incident (driver or other party)"
+                    }
+                }
+            }
+        }
+    },
+    "image": {
+        "chart_diagram_understanding_image": {
+            "name": "Chart & diagram extraction & summarization",
+            "description": "Extract detailed structured information from charts and diagrams.",
+            "scenario": "image",
+            "config": {
+                "returnDetails": true
+            },
+            "fieldSchema": {
+                "name": "ChartsAndDiagrams",
+                "descriptions": "Structured information from charts and diagrams.",
+                "fields": {
+                    "Title": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Verbatim title of the chart."
+                    },
+                    "ChartType": {
+                        "type": "string",
+                        "description": "The type of chart.",
+                        "kind": "classify",
+                        "enum": [
+                            "area",
+                            "bar",
+                            "box",
+                            "bubble",
+                            "candlestick",
+                            "funnel",
+                            "heatmap",
+                            "histogram",
+                            "line",
+                            "pie",
+                            "radar",
+                            "rings",
+                            "rose",
+                            "treemap"
+                        ],
+                        "enumDescriptions": {
+                            "histogram": "Continuous values on the x-axis, which distinguishes it from bar.",
+                            "rose": "In contrast to pie charts, the sectors are of equal angles and differ in how far each sector extends from the center of the circle."
+                        }
+                    },
+                    "TopicKeywords": {
+                        "type": "array",
+                        "method": "generate",
+                        "description": "Relevant topics associated with the chart, used for tagging.",
+                        "items": {
+                            "type": "string",
+                            "examples": [
+                                "Business and finance",
+                                "Arts and culture",
+                                "Education and academics"
+                            ]
+                        }
+                    },
+                    "DetailedDescription": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Detailed description of the chart or diagram, not leaving out any key information. Include numbers, trends, and other details."
+                    },
+                    "Summary": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Detailed summary of the chart, including highlights and takeaways."
+                    },
+                    "MarkdownDataTable": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Underlying data of the chart in tabular markdown format. Give markdown output with valid syntax and accurate numbers, and fill any uncertain values with empty cells. If not applicable, output an empty string."
+                    },
+                    "AxisTitles": {
+                        "type": "object",
+                        "method": "generate",
+                        "description": "Titles of the x and y axes.",
+                        "properties": {
+                            "xAxisTitle": {
+                                "type": "string"
+                            },
+                            "yAxisTitle": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "FootnotesAndAnnotations": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "All footnotes and textual annotations in the chart or diagram."
+                    }
+                }
+            }
+        },
+        "vehicle_damage_analysis_image": {
+            "name": "Vehicle damage analysis",
+            "description": "Extracts detailed information from images of vehicle damage",
+            "scenario": "image",
+            "config": {
+                "returnDetails": true
+            },
+            "fieldSchema": {
+                "name": "VehicleDamageImageAnalysis",
+                "descriptions": "Extracted fields and content from images of vehicle damage",
+                "fields": {
+                    "DamageSummary": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Summary of the damage contained in the image."
+                    },
+                    "DamageLocations": {
+                        "type": "array",
+                        "method": "classify",
+                        "description": "A list of locations on the vehicle which contain damage.",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "Front left",
+                                "Front right",
+                                "Rear left",
+                                "Rear right",
+                                "Front",
+                                "Rear",
+                                "Left side",
+                                "Right side",
+                                "Roof",
+                                "Windscreen",
+                                "Windows"
+                            ]
+                        }
+                    },
+                    "SeverityRating": {
+                        "type": "string",
+                        "method": "classify",
+                        "description": "Severity rating of the damage",
+                        "enum": [
+                            "Low",
+                            "Medium",
+                            "High"
+                        ]
+                    },
+                    "RequiredRepairSummary": {
+                        "type": "string",
+                        "method": "generate",
+                        "description": "Summary of the required repairs to be performed. Summarize the required parts and expected number of hours required to repair the damage."
+                    },
+                    "RepairCostEstimateUSD": {
+                        "type": "number",
+                        "method": "generate",
+                        "description": "Estimate of the cost to repair the damage (parts and labour), in US Dollars."
+                    }
+                }
+            }
+        }
+    },
+    "video": {
+        "content_understanding_video": {
+            "name": "Video segment summarization",
+            "description": "Generate a summary of each segment of a video.",
+            "scenario": "videoShot",
+            "config": {
+                "returnDetails": true,
+                "locales": [
+                    "en-US",
+                    "es-ES",
+                    "es-MX",
+                    "fr-FR",
+                    "hi-IN",
+                    "it-IT",
+                    "ja-JP",
+                    "ko-KR",
+                    "pt-BR",
+                    "zh-CN"
+                ],
+                "enableFace": false
+            },
+            "fieldSchema": {
+                "name": "Content Understanding",
+                "descriptions": "Generate content understanding from video.",
+                "fields": {
+                    "segmentDescription": {
+                        "type": "string",
+                        "description": "Detailed summary of the video segment, focusing on people, places, and actions taking place."
+                    }
+                }
+            }
+        },
+        "dash_cam_analysis_video": {
+            "name": "Dash cam accident video analysis",
+            "description": "Extracts detailed information from dash cam footage",
+            "scenario": "videoShot",
+            "config": {
+                "returnDetails": true,
+                "locales": [
+                    "en-US",
+                    "es-ES",
+                    "es-MX",
+                    "fr-FR",
+                    "hi-IN",
+                    "it-IT",
+                    "ja-JP",
+                    "ko-KR",
+                    "pt-BR",
+                    "zh-CN"
+                ],
+                "enableFace": false
+            },
+            "fieldSchema": {
+                "name": "DashCamVideoAnalysis",
+                "descriptions": "Extracted fields and content from dash cam footage",
+                "fields": {
+                    "SceneDescription": {
+                        "type": "string",
+                        "description": "Detailed description of the scene, describing the cars involved and how the cars are moving through the video. Include information about how and when any vehicles involved in an incident may behave or change direction and how that contributes to the incident."
+                    },
+                    "NumberOfVehiclesInFrame": {
+                        "type": "number",
+                        "description": "Number of vehicles in the scene"
+                    },
+                    "ColorOfDamagedCar": {
+                        "type": "string",
+                        "description": "Color of the damaged car"
+                    },
+                    "VehicleAtFault": {
+                        "type": "string",
+                        "description": "Description of the car at fault, including vehicle type, color and any other relevant details"
+                    },
+                    "VehiclesInvolved": {
+                        "type": "array",
+                        "description": "A description of each of the vehicles involved in the incident, including vehicle type, color and any other relevant details",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "DescriptionOfImpact": {
+                        "type": "string",
+                        "description": "Description of the impact/cause of damage"
+                    },
+                    "DescriptionOfDamage": {
+                        "type": "string",
+                        "description": "Description of the resulting damage that was caused"
+                    }
+                }
+            }
+        }
+    }
+}

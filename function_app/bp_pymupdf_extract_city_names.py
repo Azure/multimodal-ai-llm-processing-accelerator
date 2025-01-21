@@ -117,13 +117,13 @@ def pymupdf_extract_city_names(
     req: func.HttpRequest,
 ) -> func.HttpResponse:
     logging.info("Python HTTP trigger function processed a request.")
+    # Create the object to hold all intermediate and final values. We will progressively update
+    # values as each stage of the pipeline is completed, allowing us to return a partial
+    # response in case of an error at any stage.
+    output_model = FunctionReponseModel(success=False)
     try:
         func_timer = MeasureRunTime()
         func_timer.start()
-        # Create the object to hold all intermediate and final values. We will progressively update
-        # values as each stage of the pipeline is completed, allowing us to return a partial
-        # response in case of an error at any stage.
-        output_model = FunctionReponseModel(success=False)
         # Check mime_type of the request data
         mime_type = req.headers.get("Content-Type")
         if mime_type not in VALID_PYMUPDF_MIME_TYPES:

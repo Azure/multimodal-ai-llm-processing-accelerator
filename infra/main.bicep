@@ -30,13 +30,16 @@ param additionalRoleAssignmentIdentityIds array = []
 param storageAccountName string = 'llmprocstorage'
 
 @description('The name of the default blob storage containers to be created')
-param blobContainerNames array = ['blob-form-to-cosmosdb-blobs']
+param blobContainerNames array = ['blob-form-to-cosmosdb-blobs', 'content-understanding-blobs']
 
 @description('The name of the default CosmosDB database')
 param cosmosDbDatabaseName string = 'default'
 
 @description('The name of the default CosmosDB containers to be created')
 param cosmosDbContainerNames array = ['blob-form-to-cosmosdb-container']
+
+@description('The location of the Azure AI services resource to be used for Azure AI Content Understanding (this will be a multi-service resource). This should be in a location supported by the service (see https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/language-region-support?tabs=document#region-support)')
+param contentUnderstandingLocation string = 'westus'
 
 @description('The location of the Azure Document Intelligence resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/versioning/changelog-release-history)')
 param docIntelLocation string = 'eastus'
@@ -78,6 +81,7 @@ param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
 param storageConnectionStringSecretName string = 'storage-connection-string'
 param aoaiKeyKvSecretName string = 'aoai-api-key'
+param contentUnderstandingKeyKvSecretName string = 'content-understanding-api-key'
 param docIntelKeyKvSecretName string = 'doc-intel-api-key'
 param speechKeyKvSecretName string = 'speech-api-key'
 param funcAppKeyKvSecretName string = 'func-api-key'
@@ -119,6 +123,7 @@ var webAppPlanTokenName = toLower('${webAppName}-plan-${resourceToken}')
 var openAITokenName = toLower('${resourcePrefix}-aoai-${openAILocation}-${resourceToken}')
 var openAILLMDeploymentName = toLower('${openAILLMModel}-${openAILLMModelVersion}-${openAILLMDeploymentSku}')
 var openAIWhisperDeploymentName = toLower('${openAIWhisperModel}-${openAIWhisperModelVersion}-${openAIWhisperDeploymentSku}')
+var contentUnderstandingTokenName = toLower('${resourcePrefix}-content-understanding-${contentUnderstandingLocation}-${resourceToken}')
 var docIntelTokenName = toLower('${resourcePrefix}-doc-intel-${docIntelLocation}-${resourceToken}')
 var speechTokenName = toLower('${resourcePrefix}-speech-${speechLocation}-${resourceToken}')
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
@@ -236,6 +241,20 @@ resource cosmosDbDataContributorRoleDefinition 'Microsoft.DocumentDB/databaseAcc
 }
 
 // Cognitive services resources
+
+// Multi-service resource for Azure Content Understanding
+resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+  name: contentUnderstandingTokenName
+  location: contentUnderstandingLocation
+  kind: 'AIServices'
+  properties: {
+    publicNetworkAccess: 'Enabled'
+    customSubDomainName: contentUnderstandingTokenName
+  }
+  sku: {
+    name: 'S0'
+  }
+}
 
 resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: docIntelTokenName
@@ -364,6 +383,14 @@ resource openAIKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   }
 }
 
+resource contentUnderstandingKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: contentUnderstandingKeyKvSecretName
+  parent: keyVault
+  properties: {
+    value: contentUnderstanding.listKeys().key1
+  }
+}
+
 resource docIntelKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: docIntelKeyKvSecretName
   parent: keyVault
@@ -469,6 +496,8 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
       AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
       AOAI_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${aoaiKeyKvSecretName})'
+      CONTENT_UNDERSTANDING_ENDPOINT: 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
+      CONTENT_UNDERSTANDING_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${contentUnderstandingKeyKvSecretName})'
       DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
       DOC_INTEL_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${docIntelKeyKvSecretName})'
       SPEECH_REGION: speech.location

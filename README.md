@@ -9,6 +9,7 @@ products:
 - azure-openai
 - document-intelligence
 - azure-speech
+- azure-content-understanding
 - azure-app-service
 - azure-functions
 - azure-storage-accounts
@@ -46,10 +47,6 @@ urlFragment: multimodal-ai-llm-processing-accelerator
 
 This accelerator is as a customizable code template for building and deploying production-grade data processing pipelines that incorporate Azure AI services and Azure OpenAI/AI Studio LLM models. It uses a variety of data pre-processing and enrichment components to make it easy to build complex, reliable and accurate pipelines that solve real-world use cases. If you'd like to use AI to **summarize, classify, extract or enrich** your data with structured and reliable outputs, this is the code repository for you.
 
-#### Important Note: This accelerator is currently under development and may include regular breaking changes
-
-It is recommended to review the main repo before pulling new changes, as work is in progress to replace many of the third-party components (e.g. those imported from Haystack) with more complete, performant & fully-featured components. Once the core application is stable, a standard release pattern with semantic versioning will be used to manage releases.
-
 ### Solution Design
 
 ![Solution Design](/docs/solution-design.png)
@@ -58,6 +55,7 @@ It is recommended to review the main repo before pulling new changes, as work is
 
 - **Backend processing:** A pre-built Azure Function App, along with a number of pre-built processing pipeline blueprints that can be easily modified and deployed.
 - **Front-end demo app:** A simple demo web app to enable internal testing of the backend APIs via a UI, and make it easier to collaborate with non-technical users.
+- **Choice of Azure Content Understanding or custom pipelines:** Since releasing this accelerator, Microsoft has released the [Azure Content Understanding service](https://learn.microsoft.com/en-au/azure/ai-services/content-understanding/overview). This accelerator gives you the choice of using either Azure Content Understanding or custom preprocessing + LLM pipelines for your workflows.
 - **Data converters and processors:** Many of the core components required for multimodal processing are included, such as [Azure Document Intelligence](https://azure.microsoft.com/en-us/products/ai-services/ai-document-intelligence), [Azure AI Speech](https://azure.microsoft.com/en-us/products/ai-services/ai-speech), [Azure OpenAI](https://azure.microsoft.com/en-us/products/ai-services/openai-service) and more. These help you easily convert your data into the format expected by LLMs, and the blueprints are built in an open way so that you can easily incorporate custom-built components.
 - **Enriched outputs & confidence scores:** A number of components are included for combining the outputs of pre-processing steps with the LLM outputs. For example, adding confidence scores, bounding boxes, writing styles to the values extracted by the LLM. This allows for reliable automation of tasks instead of having to trust that the LLM is correct (or reviewing every result).
 - **Data validation & intermediate outputs:** All pipelines are built to return not just the final result but all intermediate outputs. This lets you reuse the data in other downstream tasks.
@@ -100,6 +98,7 @@ The accelerator comes with these pre-built pipeline examples to help you get sta
 
 | Example  | Description & Pipeline Steps|
 | ---------|---------|
+|**Azure Content Understanding Pipelines**<br>**(HTTP)**<br>Code: [Document](/function_app/bp_content_understanding_document.py), [Video](/function_app/bp_content_understanding_video.py), [Audio](/function_app/bp_content_understanding_audio.py), [Image](/function_app/bp_content_understanding_image.py)| Uses Azure Content Understanding Service to process Document, Video, Audio and Image modalities, along with some minor post-processing & enrichment.<br>- Azure Content Understanding (Input file -> structured outputs)<br>- Custom post-processing<br>- Return structured JSON |
 |**Form Field Extraction with Confidence Scores & bboxes**<br>**(HTTP)**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing:<br><ul>- Match LLM field values with Document Intelligence extracted lines<br>- Merge Confidence scores and bounding boxes<br>- Determine whether to human review is required</ul>- Return structured JSON |
 |**Call Center Analysis with Confidence Scores & Timestamps**<br>**(HTTP)**<br>[Code](/function_app/bp_call_center_audio_analysis.py)| Processes a call center recording, classifying customer sentiment & satisfaction, summarizing the call and next best action, and extracting any keywords mentioned. Returns the response with timestamps, confidence scores and the full sentence text for the next best action and each of the keywords mentioned.<br>- Azure AI Speech (Speech -> Text)<br>- GPT-4o (text input)<br>- Post-processing:<br><ul>- Match LLM timestamps to transcribed phrases<br>- Merge sentence info & confidence scores</ul>- Return structured JSON |
 |**Form Field Extraction**<br>**(Blob -> CosmosDB)**<br>Code: [Func](/function_app/function_app.py#L19.py), [Pipeline](/function_app/extract_blob_field_info_to_cosmosdb.py)| Summarizes text input into a desired style and number of output sentences.<br>- Pipeline triggered by blob storage event<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Write structured JSON result to CosmosDB container. |
@@ -138,6 +137,17 @@ To help prioritise these features or request new ones, please head to the Issues
 
 ### FAQ
 
+**What is the difference between Azure Content Understanding and the custom pipeline approach?**
+
+Since the release of this accelerator, Microsoft has released the [Content Understanding Service](https://azure.microsoft.com/en-au/pricing/details/content-understanding/). The Content Understanding Service and how it works under the hood is 80-90% the same as what happens in the custom pipelines that are available within this accelerator, however there are a few reasons why you might want to choose one or the other.
+
+| | Azure Content Understanding Service  | Custom Pipelines |
+|---------|---------|---------|
+|Pros| - Simpler setup, deployment and development<br>- Unified API for all data modalities<br>- Low maintenance & receive ongoing improvements & updates (managed service)| - Support in most Azure regions<br>- Full support for advanced & complicated workflows<br>- Ability to use custom system instructions & context data (e.g. RAG data or instructional/technical documentation)<br>- Full control over pre/post-processing steps & LLM models<br>- Support for more complex workflows (e.g. multistep summarization or [MapReduce](https://js.langchain.com/v0.1/docs/modules/chains/document/map_reduce/) patterns)<br>- Lower cost|
+|Cons| - Preview service with limited regional availability (3 regions as of Jan 2024)<br>- No support for LLM system prompts or additional context (beyond field-level definitions & examples)<br>- Less flexibility & control for advanced use cases<br>- Confidence scores only available for documents<br>- No summarization support for documents (only field extraction)<br>- Higher cost | - Requires higher technical capability<br>- More complex infrastructure & deployment<br>- Requires ongoing maintainance<br>- No support (yet) for video files|
+
+In general, the Azure Content Understanding service is a great fit for use cases where simplicity and ease of use is important, and where the improved accuracy, customization and cost efficiency of a custom solution is not necessary. It serves as the simpler starting point for most dev teams, while still having the option to switch to the custom processing pipelines if the need arises.
+
 **How can I get started with a solution for my own use case?**
 
 The demo pipelines are examples and require customization in order to have them work accurately in production. The best strategy to get started is to clone one of the existing demo pipelines and modify them for your own purpose. The following steps are recommended:
@@ -152,13 +162,17 @@ The demo pipelines are examples and require customization in order to have them 
 1. Review and modify the different parts of the pipeline. The common things are:
     1. The AI/LLM components that are used and their configurations.
     1. The Azure Function route and required input/output schemas and validation logic.
-    1. The Pydantic classes and definitions that define the schema of the LLM's response and the response to be returned from the API.
-        - The repo includes a useful Pydantic base model (LLMRawResponseModel) that makes it easy to print out the JSON schema in a prompt-friendly way, and it is suggested to use this model to define your schema so that you can easily provide it to your model and then validate the LLM's responses.
-        - By default, these include a lot of additional information from each step of the pipeline, but you may want to remove, modify or add new fields.
-    1. The LLM system prompt(s), which contain instructions on how the LLM should complete the task.
-        - All prompt examples in this repo are very basic and it is recommended to spend time crafting detailed instructions for the LLM and including some few-shot examples.
-        - These should be in addition to the JSON schema definition - if you use the JSON schema alone, expect that the model will make a number of mistakes (you can see this occur in some of the example pipelines).
-    1. The post-processing validation logic. This is how you automatically determine when to trust the outputs and when to escalate to human review.
+    1. For Content Understanding pipelines:
+        1. Review the [Content Understanding service documentation](https://learn.microsoft.com/en-au/azure/ai-services/content-understanding/service-limits).
+        1. Review and modify the [Content Understanding schema definitions](function_app/config/content_understanding_schemas.json) (you will need to create or recreate these analyzer schemas when any changes occur using [this script](function_app/create_content_understanding_analyzers.py))
+    1. For Custom pipelines:
+        1. The Pydantic classes and definitions that define the schema of the LLM's response and the response to be returned from the API.
+            - The repo includes a useful Pydantic base model (LLMRawResponseModel) that makes it easy to print out the JSON schema in a prompt-friendly way, and it is suggested to use this model to define your schema so that you can easily provide it to your model and then validate the LLM's responses.
+            - By default, these include a lot of additional information from each step of the pipeline, but you may want to remove, modify or add new fields.
+        1. The LLM system prompt(s), which contain instructions on how the LLM should complete the task.
+            - All prompt examples in this repo are very basic and it is recommended to spend time crafting detailed instructions for the LLM and including some few-shot examples.
+            - These should be in addition to the JSON schema definition - if you use the JSON schema alone, expect that the model will make a number of mistakes (you can see this occur in some of the example pipelines).
+        1. The post-processing validation logic. This is how you automatically determine when to trust the outputs and when to escalate to human review.
 1. Once you have started making progress on the core processing pipeline, you may want to modify the demo web app (`demo_app/`) so that you can easily test the endpoint end-to-end.
     - The Gradio app has a tab built for each of the Function app pipelines, and you should start with the code built for the base of your new function app pipeline.
     - If you need different data inputs or a different request schema (e.g. switching from sending a single file to a file with other JSON parameters), check out each of the other pipelines. These will help you determine how to build the front-end and API request logic so that things work end-to-end.
@@ -198,6 +212,7 @@ This solution accelerator deploys multiple resources. Evaluate the cost of each 
 The following are links to the pricing details for some of the resources:
 
 - [Azure OpenAI service pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/).
+- [Azure Content Understanding pricing](https://azure.microsoft.com/en-au/pricing/details/content-understanding/)
 - [Azure AI Document Intelligence pricing](https://azure.microsoft.com/pricing/details/ai-document-intelligence/)
 - [Azure AI Speech pricing](https://azure.microsoft.com/en-au/pricing/details/cognitive-services/speech-services/)
 - [Azure Functions pricing](https://azure.microsoft.com/pricing/details/functions/)
@@ -256,7 +271,7 @@ To clean up all the resources created by this sample:
 
 #### Prerequisite - Deploy Azure Resources
 
-To run the solution locally, you will need to create the necessary resources for all Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). Set these up within Azure before you start the next steps.
+To run the solution locally, you will need to create the necessary resources for all Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). Set these up within Azure before you start the next steps. If using the Azure Content Understanding service, ensure any changes to the analyzer schemas are updated within the Azure resource. You can push any updates to the schema definitions using the [create_content_understanding_analyzers.py](function_app/create_content_understanding_analyzers.py) script.
 
 #### Function app local instructions
 

@@ -249,7 +249,7 @@ import io
 
 from haystack.dataclasses import ByteStream as HaystackBytestream
 from PIL import Image
-from src.helpers.image import base64_to_pil_img, pil_img_to_base64
+from src.helpers.image import base64_to_pil_img, pil_img_to_base64_bytes
 
 
 ### PageFormatConfigs ###
@@ -286,7 +286,7 @@ class TestPageFormatConfig:
             page_img_order="end",
         )
         page_img = Image.new("RGB", (100, 100))
-        page_img_data = pil_img_to_base64(page_img)
+        page_img_data = pil_img_to_base64_bytes(page_img)
         element_id = "/pages/123"
         expected = [
             HaystackDocument(

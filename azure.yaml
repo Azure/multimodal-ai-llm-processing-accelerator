@@ -3,6 +3,19 @@
 name: multimodal-llm-ai-processing-accelerator
 metadata:
   template: multimodal-llm-ai-processing-accelerator@0.0.1
+hooks:
+  postprovision: 
+    # Create all content understanding analyzers defined in the content_understanding_schemas.json file
+    posix:
+      shell: sh
+      run: python ./function_app/create_content_understanding_analyzers.py
+      interactive: false
+      continueOnError: false
+    windows:
+      shell: pwsh
+      run: python ./function_app/create_content_understanding_analyzers.py
+      interactive: false
+      continueOnError: false
 services:
   api:
     project: ./function_app/
@@ -13,7 +26,32 @@ services:
     language: py
     host: appservice
     hooks:
+      prepackage: 
+        # Temporarily copy the content_understanding_schemas.json file to the demo_app directory
+        posix:
+          shell: sh
+          run: cp ../function_app/config/content_understanding_schemas.json ./
+          interactive: false
+          continueOnError: false
+        windows:
+          shell: pwsh
+          run: copy ../function_app/config/content_understanding_schemas.json ./
+          interactive: false
+          continueOnError: false
+      postpackage: 
+        # Remove the content_understanding_schemas.json file from the demo_app directory
+        posix:
+          shell: sh
+          run: rm ./content_understanding_schemas.json
+          interactive: false
+          continueOnError: false
+        windows:
+          shell: pwsh
+          run: del ./content_understanding_schemas.json
+          interactive: false
+          continueOnError: false
       postdeploy:
+        # Install the required Python packages
         windows:
           shell: pwsh
           run:  python3 -m pip install -r requirements.txt
