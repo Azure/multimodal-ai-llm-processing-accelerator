@@ -96,8 +96,8 @@ def multimodal_doc_intel_processing(req: func.HttpRequest) -> func.HttpResponse:
         pages_per_chunk = request_json_content.get("pages_per_chunk", 3)
         page_chunk_splitter = PageDocumentListSplitter(pages_per_chunk=pages_per_chunk)
 
-        file_bytes = req.files["doc_for_extraction"].read()
-        file_mime_type = req.files["doc_for_extraction"].content_type
+        file_bytes = req.files["file"].read()
+        file_mime_type = req.files["file"].content_type
 
         # Create the Doc Intelligence result processor. This can be configured to
         # process the raw Doc Intelligence result into a format that is easier

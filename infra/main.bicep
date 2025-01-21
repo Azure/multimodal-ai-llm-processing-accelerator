@@ -387,7 +387,7 @@ resource contentUnderstandingKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07
   name: contentUnderstandingKeyKvSecretName
   parent: keyVault
   properties: {
-    value: docIntel.listKeys().key1
+    value: contentUnderstanding.listKeys().key1
   }
 }
 

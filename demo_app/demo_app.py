@@ -243,7 +243,8 @@ DEMO_ACCOUNT_OPENING_FORM_FILES = [
 ]
 DEMO_VISION_FILES = DEMO_PDF_FILES + DEMO_IMG_FILES
 with open("demo_files/text_samples.json", "r") as json_file:
-    TEXT_SAMPLES: dict[str, str] = json.load(json_file)
+    text_samples_dict: dict[str, str] = json.load(json_file)
+    TEXT_SAMPLES_TUPLES = [(label, text) for label, text in text_samples_dict.items()]
 
 FILE_EXAMPLES_LABEL = "You can upload your own file, or select one of the following examples and then click 'Process File'."
 AUDIO_EXAMPLES_LABEL = FILE_EXAMPLES_LABEL.replace("File", "Audio").replace(
@@ -449,7 +450,7 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
         fn=render_visual_media_input,
         run_on_click=True,
     )
-    form_ext_w_conf_process_btn = gr.Button("Process File")
+    form_ext_w_conf_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column(render=False) as form_ext_w_conf_output_row:
         form_ext_w_conf_output_label = gr.Label(value="API Response", show_label=False)
@@ -637,7 +638,7 @@ with gr.Blocks(analytics_enabled=False) as simple_cu_examples_block:
             simple_cu_doc_input_thumbs = gr.Gallery(
                 label="Input File Preview", object_fit="contain", visible=True
             )
-    simple_cu_doc_process_btn = gr.Button("Process File")
+    simple_cu_doc_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as simple_cu_doc_output_row:
         simple_cu_doc_output_label = gr.Label(value="Result", show_label=False)
@@ -716,7 +717,10 @@ with gr.Blocks(analytics_enabled=False) as simple_cu_examples_block:
                 )
             # Format image and field outputs (if available in the response)
             ### 3. Extract key frames from the video input
-            if response.get("cu_raw_response", {}).get("status", "") == "Succeeded":
+            if (
+                isinstance(response, dict)
+                and response.get("cu_raw_response", {}).get("status", "") == "Succeeded"
+            ):
                 cu_result = response["cu_raw_response"]
                 # First, get the processed markdown output containing the extracted fields
                 # for each segment. If the field is missing, create an empty string for each segment.
@@ -836,7 +840,7 @@ with gr.Blocks(analytics_enabled=False) as simple_cu_examples_block:
                 autoplay=True,
                 loop=True,
             )
-    simple_cu_video_process_btn = gr.Button("Process File")
+    simple_cu_video_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as simple_cu_video_output_row:
         simple_cu_video_output_label = gr.Label(value="Result", show_label=False)
@@ -983,7 +987,7 @@ with gr.Blocks(analytics_enabled=False) as simple_cu_examples_block:
             sources=["upload", "microphone"],
             type="filepath",
         )
-    simple_cu_audio_process_btn = gr.Button("Process File")
+    simple_cu_audio_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as simple_cu_audio_output_row:
         simple_cu_audio_output_label = gr.Label(value="Result", show_label=False)
@@ -1138,7 +1142,7 @@ with gr.Blocks(analytics_enabled=False) as simple_cu_examples_block:
             simple_cu_image_input_thumbs = gr.Gallery(
                 label="Input File Preview", object_fit="contain", visible=True
             )
-    simple_cu_image_process_btn = gr.Button("Process File")
+    simple_cu_image_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as simple_cu_image_output_row:
         simple_cu_image_output_label = gr.Label(value="Result", show_label=False)
@@ -1293,7 +1297,7 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
         fn=render_visual_media_input,
         run_on_click=True,
     )
-    blob_form_to_cosmosdb_process_btn = gr.Button("Process File")
+    blob_form_to_cosmosdb_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as blob_form_to_cosmosdb_output_row:
         blob_form_to_cosmosdb_output_label = gr.Label(
@@ -1383,7 +1387,7 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
                 ("Azure OpenAI Whisper", "aoai_whisper"),
             },
         )
-        cc_audio_proc_start_btn = gr.Button("Process File")
+        cc_audio_proc_start_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as cc_audio_proc_output_row:
         cc_audio_proc_output_label = gr.Label(value="API Response", show_label=False)
@@ -1449,7 +1453,7 @@ with gr.Blocks(analytics_enabled=False) as sum_text_block:
             "",
             None,
         )
-    ] + list(TEXT_SAMPLES)
+    ] + TEXT_SAMPLES_TUPLES
     sum_text_example_dropdown = gr.Dropdown(
         value="",
         choices=sum_text_example_dropdown_options,
@@ -1470,7 +1474,7 @@ with gr.Blocks(analytics_enabled=False) as sum_text_block:
             )
             sum_text_time_taken = gr.Textbox(label="Time Taken", interactive=False)
         sum_text_output_text = gr.Textbox(label="API Response", interactive=False)
-    sum_text_get_response_btn = gr.Button("Process Text")
+    sum_text_get_response_btn = gr.Button("Process Text", variant="primary")
     sum_text_output_row.render()
     # Actions
     sum_text_get_response_btn.click(
@@ -1534,7 +1538,7 @@ with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
         fn=render_visual_media_input,
         run_on_click=True,
     )
-    form_ext_w_conf_process_btn = gr.Button("Process File")
+    form_ext_w_conf_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as di_llm_ext_names_output_row:
         di_llm_ext_names_output_label = gr.Label(value="API Response", show_label=False)
@@ -1606,7 +1610,7 @@ with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
         fn=render_visual_media_input,
         run_on_click=True,
     )
-    local_pdf_process_process_btn = gr.Button("Process File")
+    local_pdf_process_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as local_pdf_process_output_row:
         local_pdf_process_output_label = gr.Label(
@@ -1720,7 +1724,7 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             precision=0,
             info="The demo automatically splits the output content into chunks. This sets the number of pages of content per chunk.",
         )
-    di_proc_process_btn = gr.Button("Process File")
+    di_proc_process_btn = gr.Button("Process File", variant="primary")
     # Output components
     with gr.Column() as di_proc_output_row:
         di_proc_output_label = gr.Label(value="API Response", show_label=False)
