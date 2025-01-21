@@ -140,10 +140,12 @@ LLM_SYSTEM_PROMPT = (
 
 @bp_doc_intel_extract_city_names.route(route=FUNCTION_ROUTE)
 def doc_intel_extract_city_names(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info(f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request.")
+    # Create the object to hold all intermediate and final values. We will progressively update
+    # values as each stage of the pipeline is completed, allowing us to return a partial
+    # response in case of an error at any stage.
+    output_model = FunctionReponseModel(success=False)
     try:
-        logging.info(
-            f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request."
-        )
         # Create an error_text variable. This will be updated as we move through
         # the pipeline so that if a step fails, the error_text var reflects what
         # has failed. If all steps complete successfully, the var is never used.
@@ -152,10 +154,7 @@ def doc_intel_extract_city_names(req: func.HttpRequest) -> func.HttpResponse:
 
         func_timer = MeasureRunTime()
         func_timer.start()
-        # Create the object to hold all intermediate and final values. We will progressively update
-        # values as each stage of the pipeline is completed, allowing us to return a partial
-        # response in case of an error at any stage.
-        output_model = FunctionReponseModel(success=False)
+
         # Check mime_type of the request data
         mime_type = req.headers.get("Content-Type")
         if mime_type not in VALID_DI_PREBUILT_READ_LAYOUT_MIME_TYPES:

@@ -77,10 +77,8 @@ class FunctionReponseModel(BaseModel):
 
 @bp_multimodal_doc_intel_processing.route(route=FUNCTION_ROUTE)
 def multimodal_doc_intel_processing(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info(f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request.")
     try:
-        logging.info(
-            f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request."
-        )
         # Load and validate input data
         error_text = "Error while loading and validating the input data."
         error_code = 422

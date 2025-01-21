@@ -4,6 +4,7 @@ import logging
 import mimetypes
 import os
 import time
+from collections import defaultdict
 from io import BytesIO
 from typing import Optional, Union
 
@@ -14,6 +15,13 @@ from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
+from gradio.themes import Base
+from helpers import (
+    base64_img_str_to_url,
+    extract_frames_from_video_bytes,
+    pil_img_to_base64_bytes,
+    resize_img_by_max,
+)
 from PIL import Image
 
 logging.basicConfig(
@@ -84,14 +92,52 @@ else:
     auth_message = None
     auth = None
 
-# Get list of various demo files
-with open("demo_files/doc_intel_processing_samples.json", "r") as json_file:
-    doc_intel_url_sources: dict[str, str] = json.load(json_file)
+
+### Load backend Content Understanding Schemas.
+local_backend_cu_schema_path = os.path.join(
+    os.path.dirname(__file__),
+    "../function_app/config/content_understanding_schemas.json",
+)
+deployed_backend_cu_schema_path = os.path.join(
+    os.path.dirname(__file__), "content_understanding_schemas.json"
+)
+
+if os.path.exists(local_backend_cu_schema_path):
+    # App is being run locally - load the schema from the function app directory
+    backend_cu_schema_path = local_backend_cu_schema_path
+elif os.path.exists(deployed_backend_cu_schema_path):
+    # App is being run in Azure - the schema config should have been copied during the packaging and
+    # deployment process (as defined in azure.yaml).
+    backend_cu_schema_path = deployed_backend_cu_schema_path
+else:
+    raise FileNotFoundError(
+        (
+            "Backend content understanding schemas file not found. Make sure the schema file is located in "
+            "'<project_root>/function_app/config/content_understanding_schemas.json' if running locally, or "
+            "is copied into the base directory when deploying the web app to Azure (defined in <project_root>/azure.yaml)."
+        )
+    )
+
+with open(backend_cu_schema_path, "r") as json_file:
+    backend_cu_schemas: dict[str, dict] = json.load(json_file)
+    # Create a mapper that maps the backend analyzer ID to the human-friendly schema name.
+    # Generate this in a tuple format, as expected by gr.Dropdown components
+    BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY = defaultdict(list)
+    for modality, mod_schemas in backend_cu_schemas.items():
+        for analyzer_id, schema in mod_schemas.items():
+            BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY[modality].append(
+                (schema["name"], analyzer_id)
+            )
 
 
+### Load (and download) all required demo files.
 def download_url_source_to_local(
     url_source: str, output_folder: str, save_name: str = None
 ) -> str:
+    """
+    Downloads a file from a URL source to a local path, returning the local
+    path of the downloaded file.
+    """
     # Download file to local path
     basename = os.path.basename(url_source).split("?")[0]
     if save_name:
@@ -115,12 +161,25 @@ def download_url_source_to_local(
     return local_path
 
 
-DEMO_DOC_INTEL_PROCESSING_FILES = {
-    name: download_url_source_to_local(
-        url_source, "demo_files/temp/doc_intel_processing", name
+with open("demo_files/doc_intel_processing_samples.json", "r") as json_file:
+    doc_intel_url_sources: dict[str, str] = json.load(json_file)
+
+with open(
+    "demo_files/content_understanding/video_file_web_links.json", "r"
+) as json_file:
+    cu_video_file_url_sources: dict[str, str] = json.load(json_file)
+
+# For dropdown components, create a list of tuples of (display_name, filepath).
+# For standard file inputs, create a list of file paths.
+DEMO_DOC_INTEL_PROCESSING_FILE_TUPLES = [
+    (
+        name,
+        download_url_source_to_local(
+            url_source, "demo_files/temp/doc_intel_processing", name
+        ),
     )
     for name, url_source in doc_intel_url_sources.items()
-}
+]
 DEMO_CALL_CENTER_AUDIO_FILES = [
     os.path.join("demo_files/call_center_audio", fn)
     for fn in os.listdir("demo_files/call_center_audio")
@@ -130,6 +189,47 @@ DEMO_PDF_FILES = [
     os.path.join("demo_files", fn)
     for fn in os.listdir("demo_files")
     if fn.endswith((".pdf"))
+]
+DEMO_CONTENT_UNDERSTANDING_DOCUMENT_TUPLES = [
+    (
+        os.path.splitext(os.path.basename(fn))[0],
+        os.path.join("demo_files/content_understanding", fn),
+    )
+    for fn in os.listdir("demo_files/content_understanding")
+    if fn.endswith((".pdf"))
+] + DEMO_DOC_INTEL_PROCESSING_FILE_TUPLES
+DEMO_CONTENT_UNDERSTANDING_VIDEO_TUPLES = [
+    (
+        os.path.splitext(os.path.basename(fn))[0],
+        os.path.join("demo_files/content_understanding", fn),
+    )
+    for fn in os.listdir("demo_files/content_understanding")
+    if fn.endswith((".mp4"))
+] + [
+    (
+        name,
+        download_url_source_to_local(url_source, "demo_files/temp/video_files", name),
+    )
+    for name, url_source in cu_video_file_url_sources.items()
+]
+DEMO_CONTENT_UNDERSTANDING_AUDIO_TUPLES = [
+    (
+        os.path.splitext(os.path.basename(fn))[0],
+        os.path.join("demo_files/content_understanding", fn),
+    )
+    for fn in os.listdir("demo_files/content_understanding")
+    if fn.endswith((".wav"))
+] + [
+    (os.path.splitext(os.path.basename(fn))[0], fn)
+    for fn in DEMO_CALL_CENTER_AUDIO_FILES
+]
+DEMO_CONTENT_UNDERSTANDING_IMAGE_TUPLES = [
+    (
+        os.path.splitext(os.path.basename(fn))[0],
+        os.path.join("demo_files/content_understanding", fn),
+    )
+    for fn in os.listdir("demo_files/content_understanding")
+    if fn.endswith((".png", ".jpg", ".jpeg"))
 ]
 DEMO_IMG_FILES = [
     os.path.join("demo_files", fn)
@@ -152,6 +252,24 @@ AUDIO_EXAMPLES_LABEL = FILE_EXAMPLES_LABEL.replace("File", "Audio").replace(
 TEXT_EXAMPLES_LABEL = FILE_EXAMPLES_LABEL.replace("File", "Text").replace(
     "upload your own file", "insert your own text"
 )
+
+
+def echo_input(input):
+    """
+    A simple function to echo the input. Useful for updating one gradio
+    components when an input component changes (e.g. when a user selects
+    an example from a dropdown, populate the preview component with the
+    content).
+    """
+    return input
+
+
+def milliseconds_to_simple_string(milliseconds):
+    """Converts milliseconds to a string in the format 'mm:ss:ms'."""
+    minutes = milliseconds // 60000
+    seconds = (milliseconds % 60000) // 1000
+    ms = milliseconds % 1000
+    return f"{minutes:02}:{seconds:02}:{ms:03}"
 
 
 def send_request(
@@ -313,7 +431,9 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
     )
     with gr.Row():
         form_ext_w_conf_file_upload = gr.File(
-            label="Upload File", file_count="single", type="filepath"
+            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+            file_count="single",
+            type="filepath",
         )
         form_ext_w_conf_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
@@ -355,6 +475,713 @@ with gr.Blocks(analytics_enabled=False) as form_extraction_with_confidence_block
             form_ext_w_conf_time_taken,
             form_ext_w_conf_img_output,
             form_ext_w_conf_output_json,
+        ],
+    )
+
+
+### Content understanding examples ###
+with gr.Blocks(analytics_enabled=False) as simple_cu_examples_block:
+    cu_main_instructions = gr.Markdown(
+        (
+            "This tab contains Azure Content Understanding examples for Document, Video, Audio, and Image data modalities.\n"
+            "Each example uses Azure Content Understanding to process a file, using one of the "
+            "[pre-built schemas](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/config/content_understanding_schemas.json) "
+            "included in the accelerator. These schemas can be modified to extract the specific fields required for your use case.\n"
+            "For more information on the Content Understanding service, see these links:\n"
+            "* [Overview](https://learn.microsoft.com/en-au/azure/ai-services/content-understanding/overview)\n"
+            "* [Language and region support](https://learn.microsoft.com/en-au/azure/ai-services/content-understanding/language-region-support)\n"
+            "* [File requirements, service quotas & limits, schema & field information](https://learn.microsoft.com/en-au/azure/ai-services/content-understanding/service-limits)\n"
+        ),
+        show_label=False,
+        line_breaks=True,
+    )
+
+    def get_cu_value_field_name(field_info: dict) -> str:
+        """Gets the name of the dictionary field containing the resulting value
+        from a content understanding field result."""
+        return next(
+            (
+                field_name
+                for field_name, field_value in field_info.items()
+                if field_name.startswith("value")
+            ),
+            None,
+        )
+
+    def format_extracted_field_output(
+        text: str, confidence: Optional[float] = None
+    ) -> str:
+        if confidence is None:
+            return text
+        return f"{text} (Confidence: {round(confidence * 100, 1)}%)"
+
+    def format_simple_cu_field_output(
+        field_info: dict, include_confidence: bool = True
+    ) -> str:
+        field_name = get_cu_value_field_name(field_info)
+        confidence = field_info.get("confidence")
+        return format_extracted_field_output(
+            field_info.get(field_name),
+            confidence if (confidence is not None and include_confidence) else None,
+        )
+
+    def prebuilt_cu_document_process(
+        analyzer_id: str,
+        file: str,
+    ):
+        analyzer_route = "content_understanding_document"
+        processing_start_time = None
+        fields_output = ""
+        img_outputs = gr.Gallery(visible=False)
+        try:
+            if file is None:
+                gr.Warning("Please select or upload a file, then click 'Process File'.")
+                raise ValueError(
+                    "Please select or upload a file, then click 'Process File'."
+                )
+            # Get response from the API
+            with open(file, "rb") as f:
+                payload = {"analyzer_id": analyzer_id}
+                file_mime_type = mimetypes.guess_type(file)[0]
+                files = {
+                    "file": (file, f, file_mime_type),
+                    "json": ("payload.json", json.dumps(payload), "application/json"),
+                }
+
+                status_code, processing_time_taken, response = send_request(
+                    route=analyzer_route,
+                    files=files,
+                    force_json_content_type=True,
+                )
+            # Format image and field outputs (if available in the response)
+            if isinstance(response, dict) and response.get("formatted_fields_md"):
+                fields_output = response["formatted_fields_md"]
+            if isinstance(response, dict) and response.get("result_imgs_with_bboxes"):
+                img_outputs = [
+                    Image.open(BytesIO(base64.b64decode(img)))
+                    for img in response.pop("result_imgs_with_bboxes").values()
+                ]
+                img_outputs = gr.Gallery(
+                    img_outputs,
+                    columns=min(len(img_outputs), 2),
+                    type="pil",
+                    visible=True,
+                )
+        except Exception as e:
+            logging.exception("Error processing file")
+            status_code = 500
+            processing_time_taken = (
+                f"{round(time.time() - processing_start_time, 1)} seconds"
+                if processing_start_time is not None
+                else "N/A"
+            )
+            response = {"Error": str(e)}
+        return (
+            status_code,
+            processing_time_taken,
+            img_outputs,
+            gr.Markdown(
+                f"<h3>Extracted Field Values</h3>\n\n{fields_output}",
+                show_label=False,
+                visible=True,
+                line_breaks=True,
+            ),
+            gr.JSON(value=response, label="Full Function API Response", visible=True),
+        )
+
+    # Input components
+    simple_cu_doc_header = gr.Label(
+        "Azure Content Understanding - Document Processing", show_label=False
+    )
+    simple_cu_doc_instructions = gr.Markdown(
+        (
+            "This example extracts information from documents using Azure Content Understanding using one of the "
+            "[pre-built schemas](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/config/content_understanding_schemas.json) "
+            "included in the accelerator.\nThese schemas can be modified to extract the specific fields required for your use case "
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/content_understanding_document.py)). "
+            "For more information: [Azure Content Understanding - Documents Overview](https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/document/overview).\n"
+            "Once a document is processed, the accelerator performs some enrichment and post-processing to draw bounding boxes around the extracted fields.\n"
+            "To get started, select one of the existing schemas from the dropdown, then select a demo document or upload your own to have it processed."
+        ),
+        show_label=False,
+        line_breaks=True,
+    )
+    with gr.Row():
+        with gr.Column():
+            simple_cu_doc_analyzer_schema_dropdown = gr.Dropdown(
+                choices=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["document"],
+                value=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["document"][0][1],
+                label="Select field extraction schema",
+                interactive=True,
+            )
+            cu_document_file_dropdown_options = [
+                (
+                    "",
+                    None,
+                )
+            ] + DEMO_CONTENT_UNDERSTANDING_DOCUMENT_TUPLES
+            simple_cu_doc_demo_file_dropdown = gr.Dropdown(
+                choices=cu_document_file_dropdown_options,
+                value="",
+                label="[Optional] Select demo document",
+                interactive=True,
+                allow_custom_value=True,
+            )
+            simple_cu_doc_file_upload = gr.File(
+                height=100,
+                label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+                file_count="single",
+                type="filepath",
+            )
+        with gr.Column():
+            simple_cu_doc_input_thumbs = gr.Gallery(
+                label="Input File Preview", object_fit="contain", visible=True
+            )
+    simple_cu_doc_process_btn = gr.Button("Process File")
+    # Output components
+    with gr.Column() as simple_cu_doc_output_row:
+        simple_cu_doc_output_label = gr.Label(value="Result", show_label=False)
+        with gr.Row():
+            simple_cu_doc_status_code = gr.Textbox(
+                label="Response Status Code", interactive=False
+            )
+            simple_cu_doc_time_taken = gr.Textbox(label="Time Taken", interactive=False)
+        with gr.Row():
+            simple_cu_doc_img_output = gr.Gallery(
+                label="Extracted Field Locations", object_fit="contain", visible=False
+            )
+            with gr.Column():
+                simple_cu_doc_fields_output_md = gr.Markdown(
+                    "<h3>Extracted Field Values</h3>",
+                    show_label=False,
+                    visible=False,
+                    line_breaks=True,
+                )
+        simple_cu_doc_output_json = gr.JSON(
+            label="Full Function API Response", visible=False
+        )
+
+    # Actions
+    simple_cu_doc_demo_file_dropdown.change(
+        fn=echo_input,
+        inputs=[simple_cu_doc_demo_file_dropdown],
+        outputs=[simple_cu_doc_file_upload],
+    )
+    simple_cu_doc_file_upload.change(
+        fn=render_visual_media_input,
+        inputs=[simple_cu_doc_file_upload],
+        outputs=[simple_cu_doc_input_thumbs],
+    )
+    simple_cu_doc_process_btn.click(
+        fn=prebuilt_cu_document_process,
+        inputs=[
+            simple_cu_doc_analyzer_schema_dropdown,
+            simple_cu_doc_file_upload,
+        ],
+        outputs=[
+            simple_cu_doc_status_code,
+            simple_cu_doc_time_taken,
+            simple_cu_doc_img_output,
+            simple_cu_doc_fields_output_md,
+            simple_cu_doc_output_json,
+        ],
+    )
+
+    def prebuilt_cu_video_process(
+        analyzer_id: str,
+        file: str,
+    ):
+        analyzer_route = "content_understanding_video"
+        processing_start_time = None
+        markdown_output = ""
+        try:
+            if file is None:
+                gr.Warning("Please select or upload a file, then click 'Process File'.")
+                raise ValueError(
+                    "Please select or upload a file, then click 'Process File'."
+                )
+            # Get response from the API
+            with open(file, "rb") as f:
+                payload = {"analyzer_id": analyzer_id}
+                file_mime_type = mimetypes.guess_type(file)[0]
+                files = {
+                    "file": (file, f, file_mime_type),
+                    "json": ("payload.json", json.dumps(payload), "application/json"),
+                }
+
+                status_code, processing_time_taken, response = send_request(
+                    route=analyzer_route,
+                    files=files,
+                    force_json_content_type=True,
+                )
+            # Format image and field outputs (if available in the response)
+            ### 3. Extract key frames from the video input
+            if response.get("cu_raw_response", {}).get("status", "") == "Succeeded":
+                cu_result = response["cu_raw_response"]
+                # First, get the processed markdown output containing the extracted fields
+                # for each segment. If the field is missing, create an empty string for each segment.
+                segment_formatted_field_mds = response.get(
+                    "segment_formatted_field_mds",
+                    [""] * len(cu_result["result"]["contents"]),
+                )
+
+                # Next, extract the first frame from each segment
+                all_segment_start_frame_times_ms = [
+                    scene_result["startTimeMs"]
+                    for scene_result in cu_result["result"]["contents"]
+                ]
+
+                with open(file, "rb") as f:
+                    file_bytes = f.read()
+                start_frame_mapper = extract_frames_from_video_bytes(
+                    file_bytes, all_segment_start_frame_times_ms, img_type="pil"
+                )
+                # Reduce the size of the frames
+                start_frame_mapper = {
+                    frame_time_ms: resize_img_by_max(img, 480)
+                    for frame_time_ms, img in start_frame_mapper.items()
+                }
+
+                processed_md_strs = list()
+
+                for segment_idx, segment_contents in enumerate(
+                    cu_result["result"]["contents"]
+                ):
+                    # Get key frames and scene summary
+                    start_time_str = milliseconds_to_simple_string(
+                        segment_contents["startTimeMs"]
+                    )
+                    end_time_str = milliseconds_to_simple_string(
+                        segment_contents["endTimeMs"]
+                    )
+                    img_bytes = pil_img_to_base64_bytes(
+                        start_frame_mapper[segment_contents["startTimeMs"]]
+                    )
+                    base64_url = base64_img_str_to_url(
+                        img_bytes.decode(), mime_type="image/jpeg"
+                    )
+                    scene_summary_md = (
+                        f"<h3>Scene {segment_idx + 1} [{start_time_str} -> {end_time_str}]</h3>\n\n"
+                        f"*Starting Frame*\n"
+                        f"![]({base64_url})\n"
+                        "<h4>Extracted Fields:</h4>\n\n"
+                        f"{segment_formatted_field_mds[segment_idx]}"
+                    )
+                    processed_md_strs.append(scene_summary_md)
+                markdown_output = "\n\n".join(processed_md_strs)
+        except Exception as e:
+            logging.exception("Error processing file")
+            status_code = 500
+            processing_time_taken = (
+                f"{round(time.time() - processing_start_time, 1)} seconds"
+                if processing_start_time is not None
+                else "N/A"
+            )
+            response = {"Error": str(e)}
+        return (
+            status_code,
+            processing_time_taken,
+            gr.Markdown(
+                markdown_output,
+                label="Processed Video Content",
+                show_label=True,
+                visible=True,
+            ),
+            gr.JSON(value=response, label="Full Function API Response", visible=True),
+        )
+
+    # Input components
+    simple_cu_video_header = gr.Label(
+        "Azure Content Understanding - Video Processing", show_label=False
+    )
+    simple_cu_video_instructions = gr.Markdown(
+        (
+            "This example classifies and generates information about each scene in a video Azure Content Understanding using one of the "
+            "[pre-built schemas](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/config/content_understanding_schemas.json) "
+            "included in the accelerator.\nThese schemas can be modified to extract the specific fields required for your use case "
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/content_understanding_video.py)). "
+            "For more information: [Azure Content Understanding - Video Overview](https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/video/overview).\n"
+            "Once a video is processed, the accelerator performs some enrichment and post-processing to simplify the markdown output.\n"
+            "To get started, select one of the existing schemas from the dropdown, then select a demo video or upload your own to have it processed."
+        ),
+        show_label=False,
+        line_breaks=True,
+    )
+    with gr.Row():
+        with gr.Column():
+            simple_cu_video_analyzer_schema_dropdown = gr.Dropdown(
+                choices=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["video"],
+                value=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["video"][0][1],
+                label="Select field extraction schema",
+                interactive=True,
+            )
+            cu_video_file_dropdown_options = [
+                (
+                    "",
+                    None,
+                )
+            ] + DEMO_CONTENT_UNDERSTANDING_VIDEO_TUPLES
+            simple_cu_video_example_dropdown = gr.Dropdown(
+                choices=cu_video_file_dropdown_options,
+                value="",
+                label="[Optional] Select demo video file",
+                interactive=True,
+                allow_custom_value=True,
+            )
+        with gr.Column():
+            simple_cu_video_file_upload = gr.Video(
+                value=None,
+                label="Video File Preview. To upload a different file, Hit the 'X' button to the top right of this element ->",
+                sources=["upload"],
+                autoplay=True,
+                loop=True,
+            )
+    simple_cu_video_process_btn = gr.Button("Process File")
+    # Output components
+    with gr.Column() as simple_cu_video_output_row:
+        simple_cu_video_output_label = gr.Label(value="Result", show_label=False)
+        with gr.Row():
+            simple_cu_video_status_code = gr.Textbox(
+                label="Response Status Code", interactive=False
+            )
+            simple_cu_video_time_taken = gr.Textbox(
+                label="Time Taken", interactive=False
+            )
+        with gr.Row():
+            simple_cu_video_fields_output_md = gr.Markdown(
+                "<h3>Extracted Field Values</h3>",
+                show_label=False,
+                visible=False,
+                line_breaks=True,
+            )
+        simple_cu_video_output_json = gr.JSON(
+            label="Full Function API Response", visible=False
+        )
+
+    # Actions
+    simple_cu_video_example_dropdown.change(
+        fn=echo_input,
+        inputs=[simple_cu_video_example_dropdown],
+        outputs=[simple_cu_video_file_upload],
+    )
+    simple_cu_video_process_btn.click(
+        fn=prebuilt_cu_video_process,
+        inputs=[
+            simple_cu_video_analyzer_schema_dropdown,
+            simple_cu_video_file_upload,
+        ],
+        outputs=[
+            simple_cu_video_status_code,
+            simple_cu_video_time_taken,
+            simple_cu_video_fields_output_md,
+            simple_cu_video_output_json,
+        ],
+    )
+
+    def prebuilt_cu_audio_process(
+        analyzer_id: str,
+        file: str,
+    ):
+        analyzer_route = "content_understanding_audio"
+        processing_start_time = None
+        audio_transcription = None
+        fields_output = ""
+        try:
+            if file is None:
+                gr.Warning("Please select or upload a file, then click 'Process File'.")
+                raise ValueError(
+                    "Please select or upload a file, then click 'Process File'."
+                )
+            # Get response from the API
+            with open(file, "rb") as f:
+                payload = {"analyzer_id": analyzer_id}
+                file_mime_type = mimetypes.guess_type(file)[0]
+                files = {
+                    "file": (file, f, file_mime_type),
+                    "json": ("payload.json", json.dumps(payload), "application/json"),
+                }
+
+                status_code, processing_time_taken, response = send_request(
+                    route=analyzer_route,
+                    files=files,
+                    force_json_content_type=True,
+                )
+            # Format transcription and field outputs (if available in the response)
+            if isinstance(response, dict) and response.get("formatted_fields_md"):
+                fields_output = f"<h3>Extracted Field Values</h3>\n\n{response.get('formatted_fields_md')}"
+            if isinstance(response, dict) and response.get("condensed_transcription"):
+                audio_transcription = response.get("condensed_transcription")
+        except Exception as e:
+            logging.exception("Error processing file")
+            status_code = 500
+            processing_time_taken = (
+                f"{round(time.time() - processing_start_time, 1)} seconds"
+                if processing_start_time is not None
+                else "N/A"
+            )
+            response = {"Error": str(e)}
+        return (
+            status_code,
+            processing_time_taken,
+            gr.Markdown(
+                "<h3>Processed Call Transcription</h3>",
+                show_label=False,
+                visible=True,
+                line_breaks=True,
+            ),
+            gr.Textbox(
+                value=audio_transcription,
+                label="Transcription",
+                interactive=False,
+                visible=True,
+            ),
+            gr.Markdown(
+                fields_output, show_label=False, line_breaks=True, visible=True
+            ),
+            gr.JSON(value=response, label="Full Function API Response", visible=True),
+        )
+
+    # Input components
+    simple_cu_audio_header = gr.Label(
+        "Azure Content Understanding - Audio Processing", show_label=False
+    )
+    simple_cu_audio_instructions = gr.Markdown(
+        (
+            "This example extracts information from audio files using Azure Content Understanding using one of the "
+            "[pre-built schemas](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/config/content_understanding_schemas.json) "
+            "included in the accelerator.\nThese schemas can be modified to extract the specific fields required for your use case "
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/content_understanding_audio.py)). "
+            "For more information: [Azure Content Understanding - Audio Overview](https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/audio/overview).\n"
+            "Once an audio file is processed, the accelerator post-processes the raw output to simplify the transcription.\n"
+            "To get started, select one of the existing schemas from the dropdown, then select a demo recording or upload your own to have it processed."
+        ),
+        show_label=False,
+        line_breaks=True,
+    )
+    with gr.Column():
+        simple_cu_audio_analyzer_schema_dropdown = gr.Dropdown(
+            choices=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["audio"],
+            value=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["audio"][0][1],
+            label="Select field extraction schema",
+            interactive=True,
+        )
+        cu_audio_file_dropdown_options = [
+            (
+                "",
+                None,
+            )
+        ] + DEMO_CONTENT_UNDERSTANDING_AUDIO_TUPLES
+        simple_cu_audio_example_dropdown = gr.Dropdown(
+            choices=cu_audio_file_dropdown_options,
+            value="",
+            label="[Optional] Select demo audio file",
+            interactive=True,
+        )
+        simple_cu_audio_file_upload = gr.Audio(
+            value=DEMO_CALL_CENTER_AUDIO_FILES[0],
+            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+            sources=["upload", "microphone"],
+            type="filepath",
+        )
+    simple_cu_audio_process_btn = gr.Button("Process File")
+    # Output components
+    with gr.Column() as simple_cu_audio_output_row:
+        simple_cu_audio_output_label = gr.Label(value="Result", show_label=False)
+        with gr.Row():
+            simple_cu_audio_status_code = gr.Textbox(
+                label="Response Status Code", interactive=False
+            )
+            simple_cu_audio_time_taken = gr.Textbox(
+                label="Time Taken", interactive=False
+            )
+        with gr.Row():
+            with gr.Column():
+                simple_cu_audio_transcription_title = gr.Markdown(
+                    "<h3>Processed Call Transcription</h3>",
+                    show_label=False,
+                    visible=False,
+                    line_breaks=True,
+                )
+                simple_cu_audio_transcription_output = gr.Textbox(
+                    value="",
+                    show_label=False,
+                    visible=False,
+                )
+            with gr.Column():
+                simple_cu_audio_fields_output_md = gr.Markdown(
+                    "<h3>Extracted Field Values</h3>",
+                    show_label=False,
+                    visible=False,
+                    line_breaks=True,
+                )
+        simple_cu_audio_output_json = gr.JSON(
+            label="Full Function API Response", visible=False
+        )
+
+    # Actions
+    simple_cu_audio_example_dropdown.change(
+        fn=echo_input,
+        inputs=[simple_cu_audio_example_dropdown],
+        outputs=[simple_cu_audio_file_upload],
+    )
+    simple_cu_audio_process_btn.click(
+        fn=prebuilt_cu_audio_process,
+        inputs=[
+            simple_cu_audio_analyzer_schema_dropdown,
+            simple_cu_audio_file_upload,
+        ],
+        outputs=[
+            simple_cu_audio_status_code,
+            simple_cu_audio_time_taken,
+            simple_cu_audio_transcription_title,
+            simple_cu_audio_transcription_output,
+            simple_cu_audio_fields_output_md,
+            simple_cu_audio_output_json,
+        ],
+    )
+
+    def prebuilt_cu_image_process(
+        analyzer_id: str,
+        file: str,
+    ):
+        analyzer_route = "content_understanding_image"
+        processing_start_time = None
+        fields_output = ""
+
+        try:
+            if file is None:
+                gr.Warning("Please select or upload a file, then click 'Process File'.")
+                raise ValueError(
+                    "Please select or upload a file, then click 'Process File'."
+                )
+            # Get response from the API
+            with open(file, "rb") as f:
+                payload = {"analyzer_id": analyzer_id}
+                file_mime_type = mimetypes.guess_type(file)[0]
+                files = {
+                    "file": (file, f, file_mime_type),
+                    "json": ("payload.json", json.dumps(payload), "application/json"),
+                }
+
+                status_code, processing_time_taken, response = send_request(
+                    route=analyzer_route,
+                    files=files,
+                    force_json_content_type=True,
+                )
+                if isinstance(response, dict) and response.get("formatted_fields_md"):
+                    fields_output = response["formatted_fields_md"]
+        except Exception as e:
+            logging.exception("Error processing file")
+            status_code = 500
+            processing_time_taken = (
+                f"{round(time.time() - processing_start_time, 1)} seconds"
+                if processing_start_time is not None
+                else "N/A"
+            )
+            response = {"Error": str(e)}
+        return (
+            status_code,
+            processing_time_taken,
+            gr.Markdown(
+                f"<h3>Extracted Field Values</h3>\n\n{fields_output}",
+                show_label=False,
+                visible=True,
+                line_breaks=True,
+            ),
+            gr.JSON(value=response, label="Full Function API Response", visible=True),
+        )
+
+    # Input components
+    simple_cu_image_header = gr.Label(
+        "Azure Content Understanding - Image Processing", show_label=False
+    )
+    simple_cu_image_instructions = gr.Markdown(
+        (
+            "This example extracts information from images using Azure Content Understanding using one of the "
+            "[pre-built schemas](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/config/content_understanding_schemas.json) "
+            "included in the accelerator.\nThese schemas can be modified to extract the specific fields required for your use case "
+            "([Code Link](https://github.com/azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/content_understanding_image.py)). "
+            "For more information: [Azure Content Understanding - Images Overview](https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/image/overview).\n"
+            "To get started, select one of the existing schemas from the dropdown, then select a demo document or upload your own to have it processed."
+        ),
+        show_label=False,
+        line_breaks=True,
+    )
+    with gr.Row():
+        with gr.Column():
+            simple_cu_image_analyzer_schema_dropdown = gr.Dropdown(
+                choices=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["image"],
+                value=BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY["image"][0][1],
+                label="Select field extraction schema",
+                interactive=True,
+            )
+            cu_image_file_dropdown_options = [
+                (
+                    "",
+                    None,
+                )
+            ] + DEMO_CONTENT_UNDERSTANDING_IMAGE_TUPLES
+            simple_cu_image_example_dropdown = gr.Dropdown(
+                choices=cu_image_file_dropdown_options,
+                value="",
+                label="[Optional] Select demo image file",
+                interactive=True,
+                allow_custom_value=True,
+            )
+            simple_cu_image_file_upload = gr.File(
+                height=100,
+                label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+                file_count="single",
+                type="filepath",
+            )
+        with gr.Column():
+            simple_cu_image_input_thumbs = gr.Gallery(
+                label="Input File Preview", object_fit="contain", visible=True
+            )
+    simple_cu_image_process_btn = gr.Button("Process File")
+    # Output components
+    with gr.Column() as simple_cu_image_output_row:
+        simple_cu_image_output_label = gr.Label(value="Result", show_label=False)
+        with gr.Row():
+            simple_cu_image_status_code = gr.Textbox(
+                label="Response Status Code", interactive=False
+            )
+            simple_cu_image_time_taken = gr.Textbox(
+                label="Time Taken", interactive=False
+            )
+        with gr.Row():
+            simple_cu_image_fields_output_md = gr.Markdown(
+                "<h3>Extracted Field Values</h3>",
+                show_label=False,
+                visible=False,
+                line_breaks=True,
+            )
+        simple_cu_image_output_json = gr.JSON(
+            label="Full Function API Response", visible=False
+        )
+
+    # Actions
+    simple_cu_image_example_dropdown.change(
+        fn=echo_input,
+        inputs=[simple_cu_image_example_dropdown],
+        outputs=[simple_cu_image_file_upload],
+    )
+    simple_cu_image_file_upload.change(
+        fn=render_visual_media_input,
+        inputs=[simple_cu_image_file_upload],
+        outputs=[simple_cu_image_input_thumbs],
+    )
+    simple_cu_image_process_btn.click(
+        fn=prebuilt_cu_image_process,
+        inputs=[
+            simple_cu_image_analyzer_schema_dropdown,
+            simple_cu_image_file_upload,
+        ],
+        outputs=[
+            simple_cu_image_status_code,
+            simple_cu_image_time_taken,
+            simple_cu_image_fields_output_md,
+            simple_cu_image_output_json,
         ],
     )
 
@@ -448,7 +1275,9 @@ with gr.Blocks(analytics_enabled=False) as blob_form_extraction_to_cosmosdb_bloc
     )
     with gr.Row():
         blob_form_to_cosmosdb_file_upload = gr.File(
-            label="Upload File", file_count="single", type="filepath"
+            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+            file_count="single",
+            type="filepath",
         )
         blob_form_to_cosmosdb_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
@@ -534,7 +1363,7 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
     )
     with gr.Column():
         cc_audio_proc_audio_input = gr.Audio(
-            label="Upload Audio File",
+            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
             sources=["upload", "microphone"],
             type="filepath",
         )
@@ -577,10 +1406,6 @@ with gr.Blocks(analytics_enabled=False) as call_center_audio_processing_block:
 
 
 ### Text summarization Example ###
-def echo_input(input):
-    """A simple function to echo the input. Useful for updating gradio components."""
-    return input
-
 
 with gr.Blocks(analytics_enabled=False) as sum_text_block:
     # Define requesting function, which reshapes the input into the correct schema
@@ -619,10 +1444,17 @@ with gr.Blocks(analytics_enabled=False) as sum_text_block:
     sum_text_input_text = gr.Textbox(
         value="", lines=3, label="Enter the text to be summarized"
     )
+    sum_text_example_dropdown_options = [
+        (
+            "",
+            None,
+        )
+    ] + list(TEXT_SAMPLES)
     sum_text_example_dropdown = gr.Dropdown(
+        value="",
+        choices=sum_text_example_dropdown_options,
         label=TEXT_EXAMPLES_LABEL,
-        value=None,
-        choices=TEXT_SAMPLES.items(),
+        allow_custom_value=True,
     )
     sum_text_example_dropdown.change(
         fn=echo_input,
@@ -684,7 +1516,9 @@ with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
     )
     with gr.Row():
         di_llm_ext_names_file_upload = gr.File(
-            label="Upload File", file_count="single", type="filepath"
+            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+            file_count="single",
+            type="filepath",
         )
         di_llm_ext_names_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
@@ -756,7 +1590,9 @@ with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
     )
     with gr.Row():
         local_pdf_process_file_upload = gr.File(
-            label="Upload File", file_count="single", type="filepath"
+            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+            file_count="single",
+            type="filepath",
         )
         local_pdf_process_input_thumbs = gr.Gallery(
             label="File Preview", object_fit="contain", visible=True
@@ -818,7 +1654,7 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
             }
             file_mime_type = mimetypes.guess_type(file)[0]
             files = {
-                "doc_for_extraction": (file, f, file_mime_type),
+                "file": (file, f, file_mime_type),
                 "json": ("payload.json", json.dumps(payload), "application/json"),
             }
 
@@ -851,18 +1687,19 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
     )
     with gr.Row():
         di_proc_file_upload = gr.File(
-            label="Upload File",
+            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
             file_count="single",
             type="filepath",
-            value=lambda: next(iter(DEMO_DOC_INTEL_PROCESSING_FILES.values())),
+            value=lambda: DEMO_DOC_INTEL_PROCESSING_FILE_TUPLES[0][1],
         )
         di_proc_input_thumbs = render_visual_media_input(
-            next(iter(DEMO_DOC_INTEL_PROCESSING_FILES.values()))
+            DEMO_DOC_INTEL_PROCESSING_FILE_TUPLES[0][1]
         )
     # Examples
     di_proc_example_dropdown = gr.Dropdown(
         label="Select a demo PDF or image file",
-        choices=DEMO_DOC_INTEL_PROCESSING_FILES.items(),
+        choices=DEMO_DOC_INTEL_PROCESSING_FILE_TUPLES,
+        allow_custom_value=True,
     )
     with gr.Row():
         di_proc_output_page_checkbox = gr.Checkbox(
@@ -921,9 +1758,9 @@ with gr.Blocks(analytics_enabled=False) as di_proc_block:
         ],
     )
 
-
 with gr.Blocks(
     title="Multimodal AI & LLM Processing Accelerator",
+    theme=Base(),
     css="footer {visibility: hidden}",
     analytics_enabled=False,
 ) as demo:
@@ -937,6 +1774,8 @@ with gr.Blocks(
         ),
         show_label=False,
     )
+    with gr.Tab("Azure Content Understanding Demos (HTTP)"):
+        simple_cu_examples_block.render()
     with gr.Tab("Form Extraction with Confidence Scores (HTTP)"):
         form_extraction_with_confidence_block.render()
     with gr.Tab("Call Center Audio Processing (HTTP)"):

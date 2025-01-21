@@ -59,7 +59,7 @@ from ..helpers.image import (
     TransformedImage,
     crop_img,
     get_flat_poly_lists_convex_hull,
-    pil_img_to_base64,
+    pil_img_to_base64_bytes,
     rotate_img_pil,
     rotate_polygon,
     scale_flat_poly_list,
@@ -1375,7 +1375,7 @@ class DefaultDocumentPageProcessor(DocumentPageProcessor):
         """
         # Get transformed image, copying over image transformation metadata
         img_bytestream = HaystackByteStream(
-            data=pil_img_to_base64(transformed_page_img.image),
+            data=pil_img_to_base64_bytes(transformed_page_img.image),
             mime_type="image/jpeg",
         )
         meta["rotation_applied"] = transformed_page_img.rotation_applied
@@ -2349,7 +2349,7 @@ class DefaultDocumentFigureProcessor(DocumentFigureProcessor):
                     id=f"{element_info.element_id}_img",
                     content=figure_img_text,
                     blob=HaystackByteStream(
-                        data=pil_img_to_base64(figure_img),
+                        data=pil_img_to_base64_bytes(figure_img),
                         mime_type="image/jpeg",
                     ),
                     meta=meta,

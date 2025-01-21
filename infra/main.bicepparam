@@ -35,6 +35,10 @@ param speechLocation = 'eastus'
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/versioning/changelog-release-history
 param docIntelLocation = 'eastus'
 
+// Ensure your Content Understanding resource is deployed to a supported location - see:
+// 1. https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/language-region-support?tabs=document#region-support
+param contentUnderstandingLocation = 'westus'
+
 // Azure OpenAI
 // Ensure your OpenAI service locations have model availability - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/openai/quotas-limits#regional-quota-limits

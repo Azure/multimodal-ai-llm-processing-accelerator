@@ -24,7 +24,7 @@ from src.helpers.data_loading import load_visual_obj_bytes_to_pil_imgs_dict
 from src.helpers.image import (
     draw_polygon_on_pil_img,
     flat_poly_list_to_poly_dict_list,
-    pil_img_to_base64,
+    pil_img_to_base64_bytes,
     resize_img_by_max,
     scale_flat_poly_list,
 )
@@ -278,10 +278,14 @@ def form_extraction_with_confidence(
     a partial response with the error message and the fields that have been
     populated up to that point.
     """
+    logging.info(f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request.")
+    # Create the object to hold all intermediate and final values. We will progressively update
+    # values as each stage of the pipeline is completed, allowing us to return a partial
+    # response in case of an error at any stage.
+    output_model = FunctionReponseModel(
+        success=False, required_confidence_score=MIN_CONFIDENCE_SCORE
+    )
     try:
-        logging.info(
-            f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request."
-        )
         # Create error_text and error_code variables. These will be updated as
         # we move through the pipeline so that if a step fails, the vars reflect
         # what has failed. If all steps complete successfully, the vars are
@@ -309,12 +313,6 @@ def form_extraction_with_confidence(
                 "Please provide a base64 encoded PDF in the request body.",
                 status_code=error_code,
             )
-        # Create the object to hold all intermediate and final values. We will progressively update
-        # values as each stage of the pipeline is completed, allowing us to return a partial
-        # response in case of an error at any stage.
-        output_model = FunctionReponseModel(
-            success=False, required_confidence_score=MIN_CONFIDENCE_SCORE
-        )
 
         ### 1. Load the images from the PDF/image input
         error_text = "An error occurred during image extraction."
@@ -527,7 +525,7 @@ def form_extraction_with_confidence(
                 )
         # Resize the image to reduce transfer size
         pil_img = resize_img_by_max(pil_img, max_height=1000, max_width=1000)
-        output_model.result_img_with_bboxes = pil_img_to_base64(pil_img)
+        output_model.result_img_with_bboxes = pil_img_to_base64_bytes(pil_img)
 
         ### 8. All steps completed successfully, set success=True and return the final result
         output_model.success = True

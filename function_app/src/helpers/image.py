@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw
 from PIL.Image import Image as PILImage
 
 
-def pil_img_to_base64(pil_img: PILImage) -> str:
+def pil_img_to_base64_bytes(pil_img: PILImage) -> str:
     """
     Converts a PIL image to a base64 encoded string.
 

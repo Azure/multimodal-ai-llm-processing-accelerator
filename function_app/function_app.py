@@ -3,6 +3,10 @@ import os
 
 import azure.functions as func
 from bp_call_center_audio_analysis import bp_call_center_audio_analysis
+from bp_content_understanding_audio import bp_content_understanding_audio
+from bp_content_understanding_document import bp_content_understanding_document
+from bp_content_understanding_image import bp_content_understanding_image
+from bp_content_understanding_video import bp_content_understanding_video
 from bp_doc_intel_extract_city_names import bp_doc_intel_extract_city_names
 from bp_form_extraction_with_confidence import bp_form_extraction_with_confidence
 from bp_multimodal_doc_intel_processing import bp_multimodal_doc_intel_processing
@@ -29,6 +33,10 @@ app.register_blueprint(bp_summarize_text)
 app.register_blueprint(bp_doc_intel_extract_city_names)
 app.register_blueprint(bp_pymupdf_extract_city_names)
 app.register_blueprint(bp_multimodal_doc_intel_processing)
+app.register_blueprint(bp_content_understanding_document)
+app.register_blueprint(bp_content_understanding_video)
+app.register_blueprint(bp_content_understanding_audio)
+app.register_blueprint(bp_content_understanding_image)
 
 
 ### Define functions with input/output binding decorators (these do not work when defined in blueprint files).

@@ -262,10 +262,12 @@ LLM_SYSTEM_PROMPT = (
 async def call_center_audio_analysis(
     req: func.HttpRequest,
 ) -> func.HttpResponse:
+    logging.info(f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request.")
+    # Create the object to hold all intermediate and final values. We will progressively update
+    # values as each stage of the pipeline is completed, allowing us to return a partial
+    # response in case of an error at any stage.
+    output_model = FunctionReponseModel(success=False)
     try:
-        logging.info(
-            f"Python HTTP trigger function `{FUNCTION_ROUTE}` received a request."
-        )
         # Create error_text and error_code variables. These will be updated as
         # we move through the pipeline so that if a step fails, the vars reflect
         # what has failed. If all steps complete successfully, the vars are
@@ -275,10 +277,6 @@ async def call_center_audio_analysis(
 
         func_timer = MeasureRunTime()
         func_timer.start()
-        # Create the object to hold all intermediate and final values. We will progressively update
-        # values as each stage of the pipeline is completed, allowing us to return a partial
-        # response in case of an error at any stage.
-        output_model = FunctionReponseModel(success=False)
 
         ## Check the request body
         # Transcription method
