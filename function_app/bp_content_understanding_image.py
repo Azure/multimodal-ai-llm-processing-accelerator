@@ -4,6 +4,7 @@ import os
 from typing import Optional
 
 import azure.functions as func
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from src.components.content_understanding_client import (
@@ -15,12 +16,15 @@ from src.helpers.content_understanding import cu_fields_dict_to_markdown
 
 load_dotenv()
 
+token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+)
+
 bp_content_understanding_image = func.Blueprint()
 FUNCTION_ROUTE = "content_understanding_image"
 
 # Load environment variables
 CONTENT_UNDERSTANDING_ENDPOINT = os.getenv("CONTENT_UNDERSTANDING_ENDPOINT")
-CONTENT_UNDERSTANDING_KEY = os.getenv("CONTENT_UNDERSTANDING_KEY")
 
 # Load existing analyzer schemas
 with open("config/content_understanding_schemas.json", "r") as f:
@@ -28,7 +32,7 @@ with open("config/content_understanding_schemas.json", "r") as f:
 
 cu_client = AzureContentUnderstandingClient(
     endpoint=CONTENT_UNDERSTANDING_ENDPOINT,
-    subscription_key=CONTENT_UNDERSTANDING_KEY,
+    azure_ad_token_provider=token_provider,
     api_version="2024-12-01-preview",
     enable_face_identification=False,
 )

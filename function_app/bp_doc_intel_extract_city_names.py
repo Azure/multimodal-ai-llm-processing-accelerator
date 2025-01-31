@@ -6,7 +6,7 @@ from typing import Optional
 import azure.functions as func
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
-from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from pydantic import BaseModel, Field
@@ -24,15 +24,16 @@ from src.schema import LLMResponseBaseModel
 load_dotenv()
 
 bp_doc_intel_extract_city_names = func.Blueprint()
-
 FUNCTION_ROUTE = "doc_intel_extract_city_names"
+
+aoai_token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+)
 
 # Load environment variables
 DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
-DOC_INTEL_API_KEY = os.getenv("DOC_INTEL_API_KEY")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
-AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 
 # Create the clients for Document Intelligence and Azure OpenAI
 DOC_INTEL_MODEL_ID = "prebuilt-read"  # Set Document Intelligence model ID
@@ -43,13 +44,13 @@ DOC_INTEL_MODEL_ID = "prebuilt-read"  # Set Document Intelligence model ID
 # (within the `notebooks` folder).
 di_client = DocumentIntelligenceClient(
     endpoint=DOC_INTEL_ENDPOINT,
-    credential=AzureKeyCredential(DOC_INTEL_API_KEY),
+    credential=DefaultAzureCredential(),
     api_version="2024-07-31-preview",
 )
 aoai_client = AzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY,
+    azure_ad_token_provider=aoai_token_provider,
     api_version="2024-06-01",
     timeout=30,
     max_retries=0,

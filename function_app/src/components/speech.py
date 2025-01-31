@@ -2,7 +2,7 @@ import json
 import os
 from enum import Enum
 from io import BytesIO
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from httpx import AsyncClient, Timeout
 from openai import AsyncAzureOpenAI
@@ -752,10 +752,13 @@ class AzureSpeechTranscriber:
     Services. This component handles running of transcription jobs and
     processing the raw API responses into a more usable format.
 
-    :param speech_key: The Azure Speech API key.
-    :type speech_key: str
-    :param speech_region: The Azure Speech API resource region/location.
+    :param speech_endpoint: The Azure Speech resource endpoint.
     :type speech_endpoint: str
+    :param speech_key: An optional Azure Speech API key. Defaults to None.
+    :type speech_key: str
+    :param azure_ad_token_provider: An optional Azure AD token provider to use
+        for authentication. Defaults to None.
+    :type azure_ad_token_provider: Optional[Callable], optional
     :param aoai_whisper_async_client: An optional Azure OpenAI client to use for
         making requests This is required in order to get transcriptions using
         Azure OpenAI Whisper deployments. Defaults to None.
@@ -767,13 +770,15 @@ class AzureSpeechTranscriber:
 
     def __init__(
         self,
-        speech_key: str,
-        speech_region: str,
+        speech_endpoint: str,
+        speech_key: Optional[str] = None,
+        azure_ad_token_provider: Optional[Callable] = None,
         aoai_whisper_async_client: Optional[AsyncAzureOpenAI] = None,
         httpx_async_client: Optional[AsyncClient] = None,
     ):
+        self._speech_endpoint = speech_endpoint
         self._speech_key = speech_key
-        self._speech_region = speech_region
+        self._azure_ad_token_provider = azure_ad_token_provider
         self._aoai_whisper_async_client = aoai_whisper_async_client
         self._httpx_async_client = httpx_async_client or AsyncClient(
             timeout=Timeout(60)
@@ -788,14 +793,15 @@ class AzureSpeechTranscriber:
 
     def _get_speech_headers(self) -> dict[str, str]:
         """Gets the headers for the Azure Speech API."""
+        if self._azure_ad_token_provider is not None:
+            return {
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._azure_ad_token_provider()}",
+            }
         return {
             "Accept": "application/json",
             "Ocp-Apim-Subscription-Key": self._speech_key,
         }
-
-    def _get_regional_endpoint_url(self) -> str:
-        """Gets the regional endpoint URL for the Azure Speech API."""
-        return f"https://{self._speech_region}.api.cognitive.microsoft.com"
 
     async def get_fast_transcription_async(
         self,
@@ -818,7 +824,7 @@ class AzureSpeechTranscriber:
         """
 
         url = os.path.join(
-            self._get_regional_endpoint_url(),
+            self._speech_endpoint,
             "speechtotext/transcriptions:transcribe?api-version=2024-05-15-preview",
         )
         headers = self._get_speech_headers()

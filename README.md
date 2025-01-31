@@ -130,7 +130,7 @@ This accelerator is in active development, with a list of upcoming features incl
 - **Evaluation pipelines:** Example evaluation pipelines to evaluate overall performance, making it easy to iterate and improve your processing pipelines and help you select the right production thresholds for accepting a result or escalating to human review.
 - **Async processing:** Ensure all included pipeline components have async versions for maximum performance & concurrency.
 - **Other input/output options:** Additional pipelines using streaming and websockets.
-- **Infrastructure options:** Include options for identity-based authentication between services, private VNets & endpoints etc.
+- **Infrastructure options:** More advanced networking options (private VNets & endpoints etc).
 - **Deployment pipeline:** An example deployment pipeline for automated deployments.
 
 To help prioritise these features or request new ones, please head to the Issues section of this repository.

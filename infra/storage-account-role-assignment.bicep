@@ -3,8 +3,8 @@ metadata description = 'Assign RBAC resource-level roles to an Azure Storage Acc
 @description('Name of the Storage account.')
 param storageAccountName string
 
-@description('Id of the identity/principal to assign roles in the context of the account.')
-param identityId string
+@description('Id of the identity/principal to assign roles to.')
+param principalId string
 
 @description('A list of role definition Ids to assign to the targeted principal in the context of the account.')
 param roleDefintionIds array
@@ -16,11 +16,11 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' existing 
 
 resource storageAccountContributorRoles 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = [
   for roleDefinitionId in roleDefintionIds: {
-    name: guid(storageAccount.id, roleDefinitionId, identityId)
+    name: guid(storageAccount.id, roleDefinitionId, principalId)
     scope: storageAccount
     properties: {
       roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitionId)
-      principalId: identityId
+      principalId: principalId
     }
   }
 ]

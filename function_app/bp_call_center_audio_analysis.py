@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Optional
 
 import azure.functions as func
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pydantic import BaseModel, Field
@@ -24,23 +25,25 @@ load_dotenv()
 bp_call_center_audio_analysis = func.Blueprint()
 FUNCTION_ROUTE = "call_center_audio_analysis"
 
-SPEECH_REGION = os.getenv("SPEECH_REGION")
-SPEECH_API_KEY = os.getenv("SPEECH_API_KEY")
+token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+)
+
+SPEECH_ENDPOINT = os.getenv("SPEECH_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
 AOAI_WHISPER_DEPLOYMENT = os.getenv("AOAI_WHISPER_DEPLOYMENT")
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
-AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 
 ### Setup components
 aoai_whisper_async_client = AsyncAzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_WHISPER_DEPLOYMENT,
-    api_key=AOAI_API_KEY,
+    azure_ad_token_provider=token_provider,
     api_version="2024-06-01",
 )
 transcriber = AzureSpeechTranscriber(
-    speech_region=SPEECH_REGION,
-    speech_key=SPEECH_API_KEY,
+    speech_endpoint=SPEECH_ENDPOINT,
+    azure_ad_token_provider=token_provider,
     aoai_whisper_async_client=aoai_whisper_async_client,
 )
 # Define the configuration for the transcription job
@@ -63,7 +66,7 @@ aoai_whisper_kwargs = {
 aoai_client = AzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY,
+    azure_ad_token_provider=token_provider,
     api_version="2024-06-01",
     timeout=30,
     max_retries=0,

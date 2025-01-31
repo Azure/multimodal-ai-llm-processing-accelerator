@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import requests
 from requests.models import Response
@@ -15,12 +15,15 @@ class AzureContentUnderstandingClient:
         self,
         endpoint: str,
         api_version: str,
-        subscription_key: str = None,
-        api_token: str = None,
+        azure_ad_token_provider: Optional[Callable] = None,
+        subscription_key: Optional[str] = None,
+        api_token: Optional[str] = None,
         enable_face_identification: bool = False,
     ):
-        if not subscription_key and not api_token:
-            raise ValueError("Either subscription key or API token must be provided.")
+        if not any([subscription_key, api_token, azure_ad_token_provider]):
+            raise ValueError(
+                "One of azure_ad_token_provider, subscription_key or api_token must be provided."
+            )
         if not api_version:
             raise ValueError("API version must be provided.")
         if not endpoint:
@@ -29,9 +32,10 @@ class AzureContentUnderstandingClient:
         self._endpoint = endpoint.rstrip("/")
         self._api_version = api_version
         self._logger = logging.getLogger(__name__)
-        self._headers = self._get_headers(
-            subscription_key, api_token, enable_face_identification
-        )
+        self._subscription_key = subscription_key
+        self._api_token = api_token
+        self._azure_ad_token_provider = azure_ad_token_provider
+        self._enable_face_identification = enable_face_identification
 
     def _get_analyzer_url(self, endpoint, api_version, analyzer_id):
         return f"{endpoint}/contentunderstanding/analyzers/{analyzer_id}?api-version={api_version}"  # noqa
@@ -51,22 +55,23 @@ class AzureContentUnderstandingClient:
             "prefix": storage_container_path_prefix,
         }
 
-    def _get_headers(self, subscription_key, api_token, enable_face_identification):
+    def _get_headers(self):
         """Returns the headers for the HTTP requests.
-        Args:
-            subscription_key (str): The subscription key for the service.
-            api_token (str): The API token for the service.
-            enable_face_identification (bool): A flag to enable face identification.
+
         Returns:
             dict: A dictionary containing the headers for the HTTP requests.
         """
         headers = (
-            {"Ocp-Apim-Subscription-Key": subscription_key}
-            if subscription_key
-            else {"Authorization": f"Bearer {api_token}"}
+            {"Authorization": f"Bearer {self._azure_ad_token_provider()}"}
+            if self._azure_ad_token_provider
+            else (
+                {"Ocp-Apim-Subscription-Key": self._subscription_key}
+                if self._subscription_key
+                else {"Authorization": f"Bearer {self._api_token}"}
+            )
         )
         headers["x-ms-useragent"] = "cu-sample-code"
-        if enable_face_identification:
+        if self._enable_face_identification:
             headers["cogsvc-videoanalysis-face-identification-enable"] = "true"
         return headers
 
@@ -86,7 +91,7 @@ class AzureContentUnderstandingClient:
         """
         response = requests.get(
             url=self._get_analyzer_list_url(self._endpoint, self._api_version),
-            headers=self._headers,
+            headers=self._get_headers(),
         )
         response.raise_for_status()
         return response.json()
@@ -107,7 +112,7 @@ class AzureContentUnderstandingClient:
         """
         response = requests.get(
             url=self._get_analyzer_url(self._endpoint, self._api_version, analyzer_id),
-            headers=self._headers,
+            headers=self._get_headers(),
         )
         response.raise_for_status()
         return response.json()
@@ -154,7 +159,7 @@ class AzureContentUnderstandingClient:
             )
 
         headers = {"Content-Type": "application/json"}
-        headers.update(self._headers)
+        headers.update(self._get_headers())
 
         response = requests.put(
             url=self._get_analyzer_url(self._endpoint, self._api_version, analyzer_id),
@@ -180,7 +185,7 @@ class AzureContentUnderstandingClient:
         """
         response = requests.delete(
             url=self._get_analyzer_url(self._endpoint, self._api_version, analyzer_id),
-            headers=self._headers,
+            headers=self._get_headers(),
         )
         response.raise_for_status()
         self._logger.info(f"Analyzer {analyzer_id} deleted.")
@@ -227,7 +232,7 @@ class AzureContentUnderstandingClient:
         else:
             raise ValueError("file_location must be a valid path or URL.")
 
-        headers.update(self._headers)
+        headers.update(self._get_headers())
         if isinstance(data, dict):
             response = requests.post(
                 url=self._get_analyze_url(
@@ -271,7 +276,9 @@ class AzureContentUnderstandingClient:
             f"{operation_location}/images/{image_id}?api-version={self._api_version}"
         )
         try:
-            response = requests.get(url=image_retrieval_url, headers=self._headers)
+            response = requests.get(
+                url=image_retrieval_url, headers=self._get_headers()
+            )
             response.raise_for_status()
 
             assert response.headers.get("Content-Type") == "image/jpeg"
@@ -308,7 +315,7 @@ class AzureContentUnderstandingClient:
             raise ValueError("Operation location not found in response headers.")
 
         headers = {"Content-Type": "application/json"}
-        headers.update(self._headers)
+        headers.update(self._get_headers())
 
         start_time = time.time()
         while True:
@@ -318,7 +325,7 @@ class AzureContentUnderstandingClient:
                     f"Operation timed out after {timeout_seconds:.2f} seconds."
                 )
 
-            response = requests.get(operation_location, headers=self._headers)
+            response = requests.get(operation_location, headers=self._get_headers())
             response.raise_for_status()
             status = response.json().get("status").lower()
             if status == "succeeded":

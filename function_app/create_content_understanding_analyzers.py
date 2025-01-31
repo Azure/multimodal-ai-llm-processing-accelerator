@@ -4,6 +4,7 @@ import json
 import logging
 import os
 
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from src.components.content_understanding_client import (
     AzureContentUnderstandingClient,
     create_analyzers,
@@ -14,21 +15,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Load environment variables from Function App local settings file
-function_local_settings_path = os.path.join(
-    os.path.dirname(__file__), "local.settings.json"
+token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
 )
-with open(function_local_settings_path, "rb") as f:
-    local_settings = json.load(f)
-    os.environ.update(local_settings["Values"])
 
 # Load environment variables
 CONTENT_UNDERSTANDING_ENDPOINT = os.getenv("CONTENT_UNDERSTANDING_ENDPOINT")
-CONTENT_UNDERSTANDING_KEY = os.getenv("CONTENT_UNDERSTANDING_KEY")
 
-if not CONTENT_UNDERSTANDING_ENDPOINT or not CONTENT_UNDERSTANDING_KEY:
+if not CONTENT_UNDERSTANDING_ENDPOINT:
     raise ValueError(
-        "CONTENT_UNDERSTANDING_ENDPOINT and CONTENT_UNDERSTANDING_KEY must be set in `local.settings.json` or in the environment."
+        (
+            "CONTENT_UNDERSTANDING_ENDPOINT must be set in in the environment variables. "
+            "To set CONTENT_UNDERSTANDING_ENDPOINT based on the currently selected and deployed bicep environment, "
+            "copy and run the code from the postprovision hook in the azure.yaml file."
+        )
     )
 
 # If existing analyzers have had their schemas changed and they need to be
@@ -60,7 +60,7 @@ def create_config_analyzer_schemas(force_recreation: bool = False):
 
     cu_client = AzureContentUnderstandingClient(
         endpoint=CONTENT_UNDERSTANDING_ENDPOINT,
-        subscription_key=CONTENT_UNDERSTANDING_KEY,
+        azure_ad_token_provider=token_provider,
         api_version="2024-12-01-preview",
         enable_face_identification=False,
     )

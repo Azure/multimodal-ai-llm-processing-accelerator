@@ -16,12 +16,8 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 from gradio.themes import Base
-from helpers import (
-    base64_img_str_to_url,
-    extract_frames_from_video_bytes,
-    pil_img_to_base64_bytes,
-    resize_img_by_max,
-)
+from helpers import (base64_img_str_to_url, extract_frames_from_video_bytes,
+                     pil_img_to_base64_bytes, resize_img_by_max)
 from PIL import Image
 
 logging.basicConfig(
@@ -1563,77 +1559,80 @@ with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
 
 
 ### Local PDF processing and extraction example ###
-with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
-    # Define requesting function, which reshapes the input into the correct schema
-    def local_pdf_process_upload(file: str):
-        # Get response from the API
-        mime_type = mimetypes.guess_type(file)[0]
-        with open(file, "rb") as f:
-            data = f.read()
-            headers = {"Content-Type": mime_type}
-            return send_request(
-                route="pymupdf_extract_city_names",
-                data=data,
-                headers=headers,
-                force_json_content_type=True,  # JSON gradio block requires this
-            )
+### NOTE: This pipeline is disabled in function_app.py due to changing from key-based auth to token-based auth.
+### This is because the Haystack generator is instantiated with a token, and does not support cycling of keys.
+### You must use key-based auth or update the code to automatically cycle keys if the token expires.
+# with gr.Blocks(analytics_enabled=False) as local_pdf_prc_block:
+#     # Define requesting function, which reshapes the input into the correct schema
+#     def local_pdf_process_upload(file: str):
+#         # Get response from the API
+#         mime_type = mimetypes.guess_type(file)[0]
+#         with open(file, "rb") as f:
+#             data = f.read()
+#             headers = {"Content-Type": mime_type}
+#             return send_request(
+#                 route="pymupdf_extract_city_names",
+#                 data=data,
+#                 headers=headers,
+#                 force_json_content_type=True,  # JSON gradio block requires this
+#             )
 
-    # Input components
-    local_pdf_process_instructions = gr.Markdown(
-        (
-            "This example uses PyMuPDF to extract the raw text from a PDF or image file, then "
-            "sends a multimodal request (images and text) to GPT-4o "
-            "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_pymupdf_extract_city_names.py))."
-            "\n\nThe pipeline is as follows:\n"
-            "1. PyMuPDF extracts the raw text from the PDF.\n"
-            "2. The raw extracted text is sent to GPT-4o and it is instructed to extract a list of city names that "
-            "appear in the file.\n\n"
-            "The response includes the final result, as well as many of the intermediate outputs from the processing pipeline."
-        ),
-        show_label=False,
-    )
-    with gr.Row():
-        local_pdf_process_file_upload = gr.File(
-            label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
-            file_count="single",
-            type="filepath",
-        )
-        local_pdf_process_input_thumbs = gr.Gallery(
-            label="File Preview", object_fit="contain", visible=True
-        )
-    # Examples
-    local_pdf_process_examples = gr.Examples(
-        label=FILE_EXAMPLES_LABEL,
-        examples=DEMO_PDF_FILES,
-        inputs=[local_pdf_process_file_upload],
-        outputs=[local_pdf_process_input_thumbs],
-        fn=render_visual_media_input,
-        run_on_click=True,
-    )
-    local_pdf_process_process_btn = gr.Button("Process File", variant="primary")
-    # Output components
-    with gr.Column() as local_pdf_process_output_row:
-        local_pdf_process_output_label = gr.Label(
-            value="API Response", show_label=False
-        )
-        with gr.Row():
-            local_pdf_process_status_code = gr.Textbox(
-                label="Response Status Code", interactive=False
-            )
-            local_pdf_process_time_taken = gr.Textbox(
-                label="Time Taken", interactive=False
-            )
-        local_pdf_process_output_json = gr.JSON(label="API Response")
-    # Actions
-    local_pdf_process_process_btn.click(
-        fn=local_pdf_process_upload,
-        inputs=[local_pdf_process_file_upload],
-        outputs=[
-            local_pdf_process_status_code,
-            local_pdf_process_time_taken,
-            local_pdf_process_output_json,
-        ],
-    )
+#     # Input components
+#     local_pdf_process_instructions = gr.Markdown(
+#         (
+#             "This example uses PyMuPDF to extract the raw text from a PDF or image file, then "
+#             "sends a multimodal request (images and text) to GPT-4o "
+#             "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_pymupdf_extract_city_names.py))."
+#             "\n\nThe pipeline is as follows:\n"
+#             "1. PyMuPDF extracts the raw text from the PDF.\n"
+#             "2. The raw extracted text is sent to GPT-4o and it is instructed to extract a list of city names that "
+#             "appear in the file.\n\n"
+#             "The response includes the final result, as well as many of the intermediate outputs from the processing pipeline."
+#         ),
+#         show_label=False,
+#     )
+#     with gr.Row():
+#         local_pdf_process_file_upload = gr.File(
+#             label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+#             file_count="single",
+#             type="filepath",
+#         )
+#         local_pdf_process_input_thumbs = gr.Gallery(
+#             label="File Preview", object_fit="contain", visible=True
+#         )
+#     # Examples
+#     local_pdf_process_examples = gr.Examples(
+#         label=FILE_EXAMPLES_LABEL,
+#         examples=DEMO_PDF_FILES,
+#         inputs=[local_pdf_process_file_upload],
+#         outputs=[local_pdf_process_input_thumbs],
+#         fn=render_visual_media_input,
+#         run_on_click=True,
+#     )
+#     local_pdf_process_process_btn = gr.Button("Process File", variant="primary")
+#     # Output components
+#     with gr.Column() as local_pdf_process_output_row:
+#         local_pdf_process_output_label = gr.Label(
+#             value="API Response", show_label=False
+#         )
+#         with gr.Row():
+#             local_pdf_process_status_code = gr.Textbox(
+#                 label="Response Status Code", interactive=False
+#             )
+#             local_pdf_process_time_taken = gr.Textbox(
+#                 label="Time Taken", interactive=False
+#             )
+#         local_pdf_process_output_json = gr.JSON(label="API Response")
+#     # Actions
+#     local_pdf_process_process_btn.click(
+#         fn=local_pdf_process_upload,
+#         inputs=[local_pdf_process_file_upload],
+#         outputs=[
+#             local_pdf_process_status_code,
+#             local_pdf_process_time_taken,
+#             local_pdf_process_output_json,
+#         ],
+#     )
 
 ### Doc Intelligence Processing Example ###
 with gr.Blocks(analytics_enabled=False) as di_proc_block:
@@ -1790,10 +1789,8 @@ with gr.Blocks(
         blob_form_extraction_to_cosmosdb_block.render()
     with gr.Tab("Summarize Text (HTTP)"):
         sum_text_block.render()
-    with gr.Tab("City Names Extraction, Doc Intel (HTTP)"):
+    with gr.Tab("City Names Extraction, Doc Intelligence (HTTP)"):
         di_llm_ext_names_block.render()
-    with gr.Tab("City Names Extraction, PyMuPDF (HTTP)"):
-        local_pdf_prc_block.render()
 
 if __name__ == "__main__":
     # Start server by running: `gradio demo_app.py`, then navigate to http://localhost:8000
