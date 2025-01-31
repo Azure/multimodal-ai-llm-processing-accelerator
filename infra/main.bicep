@@ -23,7 +23,7 @@ param webAppPassword string
 @description('The prefix to use for all resources except the function and web apps')
 param resourcePrefix string = 'llm-proc'
 
-@description('An additional identity ID to assign storage & CosmosDB access roles to. You can use this to give storage access to your developer identity.')
+@description('An list of additional Azure identities to assign Ai services, storage & CosmosDB access roles to. This is necessary in order to do development locally since all calls to the backend AI services are made using identity-based auth.')
 param additionalRoleAssignmentIdentityIds array = []
 
 @description('The name of the default Storage account. This should be only lowercase letters and numbers. When deployed, a unique suffix will be appended to the name.')
@@ -79,11 +79,6 @@ param resourceToken string = take(toLower(uniqueString(subscription().id, resour
 param tags object = {}
 param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
-param storageConnectionStringSecretName string = 'storage-connection-string'
-param aoaiKeyKvSecretName string = 'aoai-api-key'
-param contentUnderstandingKeyKvSecretName string = 'content-understanding-api-key'
-param docIntelKeyKvSecretName string = 'doc-intel-api-key'
-param speechKeyKvSecretName string = 'speech-api-key'
 param funcAppKeyKvSecretName string = 'func-api-key'
 param appInsightsInstrumentationKeyKvSecretName string = 'appins-instrumentation-key'
 
@@ -130,6 +125,27 @@ var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}'
 var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToken}')
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
 
+// Define role definition IDs for Azure AI Services
+var roleDefinitions = {
+  openAiUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+  speechUser: 'f2dc8367-1007-4938-bd23-fe263f013447'
+  cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
+  cosmosDbDataContributor: '00000000-0000-0000-0000-000000000002'
+  storageAccountContributor: '17d1049b-9a84-46fb-8f53-869881c3d3ab'
+  storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  storageBlobDataOwner: 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
+  storageQueueDataContributor: '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+}
+
+// Set list of storage role IDs - See here for more info on required roles: 
+// https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference?tabs=blob&pivots=programming-language-python#connecting-to-host-storage-with-an-identity
+var storageRoleDefinitionIds = [
+  roleDefinitions.storageAccountContributor
+  roleDefinitions.storageBlobDataContributor
+  roleDefinitions.storageBlobDataOwner
+  roleDefinitions.storageQueueDataContributor
+]
+
 //
 // Storage account (the storage account is required for the Function App)
 //
@@ -163,20 +179,6 @@ resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/co
   }
 ]
 
-// Set list of storage role IDs - See here for more info on required roles: 
-// https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference?tabs=blob&pivots=programming-language-python#connecting-to-host-storage-with-an-identity
-var storageAccountContributorRoleId = '17d1049b-9a84-46fb-8f53-869881c3d3ab'
-var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
-var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
-
-var storageRoleDefinitionIds = [
-  storageAccountContributorRoleId // Storage Account Contributor
-  storageBlobDataContributorRoleId // Storage Blob Data Contributor
-  storageBlobDataOwnerRoleId // Storage Blob Data Owner
-  storageQueueDataContributorRoleId // Storage Queue Data Contributor
-]
-
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
 
 //
@@ -190,7 +192,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
   properties: {
     enableFreeTier: false
     databaseAccountOfferType: 'Standard'
-    disableLocalAuth: false
+    disableLocalAuth: true
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
     }
@@ -250,6 +252,7 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' 
   properties: {
     publicNetworkAccess: 'Enabled'
     customSubDomainName: contentUnderstandingTokenName
+    disableLocalAuth: true
   }
   sku: {
     name: 'S0'
@@ -263,6 +266,7 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     publicNetworkAccess: 'Enabled'
     customSubDomainName: docIntelTokenName
+    disableLocalAuth: true
   }
   sku: {
     name: 'S0'
@@ -276,6 +280,7 @@ resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     publicNetworkAccess: 'Enabled'
     customSubDomainName: speechTokenName
+    disableLocalAuth: true
   }
   sku: {
     name: 'S0'
@@ -289,6 +294,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     publicNetworkAccess: 'Enabled'
     customSubDomainName: openAITokenName
+    disableLocalAuth: true
   }
   sku: {
     name: 'S0'
@@ -364,46 +370,6 @@ resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-
         }
       }
     ]
-  }
-}
-
-resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: storageConnectionStringSecretName
-  parent: keyVault
-  properties: {
-    value: storageAccountConnectionString
-  }
-}
-
-resource openAIKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: aoaiKeyKvSecretName
-  parent: keyVault
-  properties: {
-    value: azureopenai.listKeys().key1
-  }
-}
-
-resource contentUnderstandingKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: contentUnderstandingKeyKvSecretName
-  parent: keyVault
-  properties: {
-    value: contentUnderstanding.listKeys().key1
-  }
-}
-
-resource docIntelKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: docIntelKeyKvSecretName
-  parent: keyVault
-  properties: {
-    value: docIntel.listKeys().key1
-  }
-}
-
-resource SpeechKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: speechKeyKvSecretName
-  parent: keyVault
-  properties: {
-    value: speech.listKeys().key1
   }
 }
 
@@ -495,25 +461,48 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       AOAI_ENDPOINT: azureopenai.properties.endpoint
       AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
       AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
-      AOAI_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${aoaiKeyKvSecretName})'
       CONTENT_UNDERSTANDING_ENDPOINT: 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
-      CONTENT_UNDERSTANDING_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${contentUnderstandingKeyKvSecretName})'
       DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
-      DOC_INTEL_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${docIntelKeyKvSecretName})'
-      SPEECH_REGION: speech.location
       SPEECH_ENDPOINT: speech.properties.endpoint
-      SPEECH_API_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${speechKeyKvSecretName})'
     })
   }
 }
 
-// Role assignments for the Function App's managed identity
+// Create role assignments for the function app's managed identity
+module functionAppAiServicesRoleAssignments 'ai-services-role-assignment.bicep' = [
+  for service in [
+    {
+      aiServiceName: azureopenai.name
+      roleDefinitionIds: [roleDefinitions.openAiUser, roleDefinitions.cognitiveServicesUser]
+    }
+    {
+      aiServiceName: docIntel.name
+      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+    }
+    {
+      aiServiceName: speech.name
+      roleDefinitionIds: [roleDefinitions.speechUser]
+    }
+    {
+      aiServiceName: contentUnderstanding.name
+      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+    }
+  ]: {
+    name: guid(subscription().id, resourceGroup().id, service.aiServiceName, 'funcAppMultiAiServicesRoleAssignment')
+    params: {
+      aiServiceName: service.aiServiceName
+      principalId: functionApp.identity.principalId
+      roleDefinitionIds: service.roleDefinitionIds
+    }
+  }
+]
+
 module functionAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = {
   name: 'functionAppStorageRoleAssignments'
   scope: resourceGroup()
   params: {
     storageAccountName: storageAccount.name
-    identityId: functionApp.identity.principalId
+    principalId: functionApp.identity.principalId
     roleDefintionIds: storageRoleDefinitionIds
   }
 }
@@ -523,7 +512,7 @@ module functionAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep
   scope: resourceGroup()
   params: {
     accountName: cosmosDbAccount.name
-    identityId: functionApp.identity.principalId
+    principalId: functionApp.identity.principalId
     roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
   }
 }
@@ -591,7 +580,7 @@ module webAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = {
   scope: resourceGroup()
   params: {
     storageAccountName: storageAccount.name
-    identityId: webApp.identity.principalId
+    principalId: webApp.identity.principalId
     roleDefintionIds: storageRoleDefinitionIds
   }
 }
@@ -601,31 +590,58 @@ module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
   scope: resourceGroup()
   params: {
     accountName: cosmosDbAccount.name
-    identityId: webApp.identity.principalId
+    principalId: webApp.identity.principalId
     roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
   }
 }
 
 // Additional role assignments (if provided)
+module additionalIdentityAiServicesRoleAssignments 'multiple-ai-services-role-assignment.bicep' = [
+  for service in [
+    {
+      aiServiceName: azureopenai.name
+      roleDefinitionIds: [roleDefinitions.openAiUser, roleDefinitions.cognitiveServicesUser]
+    }
+    {
+      aiServiceName: docIntel.name
+      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+    }
+    {
+      aiServiceName: speech.name
+      roleDefinitionIds: [roleDefinitions.speechUser]
+    }
+    {
+      aiServiceName: contentUnderstanding.name
+      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+    }
+  ]: {
+    name: guid(subscription().id, resourceGroup().id, service.aiServiceName, 'MultiAiServicesRoleAssignment')
+    params: {
+      aiServiceName: service.aiServiceName
+      principalIds: additionalRoleAssignmentIdentityIds
+      roleDefinitionIds: service.roleDefinitionIds
+    }
+  }
+]
 
 module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment.bicep' = [
   for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
-    name: 'StorageRoleAssignments-${additionalRoleAssignmentIdentityId}'
+    name: 'StorageRoleAssignments-${take(additionalRoleAssignmentIdentityId, 6)}'
     scope: resourceGroup()
     params: {
       storageAccountName: storageAccount.name
-      identityId: additionalRoleAssignmentIdentityId
+      principalId: additionalRoleAssignmentIdentityId
       roleDefintionIds: storageRoleDefinitionIds
     }
   }
 ]
 module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = [
   for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
-    name: 'CosmosDbRoleAssignment-${additionalRoleAssignmentIdentityId}'
+    name: 'CosmosDbRoleAssignment-${take(additionalRoleAssignmentIdentityId, 6)}'
     scope: resourceGroup()
     params: {
       accountName: cosmosDbAccount.name
-      identityId: additionalRoleAssignmentIdentityId
+      principalId: additionalRoleAssignmentIdentityId
       roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
     }
   }
@@ -637,3 +653,9 @@ output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndp
 output cosmosDbAccountEndpoint string = cosmosDbAccount.properties.documentEndpoint
 output cosmosDbAccountName string = cosmosDbAccount.name
 output cosmosDbDatabaseName string = cosmosDbDatabaseName
+output AOAI_ENDPOINT string = azureopenai.properties.endpoint
+output AOAI_LLM_DEPLOYMENT string = openAILLMDeploymentName
+output AOAI_WHISPER_DEPLOYMENT string = openAIWhisperDeploymentName
+output CONTENT_UNDERSTANDING_ENDPOINT string = 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
+output DOC_INTEL_ENDPOINT string = docIntel.properties.endpoint
+output SPEECH_ENDPOINT string = speech.properties.endpoint

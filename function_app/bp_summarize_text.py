@@ -2,26 +2,29 @@ import logging
 import os
 
 import azure.functions as func
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from pydantic import BaseModel, Field
 
 load_dotenv()
 
-bp_summarize_text = func.Blueprint()
+aoai_token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+)
 
+bp_summarize_text = func.Blueprint()
 FUNCTION_ROUTE = "summarize_text"
 
 # Load environment variables
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
-AOAI_API_KEY = os.getenv("AOAI_API_KEY")
 
 # Setup Haystack components
 aoai_client = AzureOpenAI(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY,
+    azure_ad_token_provider=aoai_token_provider,
     api_version="2024-06-01",
 )
 

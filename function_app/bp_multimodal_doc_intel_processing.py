@@ -6,7 +6,7 @@ from typing import Optional
 import azure.functions as func
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
-from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from src.components.doc_intelligence import (
@@ -23,11 +23,9 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 bp_multimodal_doc_intel_processing = func.Blueprint()
-
 FUNCTION_ROUTE = "multimodal_doc_intel_processing"
 
 DOC_INTEL_ENDPOINT = os.getenv("DOC_INTEL_ENDPOINT")
-DOC_INTEL_API_KEY = os.getenv("DOC_INTEL_API_KEY")
 
 # Create the client for Document Intelligence and Azure OpenAI
 DOC_INTEL_MODEL_ID = "prebuilt-layout"  # Set Document Intelligence model ID
@@ -38,7 +36,7 @@ DOC_INTEL_MODEL_ID = "prebuilt-layout"  # Set Document Intelligence model ID
 # (within the `notebooks` folder).
 di_client = DocumentIntelligenceClient(
     endpoint=DOC_INTEL_ENDPOINT,
-    credential=AzureKeyCredential(DOC_INTEL_API_KEY),
+    credential=DefaultAzureCredential(),
     api_version="2024-07-31-preview",
 )
 

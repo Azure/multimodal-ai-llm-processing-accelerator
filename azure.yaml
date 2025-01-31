@@ -8,12 +8,15 @@ hooks:
     # Create all content understanding analyzers defined in the content_understanding_schemas.json file
     posix:
       shell: sh
-      run: python ./function_app/create_content_understanding_analyzers.py
+      # Use azd env get-values to access the Bicep output and (re)create the content understanding analyzers
+      run: export CONTENT_UNDERSTANDING_ENDPOINT=$(azd env get-values | grep CONTENT_UNDERSTANDING_ENDPOINT | cut -d'=' -f2 | tr -d '"') && python ./function_app/create_content_understanding_analyzers.py
       interactive: false
       continueOnError: false
+      
     windows:
       shell: pwsh
-      run: python ./function_app/create_content_understanding_analyzers.py
+      # Use azd env get-values to access the Bicep output and (re)create the content understanding analyzers
+      run: Set-Item env:CONTENT_UNDERSTANDING_ENDPOINT ((azd env get-values | Select-String "CONTENT_UNDERSTANDING_ENDPOINT" | ForEach-Object {$_.ToString().Split('=')[1].Trim('"')})); python ./function_app/create_content_understanding_analyzers.py
       interactive: false
       continueOnError: false
 services:
@@ -27,7 +30,7 @@ services:
     host: appservice
     hooks:
       prepackage: 
-        # Temporarily copy the content_understanding_schemas.json file to the demo_app directory
+        # Copy the content_understanding_schemas.json file to the demo_app directory to give it knowledge of the deployed content understanding schemas
         posix:
           shell: sh
           run: cp ../function_app/config/content_understanding_schemas.json ./
@@ -54,11 +57,11 @@ services:
         # Install the required Python packages
         windows:
           shell: pwsh
-          run:  python3 -m pip install -r requirements.txt
+          run: python3 -m pip install --upgrade pip; python3 -m pip install -r requirements.txt
           interactive: false
           continueOnError: false
         posix:
           shell: sh
-          run:  python3 -m pip install -r requirements.txt
+          run: python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt
           interactive: false
           continueOnError: false

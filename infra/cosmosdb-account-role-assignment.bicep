@@ -4,7 +4,7 @@ metadata description = 'Assign RBAC resource-level role to Azure Cosmos DB for N
 param accountName string
 
 @description('Id of the identity/principal to assign this role in the context of the account.')
-param identityId string
+param principalId string
 
 @description('Id of the role definition to assign to the targeted principal in the context of the account.')
 param roleDefinitionId string
@@ -16,10 +16,10 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' exis
 
 resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
   parent: cosmosDbAccount
-  name: guid(cosmosDbAccount.id, roleDefinitionId, identityId)
+  name: guid(cosmosDbAccount.id, roleDefinitionId, principalId)
   properties: {
     roleDefinitionId: roleDefinitionId
-    principalId: identityId
+    principalId: principalId
     scope: cosmosDbAccount.id
   }
 }

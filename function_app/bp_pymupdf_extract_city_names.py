@@ -1,5 +1,6 @@
-### TODO: This pipeline will be updated to use the standard openai library
-### (instead of haystack), along with a rework of the PyMuPDF class.
+### NOTE: This pipeline is disabled in function_app.py due to changing from key-based auth to token-based auth.
+### This is because the Haystack generator is instantiated with a token, and does not support cycling of keys.
+### You must use key-based auth or update the code to automatically cycle keys if the token expires.
 
 import json
 import logging
@@ -7,6 +8,7 @@ import os
 from typing import Optional
 
 import azure.functions as func
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 from haystack import Document
 from haystack.components.generators.chat.azure import AzureOpenAIChatGenerator
@@ -25,22 +27,27 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+aoai_token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+)
+
 bp_pymupdf_extract_city_names = func.Blueprint()
+FUNCTION_ROUTE = "pymupdf_extract_city_names"
 
 # Load environment variables
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_LLM_DEPLOYMENT = os.getenv("AOAI_LLM_DEPLOYMENT")
-# Load the API key as a Secret, so that it is not logged in any traces or saved if the component is exported.
-AOAI_API_KEY_SECRET = Secret.from_env_var("AOAI_API_KEY")
 
 pymupdf_converter = PyMuPDFConverter(
     to_img_dpi=200,
     correct_img_rotation=True,
 )
+# TODO: This haystack generator only supports a key or token, and does not support cycling of keys.
+# You must use key-based auth or update the code to automatically cycle keys if the token expires.
 azure_generator = AzureOpenAIChatGenerator(
     azure_endpoint=AOAI_ENDPOINT,
     azure_deployment=AOAI_LLM_DEPLOYMENT,
-    api_key=AOAI_API_KEY_SECRET,
+    azure_ad_token=Secret.from_token(aoai_token_provider()),
     api_version="2024-06-01",
     generation_kwargs={
         "response_format": {"type": "json_object"}
@@ -112,7 +119,7 @@ LLM_SYSTEM_PROMPT = (
 )
 
 
-@bp_pymupdf_extract_city_names.route(route="pymupdf_extract_city_names")
+@bp_pymupdf_extract_city_names.route(route=FUNCTION_ROUTE)
 def pymupdf_extract_city_names(
     req: func.HttpRequest,
 ) -> func.HttpResponse:
@@ -170,9 +177,7 @@ def pymupdf_extract_city_names(
                 )
             output_model.pymupdf_time_taken_secs = pymupdf_timer.time_taken
         except Exception as _e:
-            output_model.error_text = (
-                "An error occurred during Document Intelligence extraction."
-            )
+            output_model.error_text = "An error occurred during PyMuPDF extraction."
             output_model.func_time_taken_secs = func_timer.stop()
             logging.exception(output_model.error_text)
             return func.HttpResponse(
