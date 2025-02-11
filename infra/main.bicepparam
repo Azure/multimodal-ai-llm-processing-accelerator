@@ -39,6 +39,10 @@ param docIntelLocation = 'eastus'
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/language-region-support?tabs=document#region-support
 param contentUnderstandingLocation = 'westus'
 
+// Ensure your Language resource is deployed to a region that supports all required features - see:
+// 1. https://learn.microsoft.com/en-us/azure/ai-services/language-service/concepts/regional-support
+param languageLocation = 'eastus'
+
 // Azure OpenAI
 // Ensure your OpenAI service locations have model availability - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/openai/quotas-limits#regional-quota-limits

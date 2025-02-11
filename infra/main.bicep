@@ -74,6 +74,9 @@ param openAIWhisperModelVersion string = '001'
 @description('The OpenAI LLM model deployment SKU')
 param openAIWhisperDeploymentSku string = 'Standard'
 
+@description('The location of the Azure Language resource. This should be in a location where all required models are available.')
+param languageLocation string = 'eastus'
+
 param location string = resourceGroup().location
 param resourceToken string = take(toLower(uniqueString(subscription().id, resourceGroup().id, location)), 5)
 param tags object = {}
@@ -124,6 +127,7 @@ var speechTokenName = toLower('${resourcePrefix}-speech-${speechLocation}-${reso
 var logAnalyticsTokenName = toLower('${resourcePrefix}-func-la-${resourceToken}')
 var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToken}')
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
+var languageTokenName = toLower('${resourcePrefix}-language-${languageLocation}-${resourceToken}')
 
 // Define role definition IDs for Azure AI Services
 var roleDefinitions = {
@@ -280,6 +284,20 @@ resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     publicNetworkAccess: 'Enabled'
     customSubDomainName: speechTokenName
+    disableLocalAuth: true
+  }
+  sku: {
+    name: 'S0'
+  }
+}
+
+resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+  name: languageTokenName
+  location: languageLocation
+  kind: 'TextAnalytics'
+  properties: {
+    publicNetworkAccess: 'Enabled'
+    customSubDomainName: languageTokenName
     disableLocalAuth: true
   }
   sku: {
@@ -464,6 +482,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       CONTENT_UNDERSTANDING_ENDPOINT: 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
       DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
       SPEECH_ENDPOINT: speech.properties.endpoint
+      LANGUAGE_ENDPOINT: 'https://${languageTokenName}.cognitiveservices.azure.com/'
     })
   }
 }
@@ -485,6 +504,10 @@ module functionAppAiServicesRoleAssignments 'ai-services-role-assignment.bicep' 
     }
     {
       aiServiceName: contentUnderstanding.name
+      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+    }
+    {
+      aiServiceName: language.name
       roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
     }
   ]: {
@@ -614,6 +637,10 @@ module additionalIdentityAiServicesRoleAssignments 'multiple-ai-services-role-as
       aiServiceName: contentUnderstanding.name
       roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
     }
+    {
+      aiServiceName: language.name
+      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+    }
   ]: {
     name: guid(subscription().id, resourceGroup().id, service.aiServiceName, 'MultiAiServicesRoleAssignment')
     params: {
@@ -647,6 +674,7 @@ module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignmen
   }
 ]
 
+// Add Language endpoint to outputs
 output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = webApp.properties.defaultHostName
 output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
@@ -659,3 +687,4 @@ output AOAI_WHISPER_DEPLOYMENT string = openAIWhisperDeploymentName
 output CONTENT_UNDERSTANDING_ENDPOINT string = 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
 output DOC_INTEL_ENDPOINT string = docIntel.properties.endpoint
 output SPEECH_ENDPOINT string = speech.properties.endpoint
+output LANGUAGE_ENDPOINT string = 'https://${languageTokenName}.cognitiveservices.azure.com/'
