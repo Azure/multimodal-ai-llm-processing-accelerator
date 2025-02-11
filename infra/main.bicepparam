@@ -6,6 +6,7 @@ param appendUniqueUrlSuffix = true
 param functionAppName = 'ai-llm-processing-func'
 param functionAppUsePremiumSku = true
 
+param deployWebApp = true // Set to false to skip deployment of the web app
 param webAppName = 'ai-llm-processing-demo'
 param webAppUsePasswordAuth = true
 param webAppUsername = 'admin'
@@ -28,30 +29,37 @@ param storageAccountName = 'llmprocstorage'
 // Ensure your speech service location has model availability for the methods you need - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions
 // 2. https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create#prerequisites
+param deploySpeechResource = true
 param speechLocation = 'eastus'
 
 // Doc Intelligence API v4.0 is only supported in some regions. To make use of the custom
 // DocumentIntelligenceProcessor, make sure to select a region where v4.0 is supported. See:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/versioning/changelog-release-history
+param deployDocIntelResource = true
 param docIntelLocation = 'eastus'
 
 // Ensure your Content Understanding resource is deployed to a supported location - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/language-region-support?tabs=document#region-support
+param deployContentUnderstandingMultiServicesResource = true
 param contentUnderstandingLocation = 'westus'
 
 // Ensure your Language resource is deployed to a region that supports all required features - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/language-service/concepts/regional-support
+param deployLanguageResource = true
 param languageLocation = 'eastus'
 
 // Azure OpenAI options
 // Ensure your OpenAI service locations have model availability - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/openai/quotas-limits#regional-quota-limits
+param deployOpenAIResource = true
 param openAILocation = 'eastus2'
-param openAILLMDeploymentCapacity = 30
+
+param openAILLMDeploymentCapacity = 30 // Set to 0 to skip deployment
 param openAILLMModel = 'gpt-4o'
 param openAILLMModelVersion = '2024-05-13'
 param openAILLMDeploymentSku = 'Standard'
-param openAIWhisperDeploymentCapacity = 1
+
+param openAIWhisperDeploymentCapacity = 1 // Set to 0 to skip deployment
 param openAIWhisperModel = 'whisper'
 param openAIWhisperModelVersion = '001'
 param openAIWhisperDeploymentSku = 'Standard'
