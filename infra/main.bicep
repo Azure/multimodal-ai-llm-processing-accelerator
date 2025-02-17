@@ -163,7 +163,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
-    allowBlobPublicAccess: true
+    allowBlobPublicAccess: false
     publicNetworkAccess: 'Enabled'
   }
 }
@@ -179,7 +179,7 @@ resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/co
     name: containerName
     parent: blobServices
     properties: {
-      publicAccess: 'Blob'
+      publicAccess: 'None'
     }
   }
 ]
