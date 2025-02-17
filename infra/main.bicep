@@ -301,7 +301,7 @@ resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
     disableLocalAuth: true
   }
   sku: {
-    name: 'S0'
+    name: 'S'
   }
 }
 

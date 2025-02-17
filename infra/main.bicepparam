@@ -21,7 +21,7 @@ param resourcePrefix = 'llm-proc'
 // > az ad signed-in-user show --query id -o tsv
 param additionalRoleAssignmentIdentityIds = []
 
-// Storage
+// Storage service options
 param storageAccountName = 'llmprocstorage'
 
 // Cognitive services
@@ -43,7 +43,7 @@ param contentUnderstandingLocation = 'westus'
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/language-service/concepts/regional-support
 param languageLocation = 'eastus'
 
-// Azure OpenAI
+// Azure OpenAI options
 // Ensure your OpenAI service locations have model availability - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/openai/quotas-limits#regional-quota-limits
 param openAILocation = 'eastus2'
