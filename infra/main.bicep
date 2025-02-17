@@ -197,6 +197,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
     enableFreeTier: false
     databaseAccountOfferType: 'Standard'
     disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
     }

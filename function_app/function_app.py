@@ -10,6 +10,7 @@ from bp_content_understanding_video import bp_content_understanding_video
 from bp_doc_intel_extract_city_names import bp_doc_intel_extract_city_names
 from bp_form_extraction_with_confidence import bp_form_extraction_with_confidence
 from bp_multimodal_doc_intel_processing import bp_multimodal_doc_intel_processing
+from bp_pii_redaction import bp_pii_redaction
 from bp_summarize_text import bp_summarize_text
 from dotenv import load_dotenv
 from extract_blob_field_info_to_cosmosdb import get_structured_extraction_func_outputs
@@ -35,6 +36,7 @@ app.register_blueprint(bp_content_understanding_document)
 app.register_blueprint(bp_content_understanding_video)
 app.register_blueprint(bp_content_understanding_audio)
 app.register_blueprint(bp_content_understanding_image)
+app.register_blueprint(bp_pii_redaction)
 
 
 ### Define functions with input/output binding decorators (these do not work when defined in blueprint files).
