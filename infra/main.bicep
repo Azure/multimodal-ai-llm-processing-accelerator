@@ -164,6 +164,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
     allowBlobPublicAccess: false
+    publicNetworkAccess: 'Enabled'
   }
 }
 
@@ -178,7 +179,7 @@ resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/co
     name: containerName
     parent: blobServices
     properties: {
-      publicAccess: 'None'
+      publicAccess: 'Blob'
     }
   }
 ]
@@ -364,6 +365,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
     }
     tenantId: subscription().tenantId
     accessPolicies: []
+    publicNetworkAccess: 'Enabled'
   }
 }
 
