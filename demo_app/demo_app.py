@@ -16,8 +16,12 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 from gradio.themes import Base
-from helpers import (base64_img_str_to_url, extract_frames_from_video_bytes,
-                     pil_img_to_base64_bytes, resize_img_by_max)
+from helpers import (
+    base64_img_str_to_url,
+    extract_frames_from_video_bytes,
+    pil_img_to_base64_bytes,
+    resize_img_by_max,
+)
 from PIL import Image
 
 logging.basicConfig(
@@ -241,6 +245,20 @@ DEMO_VISION_FILES = DEMO_PDF_FILES + DEMO_IMG_FILES
 with open("demo_files/text_samples.json", "r") as json_file:
     text_samples_dict: dict[str, str] = json.load(json_file)
     TEXT_SAMPLES_TUPLES = [(label, text) for label, text in text_samples_dict.items()]
+
+with open("demo_files/pii_redaction/pii_redaction_text_samples.json", "r") as json_file:
+    pii_redaction_text_samples_dict: dict[str, str] = json.load(json_file)
+    PII_REDACTION_TEXT_SAMPLE_TUPLES = [
+        (label, text) for label, text in pii_redaction_text_samples_dict.items()
+    ]
+DEMO_PII_REDACTION_PDF_TUPLES = [
+    (
+        os.path.splitext(os.path.basename(fn))[0],
+        os.path.join("demo_files/pii_redaction", fn),
+    )
+    for fn in os.listdir("demo_files/pii_redaction")
+    if fn.endswith((".pdf"))
+]
 
 FILE_EXAMPLES_LABEL = "You can upload your own file, or select one of the following examples and then click 'Process File'."
 AUDIO_EXAMPLES_LABEL = FILE_EXAMPLES_LABEL.replace("File", "Audio").replace(
@@ -1483,6 +1501,248 @@ with gr.Blocks(analytics_enabled=False) as sum_text_block:
         ],
     )
 
+with gr.Blocks(analytics_enabled=False) as pii_redaction_block:
+    # Define requesting functions, which reshapes the input into the correct schema
+    def pii_redaction_text_send_request(input_text: Optional[str]):
+        processing_start_time = time.time()
+        redacted_text_output = ""
+        try:
+            status_code, processing_time_taken, response = send_request(
+                route="pii_redaction_text",
+                json_data={
+                    "text": input_text,
+                },
+                force_json_content_type=True,
+            )
+            if isinstance(response, dict) and response.get("redacted_text"):
+                redacted_text_output = response["redacted_text"]
+        except Exception as e:
+            logging.exception("Error processing file")
+            status_code = 500
+            processing_time_taken = (
+                f"{round(time.time() - processing_start_time, 1)} seconds"
+                if processing_start_time is not None
+                else "N/A"
+            )
+            redacted_text_output = {"Error": str(e)}
+        return (
+            status_code,
+            processing_time_taken,
+            gr.JSON(value=response, label="Full Function API Response", visible=True),
+            gr.Textbox(
+                label="Redacted Text",
+                value=redacted_text_output,
+                interactive=False,
+                visible=True,
+            ),
+            gr.Gallery(
+                label="Input PDF Pages",
+                interactive=False,
+                visible=False,
+            ),
+            gr.Gallery(
+                label="Redacted PDF Pages",
+                interactive=False,
+                visible=False,
+            ),
+        )
+
+    def pii_redaction_pdf_send_request(file: Optional[str]):
+        processing_start_time = time.time()
+        redacted_text_output = ""
+        redacted_pdf_page_imgs = None
+        input_doc_pdf_page_imgs = None
+
+        try:
+            if file is None:
+                gr.Warning(
+                    "Please select or upload a PDF file, then click 'Process PDF File'."
+                )
+                return ("", "", {})
+            # Get response from the API
+            mime_type = mimetypes.guess_type(file)[0]
+            with open(file, "rb") as f:
+                data = f.read()
+                headers = {"Content-Type": mime_type}
+                status_code, processing_time_taken, response = send_request(
+                    route="pii_redaction_pdf",
+                    data=data,
+                    headers=headers,
+                    force_json_content_type=True,
+                )
+                if isinstance(response, dict) and response.get("redacted_text"):
+                    redacted_text_output = response["redacted_text"]
+                if isinstance(response, dict) and response.get(
+                    "input_doc_pdf_page_imgs"
+                ):
+                    input_doc_pdf_page_imgs = [
+                        Image.open(BytesIO(base64.b64decode(b64_img)))
+                        for b64_img in response.pop("input_doc_pdf_page_imgs")
+                    ]
+                if isinstance(response, dict) and response.get(
+                    "redacted_pdf_page_imgs"
+                ):
+                    redacted_pdf_page_imgs = [
+                        Image.open(BytesIO(base64.b64decode(b64_img)))
+                        for b64_img in response.pop("redacted_pdf_page_imgs")
+                    ]
+        except Exception as e:
+            logging.exception("Error processing file")
+            status_code = 500
+            processing_time_taken = (
+                f"{round(time.time() - processing_start_time, 1)} seconds"
+                if processing_start_time is not None
+                else "N/A"
+            )
+            response = {"Error": str(e)}
+        return (
+            status_code,
+            processing_time_taken,
+            gr.JSON(value=response, label="Full Function API Response", visible=True),
+            gr.Textbox(
+                label="Redacted Text",
+                value=redacted_text_output,
+                interactive=False,
+                visible=True,
+            ),
+            gr.Gallery(
+                label="Input PDF Pages",
+                value=input_doc_pdf_page_imgs,
+                type="pil",
+                object_fit="contain",
+                columns=min(len(input_doc_pdf_page_imgs), 2),
+                show_label=True,
+                interactive=False,
+                visible=True,
+            ),
+            gr.Gallery(
+                label="Redacted PDF Pages",
+                value=redacted_pdf_page_imgs,
+                type="pil",
+                object_fit="contain",
+                columns=min(len(redacted_pdf_page_imgs), 2),
+                show_label=True,
+                interactive=False,
+                visible=True,
+            ),
+        )
+
+    # Input components
+    pii_redaction_instructions = gr.Markdown(
+        (
+            "This demo uses the Azure Language Service's PII Redaction API to remove PII from text and documents."
+            "([Code Link](https://github.com/Azure/multimodal-ai-llm-processing-accelerator/blob/main/function_app/bp_pii_redaction.py))."
+            "\n\nThe pipeline is as follows:\n"
+            "1. If the input is a PDF, Azure Document Intelligence or PyMuPDF are used to extract the raw text from the PDF.\n"
+            "2. The raw text is sent to the Azure Language Service to detect all PII entities in the text.\n"
+            "3. The PII entities are redacted in-place, returning the processed text (and document) with all PII entities redacted.\n\n"
+            "The response includes the final result, as well as many of the intermediate outputs from the processing pipeline."
+        ),
+        show_label=False,
+    )
+    # Examples
+    with gr.Row():
+        pii_redaction_dummy_none_obj = gr.Number(value=lambda: None, visible=False)
+        with gr.Column():
+            pii_redaction_text_example_dropdown_options = [
+                (
+                    "",
+                    None,
+                )
+            ] + PII_REDACTION_TEXT_SAMPLE_TUPLES
+            pii_redaction_text_example_dropdown = gr.Dropdown(
+                label="[Optional] Select an example text to be processed",
+                value="",
+                choices=pii_redaction_text_example_dropdown_options,
+                allow_custom_value=True,
+            )
+            pii_redaction_input_text = gr.Textbox(
+                value="", lines=3, label="Enter the text to be processed"
+            )
+            pii_redaction_process_text_btn = gr.Button(
+                "Process Text", variant="primary"
+            )
+        with gr.Column():
+            pii_redaction_pdf_example_dropdown_options = [
+                (
+                    "",
+                    None,
+                )
+            ] + DEMO_PII_REDACTION_PDF_TUPLES
+            pii_redaction_pdf_example_dropdown = gr.Dropdown(
+                label="[Optional] Select an example PDF to be processed",
+                value="",
+                choices=pii_redaction_pdf_example_dropdown_options,
+                allow_custom_value=True,
+            )
+            pii_redaction_input_pdf = gr.File(
+                label="Upload File. To upload a different file, Hit the 'X' button to the top right of this element ->",
+                file_count="single",
+                type="filepath",
+                file_types=[".pdf"],
+            )
+            pii_redaction_process_pdf_btn = gr.Button("Process PDF", variant="primary")
+
+    # Output components
+    with gr.Column() as pii_redaction_output_row:
+        pii_redaction_output_label = gr.Label(value="Result", show_label=False)
+        with gr.Row():
+            pii_redaction_status_code = gr.Textbox(
+                label="Response Status Code", interactive=False
+            )
+            pii_redaction_time_taken = gr.Textbox(label="Time Taken", interactive=False)
+        pii_redaction_output_text = gr.Textbox(
+            label="Redacted Text", interactive=False, visible=False
+        )
+        with gr.Row():
+            pii_redaction_input_pdf_pages = gr.Gallery(
+                label="Input PDF Pages",
+                interactive=False,
+                visible=False,
+            )
+            pii_redaction_output_pdf_pages = gr.Gallery(
+                label="Redacted PDF Pages",
+                interactive=False,
+                visible=False,
+            )
+        pii_redaction_output_json = gr.JSON(label="API Response", visible=False)
+
+    # Actions
+    pii_redaction_text_example_dropdown.change(
+        fn=echo_input,
+        inputs=[pii_redaction_text_example_dropdown],
+        outputs=[pii_redaction_input_text],
+    )
+    pii_redaction_pdf_example_dropdown.change(
+        fn=echo_input,
+        inputs=[pii_redaction_pdf_example_dropdown],
+        outputs=[pii_redaction_input_pdf],
+    )
+    pii_redaction_process_text_btn.click(
+        fn=pii_redaction_text_send_request,
+        inputs=[pii_redaction_input_text],
+        outputs=[
+            pii_redaction_status_code,
+            pii_redaction_time_taken,
+            pii_redaction_output_json,
+            pii_redaction_output_text,
+            pii_redaction_input_pdf_pages,  # Return hidden PDF page element
+            pii_redaction_output_pdf_pages,  # Return hidden PDF page element
+        ],
+    )
+    pii_redaction_process_pdf_btn.click(
+        fn=pii_redaction_pdf_send_request,
+        inputs=[pii_redaction_input_pdf],
+        outputs=[
+            pii_redaction_status_code,
+            pii_redaction_time_taken,
+            pii_redaction_output_json,
+            pii_redaction_output_text,
+            pii_redaction_input_pdf_pages,
+            pii_redaction_output_pdf_pages,
+        ],
+    )
+
 ### Doc Intelligence Extraction + LLM Name Extraction Example ###
 with gr.Blocks(analytics_enabled=False) as di_llm_ext_names_block:
     # Define requesting function, which reshapes the input into the correct schema
@@ -1789,6 +2049,8 @@ with gr.Blocks(
         blob_form_extraction_to_cosmosdb_block.render()
     with gr.Tab("Summarize Text (HTTP)"):
         sum_text_block.render()
+    with gr.Tab("PII Redaction (HTTP)"):
+        pii_redaction_block.render()
     with gr.Tab("City Names Extraction, Doc Intelligence (HTTP)"):
         di_llm_ext_names_block.render()
 
