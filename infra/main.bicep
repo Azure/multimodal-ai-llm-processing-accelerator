@@ -163,7 +163,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
-    allowBlobPublicAccess: false
+    allowBlobPublicAccess: true
     publicNetworkAccess: 'Enabled'
   }
 }
