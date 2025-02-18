@@ -6,17 +6,28 @@ metadata:
 hooks:
   postprovision: 
     # Create all content understanding analyzers defined in the content_understanding_schemas.json file
+    # This hook will only run if the Content Understanding resource is deployed and the endpoint URL is 
+    # available in the "CONTENT_UNDERSTANDING_ENDPOINT" Bicep output (which is automatically set as
+    # an env var when running this hook).
     posix:
       shell: sh
-      # Use azd env get-values to access the Bicep output and (re)create the content understanding analyzers
-      run: export CONTENT_UNDERSTANDING_ENDPOINT=$(azd env get-values | grep CONTENT_UNDERSTANDING_ENDPOINT | cut -d'=' -f2 | tr -d '"') && python ./function_app/create_content_understanding_analyzers.py
+      run: |
+        if [ -n "$CONTENT_UNDERSTANDING_ENDPOINT" ] && [ "$CONTENT_UNDERSTANDING_ENDPOINT" != "null" ]; then
+          python ./function_app/create_content_understanding_analyzers.py
+        else
+          echo "Skipping Content Understanding analyzer creation - the resource has not been deployed and/or no endpoint URL is available in the Bicep outputs"
+        fi
       interactive: false
       continueOnError: false
       
     windows:
       shell: pwsh
-      # Use azd env get-values to access the Bicep output and (re)create the content understanding analyzers
-      run: Set-Item env:CONTENT_UNDERSTANDING_ENDPOINT ((azd env get-values | Select-String "CONTENT_UNDERSTANDING_ENDPOINT" | ForEach-Object {$_.ToString().Split('=')[1].Trim('"')})); python ./function_app/create_content_understanding_analyzers.py
+      run: |
+        if ($env:CONTENT_UNDERSTANDING_ENDPOINT) {
+          python ./function_app/create_content_understanding_analyzers.py
+        } else {
+          Write-Host "Skipping Content Understanding analyzer creation - the resource has not been deployed and/or no endpoint URL is available in the Bicep outputs"
+        }
       interactive: false
       continueOnError: false
 services:
