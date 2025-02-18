@@ -10,7 +10,7 @@ param webAppName string = 'ai-llm-processing-demo'
 @description('Whether to use a unique URL suffix for the Function and Web Apps (preventing name clashes with other applications). If set to true, the URL will be https://{functionAppName}-{randomToken}.azurewebsites.net')
 param appendUniqueUrlSuffix bool = true
 
-@description('Whether to deploy the Web App')
+@description('Whether to deploy the Web App. If web app deployment is not required, set deployWebApp to false and remove the webapp service deployment from the azure.yaml file')
 param deployWebApp bool = true
 
 @description('Whether to require a username and password when accessing the Web App')
@@ -65,7 +65,7 @@ param deployLanguageResource bool = true
 @description('The location of the Azure Language resource. This should be in a location where all required models are available.')
 param languageLocation string = 'eastus'
 
-@description('Whether to deploy the Azure OpenAI resource (a single-service AI resource)')
+@description('Whether to deploy the Azure OpenAI resource (a single-service AI resource). If set to false, all OpenAI-related model deployments will be skipped.')
 param deployOpenAIResource bool = true
 
 @description('The location of the OpenAI Azure resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)')
@@ -388,7 +388,7 @@ module openAIRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (
   }
 }
 
-resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAILLMModel) {
+resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIResource && deployOpenAILLMModel) {
   parent: azureopenai
   name: openAILLMDeploymentName
   properties: {
@@ -404,7 +404,7 @@ resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05
   }
 }
 
-resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIWhisperModel) {
+resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIResource && deployOpenAIWhisperModel) {
   parent: azureopenai
   dependsOn: [llmdeployment] // Ensure one model deployment at a time
   name: openAIWhisperDeploymentName
@@ -471,7 +471,7 @@ resource funcAppKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: funcAppKeyKvSecretName
   parent: keyVault
   properties: {
-    value: listkeys('${functionApp.id}/host/default', '2022-03-01').masterKey
+    value: listkeys('${functionApp.id}/host/default', '2022-03-01').functionKeys.default
   }
 }
 
@@ -513,42 +513,44 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   kind: 'linux'
 }
 
+// Populate environment variables for the function app for backend services,
+// only including values for resources & endpoints that are deployed 
 var optionalDeploymentFuncAppEnvVars = union(
   deployContentUnderstandingMultiServicesResource
-    ? {}
-    : {
+    ? {
         CONTENT_UNDERSTANDING_ENDPOINT: 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
-      },
+      }
+    : {},
   deployDocIntelResource
-    ? {}
-    : {
+    ? {
         DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
-      },
+      }
+    : {},
   deployLanguageResource
-    ? {}
-    : {
+    ? {
         LANGUAGE_ENDPOINT: 'https://${languageTokenName}.cognitiveservices.azure.com/'
-      },
+      }
+    : {},
   deploySpeechResource
-    ? {}
-    : {
+    ? {
         SPEECH_ENDPOINT: speech.properties.endpoint
-      },
+      }
+    : {},
   deployOpenAIResource
-    ? {}
-    : {
+    ? {
         AOAI_ENDPOINT: azureopenai.properties.endpoint
-      },
-  deployOpenAILLMModel
-    ? {}
-    : {
+      }
+    : {},
+  (deployOpenAIResource && deployOpenAILLMModel)
+    ? {
         AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
-      },
-  deployOpenAIWhisperModel
-    ? {}
-    : {
+      }
+    : {},
+  (deployOpenAIResource && deployOpenAIWhisperModel)
+    ? {
         AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
       }
+    : {}
 )
 
 resource functionApp 'Microsoft.Web/sites@2020-06-01' = {

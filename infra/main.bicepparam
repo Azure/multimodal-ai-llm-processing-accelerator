@@ -1,12 +1,15 @@
 using 'main.bicep'
 
-// Function & web apps
+//// Function & web apps
 param appendUniqueUrlSuffix = true
 
+// Function app
 param functionAppName = 'ai-llm-processing-func'
 param functionAppUsePremiumSku = true
 
-param deployWebApp = true // Set to false to skip deployment of the web app
+// Web app
+// If web app deployment is not required, set deployWebApp to false and remove the webapp service deployment from the azure.yaml file
+param deployWebApp = true
 param webAppName = 'ai-llm-processing-demo'
 param webAppUsePasswordAuth = true
 param webAppUsername = 'admin'
@@ -25,7 +28,8 @@ param additionalRoleAssignmentIdentityIds = []
 // Storage service options
 param storageAccountName = 'llmprocstorage'
 
-// Cognitive services
+//// Cognitive services
+
 // Ensure your speech service location has model availability for the methods you need - see:
 // 1. https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions
 // 2. https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create#prerequisites
