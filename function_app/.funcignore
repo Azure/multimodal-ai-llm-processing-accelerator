@@ -1,5 +1,7 @@
 .venv
-tests
+__pycache__/*
+tests/*
 sample_local.settings.json
+local.settings.json
 send_req_summarize_text.sh
 setup_env.sh

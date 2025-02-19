@@ -10,6 +10,9 @@ param webAppName string = 'ai-llm-processing-demo'
 @description('Whether to use a unique URL suffix for the Function and Web Apps (preventing name clashes with other applications). If set to true, the URL will be https://{functionAppName}-{randomToken}.azurewebsites.net')
 param appendUniqueUrlSuffix bool = true
 
+@description('Whether to deploy the Web App. If web app deployment is not required, set deployWebApp to false and remove the webapp service deployment from the azure.yaml file')
+param deployWebApp bool = true
+
 @description('Whether to require a username and password when accessing the Web App')
 param webAppUsePasswordAuth bool = true
 
@@ -32,20 +35,41 @@ param storageAccountName string = 'llmprocstorage'
 @description('The name of the default blob storage containers to be created')
 param blobContainerNames array = ['blob-form-to-cosmosdb-blobs', 'content-understanding-blobs']
 
+@description('Whether to deploy the CosmosDB database')
+param deployCosmosDB bool = false
+
 @description('The name of the default CosmosDB database')
 param cosmosDbDatabaseName string = 'default'
 
 @description('The name of the default CosmosDB containers to be created')
 param cosmosDbContainerNames array = ['blob-form-to-cosmosdb-container']
 
+@description('Whether to deploy the Content Understanding resource (a multi-service AI resource)')
+param deployContentUnderstandingMultiServicesResource bool = true
+
 @description('The location of the Azure AI services resource to be used for Azure AI Content Understanding (this will be a multi-service resource). This should be in a location supported by the service (see https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/language-region-support?tabs=document#region-support)')
 param contentUnderstandingLocation string = 'westus'
+
+@description('Whether to deploy the Document Intelligence resource (a single-service AI resource)')
+param deployDocIntelResource bool = true
 
 @description('The location of the Azure Document Intelligence resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/versioning/changelog-release-history)')
 param docIntelLocation string = 'eastus'
 
-@description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
+@description('Whether to deploy the Speech resource (a single-service AI resource)')
+param deploySpeechResource bool = true
+
+@description('The location of the Azure AI Speech resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/speech-service/regions and https://learn.microsoft.com/en-au/azure/ai-services/speech-service/fast-transcription-create#prerequisites)')
 param speechLocation string = 'eastus'
+
+@description('Whether to deploy the Azure Language resource (a single-service AI resource)')
+param deployLanguageResource bool = true
+
+@description('The location of the Azure Language resource. This should be in a location where all required models are available.')
+param languageLocation string = 'eastus'
+
+@description('Whether to deploy the Azure OpenAI resource (a single-service AI resource). If set to false, all OpenAI-related model deployments will be skipped.')
+param deployOpenAIResource bool = true
 
 @description('The location of the OpenAI Azure resource. This should be in a location where all required models are available (see https://learn.microsoft.com/en-au/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)')
 param openAILocation string = 'eastus2'
@@ -73,9 +97,6 @@ param openAIWhisperModelVersion string = '001'
 
 @description('The OpenAI LLM model deployment SKU')
 param openAIWhisperDeploymentSku string = 'Standard'
-
-@description('The location of the Azure Language resource. This should be in a location where all required models are available.')
-param languageLocation string = 'eastus'
 
 param location string = resourceGroup().location
 param resourceToken string = take(toLower(uniqueString(subscription().id, resourceGroup().id, location)), 5)
@@ -150,6 +171,11 @@ var storageRoleDefinitionIds = [
   roleDefinitions.storageQueueDataContributor
 ]
 
+var roleAssignmentIdentityIds = union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+
+// Create random GUID for the list of additional identity assign to assign roles - this ensures any changes to the list will trigger a redeploy of the role assignments module
+var additionalRoleAssignmentIdsGuid = join(additionalRoleAssignmentIdentityIds, ',')
+
 //
 // Storage account (the storage account is required for the Function App)
 //
@@ -191,7 +217,7 @@ var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName
 //
 
 // Default configuration is based on: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-bicep#free-tier
-resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
+resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = if (deployCosmosDB) {
   name: cosmosDbAccountTokenName
   location: location
   properties: {
@@ -210,7 +236,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
   }
 }
 
-resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = {
+resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = if (deployCosmosDB) {
   parent: cosmosDbAccount
   name: cosmosDbDatabaseName
   properties: {
@@ -221,7 +247,7 @@ resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
 }
 
 resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-11-15' = [
-  for containerName in cosmosDbContainerNames: {
+  for containerName in cosmosDbContainerNames: if (deployCosmosDB) {
     parent: cosmosDbDatabase
     name: containerName
     properties: {
@@ -251,7 +277,7 @@ resource cosmosDbDataContributorRoleDefinition 'Microsoft.DocumentDB/databaseAcc
 // Cognitive services resources
 
 // Multi-service resource for Azure Content Understanding
-resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deployContentUnderstandingMultiServicesResource) {
   name: contentUnderstandingTokenName
   location: contentUnderstandingLocation
   kind: 'AIServices'
@@ -265,7 +291,17 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' 
   }
 }
 
-resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+module contentUnderstandingRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployContentUnderstandingMultiServicesResource) {
+  name: guid(contentUnderstanding.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  params: {
+    aiServiceName: contentUnderstanding.name
+    principalIds: roleAssignmentIdentityIds
+    roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+  }
+}
+
+// Azure Document Intelligence 
+resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deployDocIntelResource) {
   name: docIntelTokenName
   location: docIntelLocation
   kind: 'FormRecognizer'
@@ -279,7 +315,17 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+module docIntelRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployDocIntelResource) {
+  name: guid(docIntel.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  params: {
+    aiServiceName: docIntel.name
+    principalIds: roleAssignmentIdentityIds
+    roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+  }
+}
+
+// Azure AI Speech
+resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploySpeechResource) {
   name: speechTokenName
   location: speechLocation
   kind: 'SpeechServices'
@@ -293,7 +339,17 @@ resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+module speechRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deploySpeechResource) {
+  name: guid(speech.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  params: {
+    aiServiceName: speech.name
+    principalIds: roleAssignmentIdentityIds
+    roleDefinitionIds: [roleDefinitions.speechUser]
+  }
+}
+
+// Azure AI Language
+resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deployLanguageResource) {
   name: languageTokenName
   location: languageLocation
   kind: 'TextAnalytics'
@@ -307,7 +363,17 @@ resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+module languageRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployLanguageResource) {
+  name: guid(language.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  params: {
+    aiServiceName: language.name
+    principalIds: roleAssignmentIdentityIds
+    roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
+  }
+}
+
+// Azure OpenAI
+resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deployOpenAIResource) {
   name: openAITokenName
   location: openAILocation
   kind: 'OpenAI'
@@ -321,7 +387,16 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAILLMModel) {
+module openAIRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployOpenAIResource) {
+  name: guid(azureopenai.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  params: {
+    aiServiceName: azureopenai.name
+    principalIds: roleAssignmentIdentityIds
+    roleDefinitionIds: [roleDefinitions.openAiUser, roleDefinitions.cognitiveServicesUser]
+  }
+}
+
+resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIResource && deployOpenAILLMModel) {
   parent: azureopenai
   name: openAILLMDeploymentName
   properties: {
@@ -337,7 +412,7 @@ resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05
   }
 }
 
-resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIWhisperModel) {
+resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployOpenAIResource && deployOpenAIWhisperModel) {
   parent: azureopenai
   dependsOn: [llmdeployment] // Ensure one model deployment at a time
   name: openAIWhisperDeploymentName
@@ -369,28 +444,34 @@ resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
   }
 }
 
-resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
+resource keyVaultAccessPolicies 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
   parent: keyVault
   name: 'add'
   properties: {
-    accessPolicies: [
-      {
-        tenantId: subscription().tenantId
-        objectId: functionApp.identity.principalId
-        permissions: {
-          keys: ['get', 'list']
-          secrets: ['get', 'list']
+    accessPolicies: concat(
+      [
+        {
+          tenantId: subscription().tenantId
+          objectId: functionApp.identity.principalId
+          permissions: {
+            keys: ['get', 'list']
+            secrets: ['get', 'list']
+          }
         }
-      }
-      {
-        tenantId: subscription().tenantId
-        objectId: webApp.identity.principalId
-        permissions: {
-          keys: ['get', 'list']
-          secrets: ['get', 'list']
-        }
-      }
-    ]
+      ],
+      deployWebApp
+        ? [
+            {
+              tenantId: subscription().tenantId
+              objectId: webApp.identity.principalId
+              permissions: {
+                keys: ['get', 'list']
+                secrets: ['get', 'list']
+              }
+            }
+          ]
+        : []
+    )
   }
 }
 
@@ -398,7 +479,7 @@ resource funcAppKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: funcAppKeyKvSecretName
   parent: keyVault
   properties: {
-    value: listkeys('${functionApp.id}/host/default', '2022-03-01').masterKey
+    value: listkeys('${functionApp.id}/host/default', '2022-03-01').functionKeys.default
   }
 }
 
@@ -440,6 +521,52 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   kind: 'linux'
 }
 
+// Populate environment variables for the function app for backend services,
+// only including values for resources & endpoints that are deployed 
+var optionalDeploymentFuncAppEnvVars = union(
+  deployCosmosDB
+    ? {
+        COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
+        CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
+      }
+    : {},
+  deployContentUnderstandingMultiServicesResource
+    ? {
+        CONTENT_UNDERSTANDING_ENDPOINT: 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
+      }
+    : {},
+  deployDocIntelResource
+    ? {
+        DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
+      }
+    : {},
+  deployLanguageResource
+    ? {
+        LANGUAGE_ENDPOINT: 'https://${languageTokenName}.cognitiveservices.azure.com/'
+      }
+    : {},
+  deploySpeechResource
+    ? {
+        SPEECH_ENDPOINT: speech.properties.endpoint
+      }
+    : {},
+  deployOpenAIResource
+    ? {
+        AOAI_ENDPOINT: azureopenai.properties.endpoint
+      }
+    : {},
+  (deployOpenAIResource && deployOpenAILLMModel)
+    ? {
+        AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
+      }
+    : {},
+  (deployOpenAIResource && deployOpenAIWhisperModel)
+    ? {
+        AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
+      }
+    : {}
+)
+
 resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   name: functionAppTokenName
   kind: 'functionapp,linux'
@@ -464,7 +591,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
   }
   resource functionSettings 'config@2022-09-01' = {
     name: 'appsettings'
-    properties: union(functionAppConsumptionSettings, {
+    properties: union(functionAppConsumptionSettings, optionalDeploymentFuncAppEnvVars, {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage__credential: 'managedIdentity'
@@ -475,53 +602,11 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
       APPINSIGHTS_INSTRUMENTATIONKEY: appInsights.properties.InstrumentationKey
       APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
-      CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
-      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       FUNCTIONS_EXTENSION_VERSION: '~4'
       FUNCTIONS_WORKER_RUNTIME: 'python'
-      AOAI_ENDPOINT: azureopenai.properties.endpoint
-      AOAI_LLM_DEPLOYMENT: openAILLMDeploymentName
-      AOAI_WHISPER_DEPLOYMENT: openAIWhisperDeploymentName
-      CONTENT_UNDERSTANDING_ENDPOINT: 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
-      DOC_INTEL_ENDPOINT: docIntel.properties.endpoint
-      SPEECH_ENDPOINT: speech.properties.endpoint
-      LANGUAGE_ENDPOINT: 'https://${languageTokenName}.cognitiveservices.azure.com/'
     })
   }
 }
-
-// Create role assignments for the function app's managed identity
-module functionAppAiServicesRoleAssignments 'ai-services-role-assignment.bicep' = [
-  for service in [
-    {
-      aiServiceName: azureopenai.name
-      roleDefinitionIds: [roleDefinitions.openAiUser, roleDefinitions.cognitiveServicesUser]
-    }
-    {
-      aiServiceName: docIntel.name
-      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
-    }
-    {
-      aiServiceName: speech.name
-      roleDefinitionIds: [roleDefinitions.speechUser]
-    }
-    {
-      aiServiceName: contentUnderstanding.name
-      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
-    }
-    {
-      aiServiceName: language.name
-      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
-    }
-  ]: {
-    name: guid(subscription().id, resourceGroup().id, service.aiServiceName, 'funcAppMultiAiServicesRoleAssignment')
-    params: {
-      aiServiceName: service.aiServiceName
-      principalId: functionApp.identity.principalId
-      roleDefinitionIds: service.roleDefinitionIds
-    }
-  }
-]
 
 module functionAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = {
   name: 'functionAppStorageRoleAssignments'
@@ -533,7 +618,7 @@ module functionAppStorageRoleAssignments 'storage-account-role-assignment.bicep'
   }
 }
 
-module functionAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
+module functionAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = if (deployCosmosDB) {
   name: 'functionAppCosmosDbRoleAssignment'
   scope: resourceGroup()
   params: {
@@ -544,7 +629,7 @@ module functionAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep
 }
 
 // Demo app
-resource webAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
+resource webAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = if (deployWebApp) {
   name: webAppPlanTokenName
   location: location
   tags: tags
@@ -562,7 +647,16 @@ resource webAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   dependsOn: [functionAppPlan] // Consumption plan must be deployed before premium plan
 }
 
-resource webApp 'Microsoft.Web/sites@2022-03-01' = {
+// Populate environment variables for the demo app for backend services,
+// only including values for resources & endpoints that are deployed 
+var optionalDeploymentWebAppEnvVars = deployCosmosDB
+  ? {
+      COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
+      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
+    }
+  : {}
+
+resource webApp 'Microsoft.Web/sites@2022-03-01' = if (deployWebApp) {
   name: webAppTokenName
   location: location
   tags: union(tags, { 'azd-service-name': webAppServiceName })
@@ -585,23 +679,21 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
 
   resource appSettings 'config@2022-09-01' = {
     name: 'appsettings'
-    properties: {
+    properties: union(optionalDeploymentWebAppEnvVars, {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       FUNCTION_HOSTNAME: 'https://${functionApp.properties.defaultHostName}'
       FUNCTION_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${funcAppKeyKvSecretName})'
       STORAGE_ACCOUNT_ENDPOINT: storageAccount.properties.primaryEndpoints.blob
-      COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
-      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       WEB_APP_USE_PASSWORD_AUTH: string(webAppUsePasswordAuth)
       WEB_APP_USERNAME: webAppUsername // Demo app username, no need for key vault storage
       WEB_APP_PASSWORD: webAppPassword // Demo app password, no need for key vault storage
-    }
+    })
   }
 }
 
 // Role assignments for the Web App's managed identity
 
-module webAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = {
+module webAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = if (deployWebApp) {
   name: 'webAppStorageRoleAssignments'
   scope: resourceGroup()
   params: {
@@ -611,7 +703,7 @@ module webAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = {
   }
 }
 
-module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
+module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = if (deployWebApp && deployCosmosDB) {
   name: 'webAppCosmosDbRoleAssignment'
   scope: resourceGroup()
   params: {
@@ -621,42 +713,9 @@ module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
   }
 }
 
-// Additional role assignments (if provided)
-module additionalIdentityAiServicesRoleAssignments 'multiple-ai-services-role-assignment.bicep' = [
-  for service in [
-    {
-      aiServiceName: azureopenai.name
-      roleDefinitionIds: [roleDefinitions.openAiUser, roleDefinitions.cognitiveServicesUser]
-    }
-    {
-      aiServiceName: docIntel.name
-      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
-    }
-    {
-      aiServiceName: speech.name
-      roleDefinitionIds: [roleDefinitions.speechUser]
-    }
-    {
-      aiServiceName: contentUnderstanding.name
-      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
-    }
-    {
-      aiServiceName: language.name
-      roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
-    }
-  ]: {
-    name: guid(subscription().id, resourceGroup().id, service.aiServiceName, 'MultiAiServicesRoleAssignment')
-    params: {
-      aiServiceName: service.aiServiceName
-      principalIds: additionalRoleAssignmentIdentityIds
-      roleDefinitionIds: service.roleDefinitionIds
-    }
-  }
-]
-
 module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment.bicep' = [
   for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
-    name: 'StorageRoleAssignments-${take(additionalRoleAssignmentIdentityId, 6)}'
+    name: guid(storageAccount.id, additionalRoleAssignmentIdentityId, 'StorageRoleAssignment')
     scope: resourceGroup()
     params: {
       storageAccountName: storageAccount.name
@@ -666,8 +725,8 @@ module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment
   }
 ]
 module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = [
-  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
-    name: 'CosmosDbRoleAssignment-${take(additionalRoleAssignmentIdentityId, 6)}'
+  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: if (deployCosmosDB) {
+    name: guid(cosmosDbAccount.id, additionalRoleAssignmentIdentityId, 'CosmosDbRoleAssignment')
     scope: resourceGroup()
     params: {
       accountName: cosmosDbAccount.name
@@ -679,15 +738,21 @@ module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignmen
 
 // Add Language endpoint to outputs
 output FunctionAppUrl string = functionApp.properties.defaultHostName
-output webAppUrl string = webApp.properties.defaultHostName
+output webAppUrl string = deployWebApp ? webApp.properties.defaultHostName : ''
 output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
-output cosmosDbAccountEndpoint string = cosmosDbAccount.properties.documentEndpoint
-output cosmosDbAccountName string = cosmosDbAccount.name
-output cosmosDbDatabaseName string = cosmosDbDatabaseName
-output AOAI_ENDPOINT string = azureopenai.properties.endpoint
-output AOAI_LLM_DEPLOYMENT string = openAILLMDeploymentName
-output AOAI_WHISPER_DEPLOYMENT string = openAIWhisperDeploymentName
-output CONTENT_UNDERSTANDING_ENDPOINT string = 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
-output DOC_INTEL_ENDPOINT string = docIntel.properties.endpoint
-output SPEECH_ENDPOINT string = speech.properties.endpoint
-output LANGUAGE_ENDPOINT string = 'https://${languageTokenName}.cognitiveservices.azure.com/'
+output cosmosDbAccountEndpoint string = deployCosmosDB ? cosmosDbAccount.properties.documentEndpoint : ''
+output cosmosDbAccountName string = deployCosmosDB ? cosmosDbAccount.name : ''
+output cosmosDbDatabaseName string = deployCosmosDB ? cosmosDbDatabaseName : ''
+output AOAI_ENDPOINT string = deployOpenAIResource ? azureopenai.properties.endpoint : ''
+output AOAI_LLM_DEPLOYMENT string = (deployOpenAIResource && deployOpenAILLMModel) ? openAILLMDeploymentName : ''
+output AOAI_WHISPER_DEPLOYMENT string = (deployOpenAIResource && deployOpenAIWhisperModel)
+  ? openAIWhisperDeploymentName
+  : ''
+output CONTENT_UNDERSTANDING_ENDPOINT string = deployContentUnderstandingMultiServicesResource
+  ? 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
+  : ''
+output DOC_INTEL_ENDPOINT string = deployDocIntelResource ? docIntel.properties.endpoint : ''
+output SPEECH_ENDPOINT string = deploySpeechResource ? speech.properties.endpoint : ''
+output LANGUAGE_ENDPOINT string = deployLanguageResource
+  ? 'https://${languageTokenName}.cognitiveservices.azure.com/'
+  : ''
