@@ -35,6 +35,9 @@ param storageAccountName string = 'llmprocstorage'
 @description('The name of the default blob storage containers to be created')
 param blobContainerNames array = ['blob-form-to-cosmosdb-blobs', 'content-understanding-blobs']
 
+@description('Whether to deploy the CosmosDB database')
+param deployCosmosDB bool = false
+
 @description('The name of the default CosmosDB database')
 param cosmosDbDatabaseName string = 'default'
 
@@ -168,6 +171,11 @@ var storageRoleDefinitionIds = [
   roleDefinitions.storageQueueDataContributor
 ]
 
+var roleAssignmentIdentityIds = union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+
+// Create random GUID for the list of additional identity assign to assign roles - this ensures any changes to the list will trigger a redeploy of the role assignments module
+var additionalRoleAssignmentIdsGuid = join(additionalRoleAssignmentIdentityIds, ',')
+
 //
 // Storage account (the storage account is required for the Function App)
 //
@@ -209,7 +217,7 @@ var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName
 //
 
 // Default configuration is based on: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-bicep#free-tier
-resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
+resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = if (deployCosmosDB) {
   name: cosmosDbAccountTokenName
   location: location
   properties: {
@@ -228,7 +236,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
   }
 }
 
-resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = {
+resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = if (deployCosmosDB) {
   parent: cosmosDbAccount
   name: cosmosDbDatabaseName
   properties: {
@@ -239,7 +247,7 @@ resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
 }
 
 resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-11-15' = [
-  for containerName in cosmosDbContainerNames: {
+  for containerName in cosmosDbContainerNames: if (deployCosmosDB) {
     parent: cosmosDbDatabase
     name: containerName
     properties: {
@@ -284,10 +292,10 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' 
 }
 
 module contentUnderstandingRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployContentUnderstandingMultiServicesResource) {
-  name: guid(subscription().id, resourceGroup().id, contentUnderstanding.name, 'AiServicesRoleAssignments')
+  name: guid(contentUnderstanding.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: contentUnderstanding.name
-    principalIds: union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+    principalIds: roleAssignmentIdentityIds
     roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
   }
 }
@@ -308,10 +316,10 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploy
 }
 
 module docIntelRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployDocIntelResource) {
-  name: guid(subscription().id, resourceGroup().id, docIntel.name, 'AiServicesRoleAssignments')
+  name: guid(docIntel.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: docIntel.name
-    principalIds: union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+    principalIds: roleAssignmentIdentityIds
     roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
   }
 }
@@ -332,10 +340,10 @@ resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploySp
 }
 
 module speechRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deploySpeechResource) {
-  name: guid(subscription().id, resourceGroup().id, speech.name, 'AiServicesRoleAssignments')
+  name: guid(speech.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: speech.name
-    principalIds: union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+    principalIds: roleAssignmentIdentityIds
     roleDefinitionIds: [roleDefinitions.speechUser]
   }
 }
@@ -356,10 +364,10 @@ resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploy
 }
 
 module languageRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployLanguageResource) {
-  name: guid(subscription().id, resourceGroup().id, language.name, 'AiServicesRoleAssignments')
+  name: guid(language.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: language.name
-    principalIds: union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+    principalIds: roleAssignmentIdentityIds
     roleDefinitionIds: [roleDefinitions.cognitiveServicesUser]
   }
 }
@@ -380,10 +388,10 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (dep
 }
 
 module openAIRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployOpenAIResource) {
-  name: guid(subscription().id, resourceGroup().id, azureopenai.name, 'AiServicesRoleAssignments')
+  name: guid(azureopenai.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: azureopenai.name
-    principalIds: union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+    principalIds: roleAssignmentIdentityIds
     roleDefinitionIds: [roleDefinitions.openAiUser, roleDefinitions.cognitiveServicesUser]
   }
 }
@@ -516,6 +524,12 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
 // Populate environment variables for the function app for backend services,
 // only including values for resources & endpoints that are deployed 
 var optionalDeploymentFuncAppEnvVars = union(
+  deployCosmosDB
+    ? {
+        COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
+        CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
+      }
+    : {},
   deployContentUnderstandingMultiServicesResource
     ? {
         CONTENT_UNDERSTANDING_ENDPOINT: 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
@@ -588,8 +602,6 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
       APPINSIGHTS_INSTRUMENTATIONKEY: appInsights.properties.InstrumentationKey
       APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
-      CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
-      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       FUNCTIONS_EXTENSION_VERSION: '~4'
       FUNCTIONS_WORKER_RUNTIME: 'python'
     })
@@ -606,7 +618,7 @@ module functionAppStorageRoleAssignments 'storage-account-role-assignment.bicep'
   }
 }
 
-module functionAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = {
+module functionAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = if (deployCosmosDB) {
   name: 'functionAppCosmosDbRoleAssignment'
   scope: resourceGroup()
   params: {
@@ -635,6 +647,15 @@ resource webAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = if (deployWebApp) {
   dependsOn: [functionAppPlan] // Consumption plan must be deployed before premium plan
 }
 
+// Populate environment variables for the demo app for backend services,
+// only including values for resources & endpoints that are deployed 
+var optionalDeploymentWebAppEnvVars = deployCosmosDB
+  ? {
+      COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
+      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
+    }
+  : {}
+
 resource webApp 'Microsoft.Web/sites@2022-03-01' = if (deployWebApp) {
   name: webAppTokenName
   location: location
@@ -658,17 +679,15 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = if (deployWebApp) {
 
   resource appSettings 'config@2022-09-01' = {
     name: 'appsettings'
-    properties: {
+    properties: union(optionalDeploymentWebAppEnvVars, {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       FUNCTION_HOSTNAME: 'https://${functionApp.properties.defaultHostName}'
       FUNCTION_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${funcAppKeyKvSecretName})'
       STORAGE_ACCOUNT_ENDPOINT: storageAccount.properties.primaryEndpoints.blob
-      COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
-      COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       WEB_APP_USE_PASSWORD_AUTH: string(webAppUsePasswordAuth)
       WEB_APP_USERNAME: webAppUsername // Demo app username, no need for key vault storage
       WEB_APP_PASSWORD: webAppPassword // Demo app password, no need for key vault storage
-    }
+    })
   }
 }
 
@@ -684,7 +703,7 @@ module webAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = if
   }
 }
 
-module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = if (deployWebApp) {
+module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = if (deployWebApp && deployCosmosDB) {
   name: 'webAppCosmosDbRoleAssignment'
   scope: resourceGroup()
   params: {
@@ -696,7 +715,7 @@ module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = i
 
 module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment.bicep' = [
   for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
-    name: 'StorageRoleAssignments-${take(additionalRoleAssignmentIdentityId, 6)}'
+    name: guid(storageAccount.id, additionalRoleAssignmentIdentityId, 'StorageRoleAssignment')
     scope: resourceGroup()
     params: {
       storageAccountName: storageAccount.name
@@ -706,8 +725,8 @@ module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment
   }
 ]
 module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = [
-  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
-    name: 'CosmosDbRoleAssignment-${take(additionalRoleAssignmentIdentityId, 6)}'
+  for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: if (deployCosmosDB) {
+    name: guid(cosmosDbAccount.id, additionalRoleAssignmentIdentityId, 'CosmosDbRoleAssignment')
     scope: resourceGroup()
     params: {
       accountName: cosmosDbAccount.name
@@ -721,9 +740,9 @@ module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignmen
 output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = deployWebApp ? webApp.properties.defaultHostName : ''
 output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
-output cosmosDbAccountEndpoint string = cosmosDbAccount.properties.documentEndpoint
-output cosmosDbAccountName string = cosmosDbAccount.name
-output cosmosDbDatabaseName string = cosmosDbDatabaseName
+output cosmosDbAccountEndpoint string = deployCosmosDB ? cosmosDbAccount.properties.documentEndpoint : ''
+output cosmosDbAccountName string = deployCosmosDB ? cosmosDbAccount.name : ''
+output cosmosDbDatabaseName string = deployCosmosDB ? cosmosDbDatabaseName : ''
 output AOAI_ENDPOINT string = deployOpenAIResource ? azureopenai.properties.endpoint : ''
 output AOAI_LLM_DEPLOYMENT string = (deployOpenAIResource && deployOpenAILLMModel) ? openAILLMDeploymentName : ''
 output AOAI_WHISPER_DEPLOYMENT string = (deployOpenAIResource && deployOpenAIWhisperModel)
