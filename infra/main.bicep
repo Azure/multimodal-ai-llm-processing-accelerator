@@ -274,6 +274,11 @@ resource cosmosDbDataContributorRoleDefinition 'Microsoft.DocumentDB/databaseAcc
   name: '00000000-0000-0000-0000-000000000002' // Built-in Data Contributor Role
 }
 
+resource cosmosDbDataReaderRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2021-04-15' existing = {
+  parent: cosmosDbAccount
+  name: '00000000-0000-0000-0000-000000000001' // Built-in Data Reader Role
+}
+
 // Cognitive services resources
 
 // Multi-service resource for Azure Content Understanding
@@ -703,16 +708,18 @@ module webAppStorageRoleAssignments 'storage-account-role-assignment.bicep' = if
   }
 }
 
+// Add CosmosDB data reader role to web app (for reading output data - e.g. processed documents)
 module webAppCosmosDbRoleAssignment 'cosmosdb-account-role-assignment.bicep' = if (deployWebApp && deployCosmosDB) {
-  name: 'webAppCosmosDbRoleAssignment'
+  name: 'webAppCosmosDbReaderRoleAssignment'
   scope: resourceGroup()
   params: {
     accountName: cosmosDbAccount.name
     principalId: webApp.identity.principalId
-    roleDefinitionId: cosmosDbDataContributorRoleDefinition.id
+    roleDefinitionId: cosmosDbDataReaderRoleDefinition.id
   }
 }
 
+// Role assignments for additional identities (e.g. for local development)
 module additionalIdentityStorageRoleAssignments 'storage-account-role-assignment.bicep' = [
   for additionalRoleAssignmentIdentityId in additionalRoleAssignmentIdentityIds: {
     name: guid(storageAccount.id, additionalRoleAssignmentIdentityId, 'StorageRoleAssignment')
