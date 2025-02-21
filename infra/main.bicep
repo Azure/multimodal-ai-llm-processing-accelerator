@@ -585,6 +585,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
     serverFarmId: functionAppPlan.id
     clientAffinityEnabled: true
     siteConfig: {
+      alwaysOn: functionAppUsePremiumSku ? true : false
       pythonVersion: '3.11'
       linuxFxVersion: 'python|3.11'
       cors: {
