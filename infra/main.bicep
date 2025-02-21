@@ -707,7 +707,7 @@ resource webAppBlobContainerRoleAssignment 'Microsoft.Authorization/roleAssignme
     properties: {
       roleDefinitionId: subscriptionResourceId(
         'Microsoft.Authorization/roleDefinitions',
-        roleDefinitions.blobContainerContributor
+        roleDefinitions.storageBlobDataContributor
       )
       principalId: webApp.identity.principalId
     }
