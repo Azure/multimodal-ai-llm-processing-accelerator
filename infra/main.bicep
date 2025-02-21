@@ -526,8 +526,8 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
 var optionalDeploymentFuncAppEnvVars = union(
   deployCosmosDB
     ? {
-        COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
         CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
+        COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       }
     : {},
   deployContentUnderstandingMultiServicesResource
