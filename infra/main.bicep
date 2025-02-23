@@ -531,8 +531,8 @@ resource functionAppPlan 'Microsoft.Web/serverfarms@2020-06-01' = {
 var optionalDeploymentFuncAppEnvVars = union(
   deployCosmosDB
     ? {
-        COSMOSDB_ACCOUNT_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
         CosmosDbConnectionSetting__accountEndpoint: cosmosDbAccount.properties.documentEndpoint
+        COSMOSDB_DATABASE_NAME: cosmosDbDatabaseName
       }
     : {},
   deployContentUnderstandingMultiServicesResource
@@ -585,6 +585,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
     serverFarmId: functionAppPlan.id
     clientAffinityEnabled: true
     siteConfig: {
+      alwaysOn: functionAppUsePremiumSku ? true : false
       pythonVersion: '3.11'
       linuxFxVersion: 'python|3.11'
       cors: {
