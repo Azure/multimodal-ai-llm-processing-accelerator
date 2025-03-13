@@ -73,7 +73,7 @@ param openAILLMModel = 'gpt-4o'
 param openAILLMModelVersion = '2024-05-13'
 param openAILLMDeploymentSku = 'Standard'
 
-param openAIWhisperDeploymentCapacity = 1 // Set to 0 to skip deployment
+param openAIWhisperDeploymentCapacity = 1 // Set to 0 to skip deployment 
 param openAIWhisperModel = 'whisper'
 param openAIWhisperModelVersion = '001'
 param openAIWhisperDeploymentSku = 'Standard'
