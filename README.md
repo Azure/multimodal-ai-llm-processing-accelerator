@@ -60,7 +60,8 @@ This accelerator is as a customizable code template for building and deploying p
 - **Enriched outputs & confidence scores:** A number of components are included for combining the outputs of pre-processing steps with the LLM outputs. For example, adding confidence scores, bounding boxes, writing styles to the values extracted by the LLM. This allows for reliable automation of tasks instead of having to trust that the LLM is correct (or reviewing every result).
 - **Data validation & intermediate outputs:** All pipelines are built to return not just the final result but all intermediate outputs. This lets you reuse the data in other downstream tasks.
 - **Powerful and flexible:** The application is built in a way that supports both simple and complicated pipelines. This allows you to build pipelines for <u>all of your use cases</u> without needing to start from scratch with a new code base when you need to something a little more complex. A single deployment can support all of your backend processing pipelines.
-- **Infrastructure-as-code:** An Azure Bicep template to deploy the solution and its required components using `azd`.
+- **Secure networking options:** Restrict access using either IP-based access rules or completely private networking configurations for enterprise-grade security.
+- **Infrastructure-as-code:** An Azure Bicep template to deploy the solution and its required components using `azd`, including the option to enable only the backend services that are required for your use case.
 
 ### Why use this accelerator?
 
@@ -131,7 +132,6 @@ This accelerator is in active development, with a list of upcoming features incl
 - **Evaluation pipelines:** Example evaluation pipelines to evaluate overall performance, making it easy to iterate and improve your processing pipelines and help you select the right production thresholds for accepting a result or escalating to human review.
 - **Async processing:** Ensure all included pipeline components have async versions for maximum performance & concurrency.
 - **Other input/output options:** Additional pipelines using streaming and websockets.
-- **Infrastructure options:** More advanced networking options (private VNets & endpoints etc).
 - **Deployment pipeline:** An example deployment pipeline for automated deployments.
 
 To help prioritise these features or request new ones, please head to the Issues section of this repository.
@@ -210,7 +210,9 @@ Yes - you'll need to modify the Bicep templates to refer to existing resources i
 
 This solution accelerator deploys multiple resources. Evaluate the cost of each component prior to deployment.
 
-The following are links to the pricing details for some of the resources:
+The base cost of the solution is the cost to host the Function App, plus the Web app and private endpoints (if they are enabled). The cost of the default Premium App Service plan is approximately $60 USD/month (depending on your region), multiplied by 2 if you also deploy the demo web app. Once you start using the solution, your cost will then be based purely on your usage of each of the backend services (OpenAI, Document Intelligence, Speech, Language, Content Understanding).
+
+The following are links to the pricing details for all resources:
 
 - [Azure OpenAI service pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/).
 - [Azure Content Understanding pricing](https://azure.microsoft.com/en-au/pricing/details/content-understanding/)
@@ -222,6 +224,74 @@ The following are links to the pricing details for some of the resources:
 - [Azure Blob Storage pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)
 - [Azure Key Vault pricing](https://azure.microsoft.com/en-us/pricing/details/key-vault/)
 - [Azure Monitor pricing](https://azure.microsoft.com/en-us/pricing/details/monitor/)
+- [Azure Private Endpoints pricing](https://azure.microsoft.com/en-us/pricing/details/private-link/)
+
+### Networking configuration
+
+The solution includes comprehensive networking options to support both development scenarios and enterprise security requirements.
+
+#### Network architecture overview
+
+The infrastructure deploys a Virtual Network (VNET) with the following subnets:
+
+- **Frontend subnet**: Contains the demo web application (if deployed). Has access to the Function App and shared storage/KV services.
+- **Function App subnet**: Contains the Azure Function App. Has access to backend AI services and shared storage/KV services.
+- **Backend services subnet**: Contains the backend AI resources (OpenAI, Document Intelligence, Speech, Language, Content Understanding) and optionally their private endpoints. Only accessible from the Function App subnet by default.
+- **Storage services subnet**: Contains the shared storage/KV services (Storage Account and CosmosDB), and optionally their private endpoints. Accessible from both the Function App and Frontend subnets. Accessible from the Frontend and function app subnets by default.
+- **Function App private endpoint subnet**: Contains the private endpoint for the Function App when using private networking. Accessible from the Frontend subnet only.
+
+**Network endpoint types**:
+By default, all of the resources deployed in this accelerator communicate with each other using either Service Endpoints or Private Endpoints.
+
+1. Private Endpoints - This restricts all traffic to the backend resources to within the VNET and ensures no data traverses the public internet.
+2. Service Endpoints - This allows traffic to reach the resources via the public internet, but controls access to the resources using NACLs and IP rules.
+
+The choice between Service Endpoints and Private Endpoints can be made independently for each group of resources.
+
+- `backendServicesNetworkingType`: Controls how the backend AI services can be accessed (ServiceEndpoint or PrivateEndpoint)
+- `storageServicesAndKVNetworkingType`: Controls how shared storage services & Key Vault can be accessed (ServiceEndpoint or PrivateEndpoint)
+- `functionAppNetworkingType`: Controls how the Function App can be accessed (ServiceEndpoint or PrivateEndpoint)
+
+When using Service Endpoints, the resources will can access other resources within the VNET via pre-defined network security groups (NSGs), but additional options are available to set the access rules for connecting to the resources from public networks. Each group of resources can have public network access enabled or disabled independently, along with the ability to restrict public network access to a specific set of IP addresses or CIDR blocks.
+
+These IP access control parameters only apply when the corresponding networking type is set to `ServiceEndpoint`. When a group of services are deployed using the `PrivateEndpoint` deployment option, public access to the resources in that group is disabled completely and will only be accessible by resources within the VNET that have access to the subnet containing the private endpoint(s).
+
+For more information, check out the configuration options within the `infra/main.bicepparam` file.
+
+#### When to use each networking option
+
+**Service Endpoints**:
+
+- Best for development scenarios or when public access is required
+- Allows controlled public access from specified IP addresses
+- Simpler to set up and use when deveoping locally
+- No cost overhead
+- Typical scenarios: Local development, dev/sandbox environments, or applications where private networking of backend services is not required.
+
+**Private Endpoints**:
+
+- Best for enterprise security requirements, providing the highest level of security
+- Recommended for production environments with strict security requirements
+- Completely isolates services from the public internet - all traffic must originate from within the VNET and stay within the VNET
+- Prevents public access to the Function App and backend services, including when deploying Content Understanding schemas or application code (see the next section for more details and workarounds)
+- Adds a small cost overhead (approximately $7.50 per month per private endpoint, which can total $60-75/month when using private endpoints for all services)
+- Typical scenarios: Production environments, and applications where private networking is required.
+
+#### Private endpoint considerations
+
+When using private endpoints:
+
+1. **Local development challenges**: Services with private endpoints are not directly accessible from your local development environment. Options to address this include:
+   - Using a jumpbox or Azure Bastion service to access the VNET
+   - Setting up a VPN connection to the VNET
+   - Using Azure Dev Tunnels or similar services
+
+2. **Deployment of Content Undertstanding Schemas & Application Code**: After the provisioning of the cloud resources, a postprovision script is run from the deployment runner (or your local machine) to create or update the Content Understanding analyzer schemas in the resource dedicated to Azure Content Understanding, along with deployment of the function app code. If either the Content Understanding resource or the function app resources are deployed behind private endpoints, these steps will fail unless they are being run from a machine that is connected to the VNET. There are a couple ways to resolve this:
+    - The recommended long-term solution is to run the deployment from a machine that is located within or connected to the VNET (e.g. via a VPN or Azure Bastion, or from a VM/runner that is deployed within the VNET).
+    - The alternative short-term solution is to deploy the solution as follows:
+        - For the first deployment, run `azd up` with `NetworkingType = 'ServiceEndpoint'` for the function app and backend services (this will create the schemas in the resource and deploy the application code while public access is possible)
+        - With the resources deployed and publicly accessible, set `NetworkingType = 'PrivateEndpoint'` for the function app and/or backend services and re-run `azd up` with the new networking configuration. This will switch the backend resource(s) to private networking and now prevent all public access - including the postprovision hook and code deployment. Note that the deployment will fail once the private endpoints are enabled and the postprovision hook and/or code deployments are attempted since the resources are no longer publicly accessible.
+        - Next time you need to update the schemas or application code, you can switch the networking configuration back to `ServiceEndpoint` and rerun `azd up` to re-enable public access to the backend resources. For the Function app, you will also need to manually remove the private endpoint (e.g. through the portal) so that the function app can be accessed again via the standard networking configuration. Once this is done, you can deploy the new function app code (either with `azd up` or `azd deploy api`), and then switch the configuration back to `PrivateEndpoint` and run `azd up` again to switch the resources back to private endpoints.
 
 ### Deploying to Azure with `azd`
 

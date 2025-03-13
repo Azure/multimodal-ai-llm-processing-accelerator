@@ -35,7 +35,7 @@ param storageAccountName string = 'llmprocstorage'
 @description('The name of the default blob storage containers to be created')
 param blobContainerNames array = ['blob-form-to-cosmosdb-blobs', 'content-understanding-blobs']
 
-@description('Whether to deploy the CosmosDB database')
+@description('Whether to deploy the CosmosDB resource. This is required if using CosmosDB as an input data source or when writing records to an output CosmosDB container.')
 param deployCosmosDB bool = false
 
 @description('The name of the default CosmosDB database')
@@ -104,7 +104,77 @@ param tags object = {}
 param apiServiceName string = 'api'
 param webAppServiceName string = 'webapp'
 param funcAppKeyKvSecretName string = 'func-api-key'
-param appInsightsInstrumentationKeyKvSecretName string = 'appins-instrumentation-key'
+
+// Networking parameters
+@description('The address space for the virtual network (CIDR notation)')
+param vnetAddressPrefix string = '10.0.0.0/16'
+
+@description('The address space for the backend services subnet (CIDR notation)')
+param backendServicesSubnetPrefix string = '10.0.1.0/24'
+
+@description('The address space for the function app subnet (CIDR notation)')
+param functionAppSubnetPrefix string = '10.0.2.0/24'
+
+@description('The address space for the shared storage & key vaultsubnet (CIDR notation)')
+param storageServicesAndKVSubnetPrefix string = '10.0.3.0/24'
+
+@description('The address space for the frontend subnet (CIDR notation)')
+param frontendSubnetPrefix string = '10.0.4.0/24'
+
+@description('The address space for the function app private endpoint subnet (CIDR notation)')
+param functionAppPrivateEndpointSubnetPrefix string = '10.0.5.0/24'
+
+// Add networking type parameters
+@description('The type of network endpoint to use for backend AI services. ServiceEndpoint enables public access to the deployed services but limits access to the IP addresses specified in the backendServicesExternalIpsOrIpRanges parameter. PrivateEndpoint prevents public network access and deploys Private Endpoints into the backend subnet, restricting access to clients that have access to that subnet.')
+@allowed([
+  'ServiceEndpoint'
+  'PrivateEndpoint'
+])
+param backendServicesNetworkingType string
+
+@description('The type of network endpoint to use for storage services. ServiceEndpoint enables public access to the deployed services but limits access to the IP addresses specified in the storageServicesAndKVExternalIpsOrIpRanges parameter. PrivateEndpoint prevents public network access and deploys Private Endpoints into the storage subnet, restricting access to clients that have access to that subnet.')
+@allowed([
+  'ServiceEndpoint'
+  'PrivateEndpoint'
+])
+param storageServicesAndKVNetworkingType string
+
+@description('The type of network endpoint to use for the Function app. ServiceEndpoint enables public access to the deployed services but limits access to the IP addresses specified in the functionAppExternalIpsOrIpRanges parameter. PrivateEndpoint prevents public network access and deploys Private Endpoints into the function app subnet, restricting access to clients that have access to that subnet.')
+@allowed([
+  'ServiceEndpoint'
+  'PrivateEndpoint'
+])
+param functionAppNetworkingType string
+
+// External developer access rules
+@description('Whether to allow public access to the frontend web app')
+param webAppAllowPublicAccess bool = true
+
+@description('IP ranges allowed for external access to frontend web app')
+param webAppExternalIpsOrIpRanges array = []
+
+@description('Whether to allow public access to the function app')
+param functionAppAllowPublicAccess bool = true
+
+@description('IP ranges allowed for external access to function app')
+param functionAppExternalIpsOrIpRanges array = []
+
+@description('Whether to allow public access to the backend AI services')
+param backendServicesAllowPublicAccess bool = true
+
+@description('IP ranges allowed for external access to backend services')
+param backendServicesExternalIpsOrIpRanges array = []
+
+@description('Whether to allow public access to the storage & Key Vault')
+param storageServicesAndKVAllowPublicAccess bool = true
+
+@description('IP ranges allowed for external access to Storage, CosmosDB & Key Vault services')
+param storageServicesAndKVExternalIpsOrIpRanges array = []
+
+// Combine the '*NetworkingType' and '*AllowPublicAccess' parameters to determine the actual public access setting for each service
+var isFunctionAppAllowPublicAccess = functionAppAllowPublicAccess && functionAppNetworkingType == 'ServiceEndpoint'
+var isBackendServicesAllowPublicAccess = backendServicesAllowPublicAccess && backendServicesNetworkingType == 'ServiceEndpoint'
+var isStorageServicesAndKVAllowPublicAccess = storageServicesAndKVAllowPublicAccess && storageServicesAndKVNetworkingType == 'ServiceEndpoint'
 
 // Set function app settings based on the deployment type. 
 var functionAppSkuProperties = functionAppUsePremiumSku
@@ -150,7 +220,7 @@ var appInsightsTokenName = toLower('${resourcePrefix}-func-appins-${resourceToke
 var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
 var languageTokenName = toLower('${resourcePrefix}-language-${languageLocation}-${resourceToken}')
 
-// Define role definition IDs for Azure AI Services
+// Define role definition IDs for Azure AI Services & Storage
 var roleDefinitions = {
   openAiUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
   speechUser: 'f2dc8367-1007-4938-bd23-fe263f013447'
@@ -162,6 +232,348 @@ var roleDefinitions = {
   storageQueueDataContributor: '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 }
 
+// Create a unique string for the list of additional identity assign to assign roles - this ensures any changes to the list will trigger a redeploy of the role assignments module
+var roleAssignmentIdentityIds = union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
+var additionalRoleAssignmentIdsStr = join(additionalRoleAssignmentIdentityIds, ',')
+
+// Network configuration
+
+var frontendSubnetName = 'frontend-subnet'
+var functionAppSubnetName = 'function-app-subnet'
+var functionAppPrivateEndpointSubnetName = 'function-app-pe-subnet'
+var backendServicesSubnetName = 'backend-services-subnet'
+var storageServicesAndKVSubnetName = 'storage-services-subnet'
+
+var privateCognitiveServicesDnsZoneName = 'privatelink.cognitiveservices.azure.com'
+var privateOpenAIDnsZoneName = 'privatelink.openai.azure.com'
+var privateContentUnderstandingDnsZoneName = 'privatelink.services.ai.azure.com'
+var privateCosmosDbDnsZoneName = 'privatelink.documents.azure.com'
+var privateStorageFileDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
+var privateStorageTableDnsZoneName = 'privatelink.table.${environment().suffixes.storage}'
+var privateStorageBlobDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
+var privateStorageQueueDnsZoneName = 'privatelink.queue.${environment().suffixes.storage}'
+var privateFunctionAppDnsZoneName = 'privatelink.azurewebsites.net'
+var privateKeyVaultDnsZoneName = 'privatelink.vaultcore.azure.net'
+
+// Virtual Network
+
+resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
+  name: '${resourcePrefix}-vnet-${resourceToken}'
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        vnetAddressPrefix
+      ]
+    }
+    subnets: [
+      {
+        name: backendServicesSubnetName
+        properties: {
+          addressPrefix: backendServicesSubnetPrefix
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+          networkSecurityGroup: {
+            id: backendServicesNsg.id
+          }
+          serviceEndpoints: backendServicesNetworkingType == 'ServiceEndpoint'
+            ? [
+                {
+                  service: 'Microsoft.CognitiveServices'
+                  locations: ['*']
+                }
+              ]
+            : []
+        }
+      }
+      {
+        name: functionAppSubnetName
+        properties: {
+          addressPrefix: functionAppSubnetPrefix
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+          delegations: [
+            {
+              name: 'Microsoft.Web.serverFarms'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+          networkSecurityGroup: {
+            id: functionAppNsg.id
+          }
+          serviceEndpoints: union(
+            // Add Storage services & Key Vault endpoints if using service endpoints
+            storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+              ? [
+                  {
+                    service: 'Microsoft.Storage'
+                    locations: ['*']
+                  }
+                  {
+                    service: 'Microsoft.AzureCosmosDB'
+                    locations: ['*']
+                  }
+                ]
+              : [],
+            // Always add Cognitive services endpoints
+            // This is needed for the network ACLs to work properly
+            [
+              {
+                service: 'Microsoft.CognitiveServices'
+                locations: ['*']
+              }
+            ]
+          )
+        }
+      }
+      {
+        name: storageServicesAndKVSubnetName
+        properties: {
+          addressPrefix: storageServicesAndKVSubnetPrefix
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+          networkSecurityGroup: {
+            id: storageServicesAndKVNsg.id
+          }
+          serviceEndpoints: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+            ? [
+                {
+                  service: 'Microsoft.Storage'
+                  locations: ['*']
+                }
+                {
+                  service: 'Microsoft.AzureCosmosDB'
+                  locations: ['*']
+                }
+              ]
+            : []
+        }
+      }
+      {
+        name: frontendSubnetName
+        properties: {
+          addressPrefix: frontendSubnetPrefix
+          delegations: [
+            {
+              name: 'Microsoft.Web.serverFarms'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+          networkSecurityGroup: {
+            id: frontendNsg.id
+          }
+          serviceEndpoints: union(
+            // Add Function app service endpoint if required
+            functionAppNetworkingType == 'ServiceEndpoint'
+              ? [
+                  {
+                    service: 'Microsoft.Web'
+                    locations: ['*']
+                  }
+                ]
+              : [],
+            // Add Key Vault service endpoint if required
+            storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+              ? [
+                  {
+                    service: 'Microsoft.KeyVault'
+                    locations: ['*']
+                  }
+                ]
+              : [],
+            // Always add Storage endpoints
+            // This is needed for the network ACLs to work properly
+            [
+              {
+                service: 'Microsoft.Storage'
+                locations: ['*']
+              }
+              {
+                service: 'Microsoft.AzureCosmosDB'
+                locations: ['*']
+              }
+            ]
+          )
+        }
+      }
+      {
+        name: functionAppPrivateEndpointSubnetName
+        properties: {
+          addressPrefix: functionAppPrivateEndpointSubnetPrefix
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+          networkSecurityGroup: {
+            id: functionAppPrivateEndpointNsg.id
+          }
+        }
+      }
+    ]
+  }
+}
+
+// NSG for backend services - most restricted
+resource backendServicesNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: '${resourcePrefix}-backend-services-nsg-${resourceToken}'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowInternalAccess'
+        properties: {
+          priority: 100
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefixes: [
+            functionAppSubnetPrefix // Only allow access from function app subnet
+          ]
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'DenyAllInbound'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
+// NSG for Function App - allows frontend and developer access
+resource functionAppNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: '${resourcePrefix}-function-app-nsg-${resourceToken}'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowInternalAccess'
+        properties: {
+          priority: 100
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '443'
+          sourceAddressPrefixes: [
+            frontendSubnetPrefix // Allow access from frontend subnet
+          ]
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'DenyAllInbound'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
+// NSG for shared storage & key vault - allows access from both function app and frontend
+resource storageServicesAndKVNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: '${resourcePrefix}-storage-nsg-${resourceToken}'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowInternalAccess'
+        properties: {
+          priority: 100
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefixes: [
+            functionAppSubnetPrefix // Allow access from function app subnet
+            frontendSubnetPrefix // Allow access from frontend subnet
+          ]
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'DenyAllInbound'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
+// NSG for frontend - no internal routes necessary as it is only used for public access
+resource frontendNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: '${resourcePrefix}-frontend-nsg-${resourceToken}'
+  location: location
+}
+
+// Create NSG for function app private endpoint subnet - only allow access from frontend
+resource functionAppPrivateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = if (functionAppNetworkingType == 'PrivateEndpoint') {
+  name: '${resourcePrefix}-function-app-pe-nsg-${resourceToken}'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowFromFrontendSubnet'
+        properties: {
+          priority: 100
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: frontendSubnetPrefix
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'DenyAllInbound'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
 // Set list of storage role IDs - See here for more info on required roles: 
 // https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference?tabs=blob&pivots=programming-language-python#connecting-to-host-storage-with-an-identity
 var storageRoleDefinitionIds = [
@@ -170,11 +582,6 @@ var storageRoleDefinitionIds = [
   roleDefinitions.storageBlobDataOwner
   roleDefinitions.storageQueueDataContributor
 ]
-
-var roleAssignmentIdentityIds = union([functionApp.identity.principalId], additionalRoleAssignmentIdentityIds)
-
-// Create random GUID for the list of additional identity assign to assign roles - this ensures any changes to the list will trigger a redeploy of the role assignments module
-var additionalRoleAssignmentIdsGuid = join(additionalRoleAssignmentIdentityIds, ',')
 
 //
 // Storage account (the storage account is required for the Function App)
@@ -190,7 +597,27 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     supportsHttpsTrafficOnly: true
     defaultToOAuthAuthentication: true
     allowBlobPublicAccess: false
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: isStorageServicesAndKVAllowPublicAccess ? 'Enabled' : 'Disabled'
+    networkAcls: {
+      bypass: 'None'
+      defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          id: '${vnet.id}/subnets/${functionAppSubnetName}'
+          action: 'Allow'
+        }
+        {
+          id: '${vnet.id}/subnets/${frontendSubnetName}'
+          action: 'Allow'
+        }
+      ]
+      ipRules: (isStorageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVExternalIpsOrIpRanges))
+        ? map(storageServicesAndKVExternalIpsOrIpRanges, ip => {
+            value: ip
+            action: 'Allow'
+          })
+        : []
+    }
   }
 }
 
@@ -210,10 +637,222 @@ resource blobStorageContainer 'Microsoft.Storage/storageAccounts/blobServices/co
   }
 ]
 
+resource privateStorageFileDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: privateStorageFileDnsZoneName
+  location: 'global'
+}
+
+resource privateStorageBlobDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: privateStorageBlobDnsZoneName
+  location: 'global'
+}
+
+resource privateStorageQueueDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: privateStorageQueueDnsZoneName
+  location: 'global'
+}
+
+resource privateStorageTableDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: privateStorageTableDnsZoneName
+  location: 'global'
+}
+
+resource privateStorageFileDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateStorageFileDnsZone
+  name: '${privateStorageFileDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
+resource privateStorageBlobDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateStorageBlobDnsZone
+  name: '${privateStorageBlobDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
+resource privateStorageTableDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateStorageTableDnsZone
+  name: '${privateStorageTableDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
+resource privateStorageQueueDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateStorageQueueDnsZone
+  name: '${privateStorageQueueDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
+resource privateEndpointStorageFile 'Microsoft.Network/privateEndpoints@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: '${storageAccount.name}-file-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'MyStorageFilePrivateLinkConnection'
+        properties: {
+          privateLinkServiceId: storageAccount.id
+          groupIds: [
+            'file'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointStorageBlob 'Microsoft.Network/privateEndpoints@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: '${storageAccount.name}-blob-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'MyStorageBlobPrivateLinkConnection'
+        properties: {
+          privateLinkServiceId: storageAccount.id
+          groupIds: [
+            'blob'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointStorageTable 'Microsoft.Network/privateEndpoints@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: '${storageAccount.name}-table-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'MyStorageTablePrivateLinkConnection'
+        properties: {
+          privateLinkServiceId: storageAccount.id
+          groupIds: [
+            'table'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointStorageQueue 'Microsoft.Network/privateEndpoints@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: '${storageAccount.name}-queue-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'MyStorageQueuePrivateLinkConnection'
+        properties: {
+          privateLinkServiceId: storageAccount.id
+          groupIds: [
+            'queue'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointStorageFilePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateEndpointStorageFile
+  name: 'filePrivateDnsZoneGroup'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'config'
+        properties: {
+          privateDnsZoneId: privateStorageFileDnsZone.id
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointStorageBlobPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateEndpointStorageBlob
+  name: 'blobPrivateDnsZoneGroup'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'config'
+        properties: {
+          privateDnsZoneId: privateStorageBlobDnsZone.id
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointStorageTablePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateEndpointStorageTable
+  name: 'tablePrivateDnsZoneGroup'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'config'
+        properties: {
+          privateDnsZoneId: privateStorageTableDnsZone.id
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointStorageQueuePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateEndpointStorageQueue
+  name: 'queuePrivateDnsZoneGroup'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'config'
+        properties: {
+          privateDnsZoneId: privateStorageQueueDnsZone.id
+        }
+      }
+    ]
+  }
+}
+
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
 
 //
-// CosmosDB
+// CosmosDB with flexible networking
 //
 
 // Default configuration is based on: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-bicep#free-tier
@@ -224,7 +863,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = if
     enableFreeTier: false
     databaseAccountOfferType: 'Standard'
     disableLocalAuth: true
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: isStorageServicesAndKVAllowPublicAccess ? 'Enabled' : 'Disabled'
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
     }
@@ -233,6 +872,77 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = if
         locationName: location
       }
     ]
+    networkAclBypass: 'AzureServices' // Allow Azure services to bypass network rules
+    isVirtualNetworkFilterEnabled: true // Enable VNET filtering
+    virtualNetworkRules: [
+      // Allow access from the frontend subnet (web app)
+      {
+        id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, frontendSubnetName)
+        ignoreMissingVNetServiceEndpoint: false
+      }
+      // Allow access from the function app subnet
+      {
+        id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, functionAppSubnetName)
+        ignoreMissingVNetServiceEndpoint: false
+      }
+    ]
+    ipRules: (isStorageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVExternalIpsOrIpRanges))
+      ? map(storageServicesAndKVExternalIpsOrIpRanges, ip => {
+          ipAddressOrRange: ip
+        })
+      : []
+  }
+}
+
+resource cosmosDbPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = if (deployCosmosDB && storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: '${cosmosDbAccount.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: '${vnet.id}/subnets/${storageServicesAndKVSubnetName}'
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${cosmosDbAccount.name}-plsc'
+        properties: {
+          privateLinkServiceId: cosmosDbAccount.id
+          groupIds: ['Sql']
+        }
+      }
+    ]
+  }
+
+  resource cosmosDbPrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'cosmosDbPrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: cosmosDbPrivateDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
+// Add CosmosDB DNS zone for private endpoints
+resource cosmosDbPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployCosmosDB && storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: privateCosmosDbDnsZoneName
+  location: 'global'
+}
+
+// Add DNS zone VNet link for CosmosDB
+resource cosmosDbPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployCosmosDB && storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: cosmosDbPrivateDnsZone
+  name: 'link-to-vnet'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
   }
 }
 
@@ -287,17 +997,83 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' 
   location: contentUnderstandingLocation
   kind: 'AIServices'
   properties: {
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: isBackendServicesAllowPublicAccess ? 'Enabled' : 'Disabled'
     customSubDomainName: contentUnderstandingTokenName
     disableLocalAuth: true
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: '${vnet.id}/subnets/${functionAppSubnetName}'
+              ignoreMissingVnetServiceEndpoint: false
+            }
+          ]
+        : []
+      ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
+        ? map(backendServicesExternalIpsOrIpRanges, ip => {
+            value: ip
+          })
+        : []
+    }
   }
   sku: {
     name: 'S0'
   }
 }
 
+resource contentUnderstandingPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = if (deployContentUnderstandingMultiServicesResource && backendServicesNetworkingType == 'PrivateEndpoint') {
+  name: '${contentUnderstanding.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: '${vnet.id}/subnets/${backendServicesSubnetName}'
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${contentUnderstanding.name}-plsc'
+        properties: {
+          privateLinkServiceId: contentUnderstanding.id
+          groupIds: ['account']
+        }
+      }
+    ]
+  }
+
+  resource contentUnderstandingPrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'contentUnderstandingPrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: privateContentUnderstandingDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
+resource privateContentUnderstandingDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (backendServicesNetworkingType == 'PrivateEndpoint' && deployContentUnderstandingMultiServicesResource) {
+  name: privateContentUnderstandingDnsZoneName
+  location: 'global'
+}
+
+resource privateContentUnderstandingDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (backendServicesNetworkingType == 'PrivateEndpoint' && deployContentUnderstandingMultiServicesResource) {
+  parent: privateContentUnderstandingDnsZone
+  name: '${privateContentUnderstandingDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
 module contentUnderstandingRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployContentUnderstandingMultiServicesResource) {
-  name: guid(contentUnderstanding.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  name: guid(contentUnderstanding.id, additionalRoleAssignmentIdsStr, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: contentUnderstanding.name
     principalIds: roleAssignmentIdentityIds
@@ -311,17 +1087,83 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploy
   location: docIntelLocation
   kind: 'FormRecognizer'
   properties: {
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: isBackendServicesAllowPublicAccess ? 'Enabled' : 'Disabled'
     customSubDomainName: docIntelTokenName
     disableLocalAuth: true
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: '${vnet.id}/subnets/${functionAppSubnetName}'
+              ignoreMissingVnetServiceEndpoint: false
+            }
+          ]
+        : []
+      ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
+        ? map(backendServicesExternalIpsOrIpRanges, ip => {
+            value: ip
+          })
+        : []
+    }
   }
   sku: {
     name: 'S0'
   }
 }
 
+resource privateCognitiveServicesDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (backendServicesNetworkingType == 'PrivateEndpoint') {
+  name: privateCognitiveServicesDnsZoneName
+  location: 'global'
+}
+
+resource privateCognitiveServicesDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (backendServicesNetworkingType == 'PrivateEndpoint') {
+  parent: privateCognitiveServicesDnsZone
+  name: '${privateCognitiveServicesDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
+resource docIntelPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = if (deployDocIntelResource && backendServicesNetworkingType == 'PrivateEndpoint') {
+  name: '${docIntel.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: '${vnet.id}/subnets/${backendServicesSubnetName}'
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${docIntel.name}-plsc'
+        properties: {
+          privateLinkServiceId: docIntel.id
+          groupIds: ['account']
+        }
+      }
+    ]
+  }
+
+  resource docIntelPrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'docIntelPrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: privateCognitiveServicesDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
 module docIntelRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployDocIntelResource) {
-  name: guid(docIntel.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  name: guid(docIntel.id, additionalRoleAssignmentIdsStr, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: docIntel.name
     principalIds: roleAssignmentIdentityIds
@@ -335,17 +1177,66 @@ resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploySp
   location: speechLocation
   kind: 'SpeechServices'
   properties: {
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: isBackendServicesAllowPublicAccess ? 'Enabled' : 'Disabled'
     customSubDomainName: speechTokenName
     disableLocalAuth: true
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: '${vnet.id}/subnets/${functionAppSubnetName}'
+              ignoreMissingVnetServiceEndpoint: false
+            }
+          ]
+        : []
+      ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
+        ? map(backendServicesExternalIpsOrIpRanges, ip => {
+            value: ip
+          })
+        : []
+    }
   }
   sku: {
     name: 'S0'
   }
 }
 
+resource speechPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = if (deploySpeechResource && backendServicesNetworkingType == 'PrivateEndpoint') {
+  name: '${speech.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: '${vnet.id}/subnets/${backendServicesSubnetName}'
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${speech.name}-plsc'
+        properties: {
+          privateLinkServiceId: speech.id
+          groupIds: ['account']
+        }
+      }
+    ]
+  }
+
+  resource speechPrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'speechPrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: privateCognitiveServicesDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
 module speechRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deploySpeechResource) {
-  name: guid(speech.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  name: guid(speech.id, additionalRoleAssignmentIdsStr, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: speech.name
     principalIds: roleAssignmentIdentityIds
@@ -359,17 +1250,66 @@ resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploy
   location: languageLocation
   kind: 'TextAnalytics'
   properties: {
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: isBackendServicesAllowPublicAccess ? 'Enabled' : 'Disabled'
     customSubDomainName: languageTokenName
     disableLocalAuth: true
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: '${vnet.id}/subnets/${functionAppSubnetName}'
+              ignoreMissingVnetServiceEndpoint: false
+            }
+          ]
+        : []
+      ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
+        ? map(backendServicesExternalIpsOrIpRanges, ip => {
+            value: ip
+          })
+        : []
+    }
   }
   sku: {
     name: 'S'
   }
 }
 
+resource languagePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = if (deployLanguageResource && backendServicesNetworkingType == 'PrivateEndpoint') {
+  name: '${language.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: '${vnet.id}/subnets/${backendServicesSubnetName}'
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${language.name}-plsc'
+        properties: {
+          privateLinkServiceId: language.id
+          groupIds: ['account']
+        }
+      }
+    ]
+  }
+
+  resource languagePrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'languagePrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: privateCognitiveServicesDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
 module languageRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployLanguageResource) {
-  name: guid(language.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  name: guid(language.id, additionalRoleAssignmentIdsStr, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: language.name
     principalIds: roleAssignmentIdentityIds
@@ -382,18 +1322,84 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (dep
   name: openAITokenName
   location: openAILocation
   kind: 'OpenAI'
-  properties: {
-    publicNetworkAccess: 'Enabled'
-    customSubDomainName: openAITokenName
-    disableLocalAuth: true
-  }
   sku: {
     name: 'S0'
+  }
+  properties: {
+    publicNetworkAccess: isBackendServicesAllowPublicAccess ? 'Enabled' : 'Disabled'
+    customSubDomainName: openAITokenName
+    disableLocalAuth: true
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: '${vnet.id}/subnets/${functionAppSubnetName}'
+              ignoreMissingVnetServiceEndpoint: false
+            }
+          ]
+        : []
+      ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
+        ? map(backendServicesExternalIpsOrIpRanges, ip => {
+            value: ip
+          })
+        : []
+    }
+  }
+}
+
+resource openAIPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = if (deployOpenAIResource && backendServicesNetworkingType == 'PrivateEndpoint') {
+  name: '${azureopenai.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: '${vnet.id}/subnets/${backendServicesSubnetName}'
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${azureopenai.name}-plsc'
+        properties: {
+          privateLinkServiceId: azureopenai.id
+          groupIds: ['account']
+        }
+      }
+    ]
+  }
+
+  resource openAIPrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'openAIPrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: privateOpenAIDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
+resource privateOpenAIDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (backendServicesNetworkingType == 'PrivateEndpoint' && deployOpenAIResource) {
+  name: privateOpenAIDnsZoneName
+  location: 'global'
+}
+
+resource privateOpenAIDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (backendServicesNetworkingType == 'PrivateEndpoint' && deployOpenAIResource) {
+  parent: privateOpenAIDnsZone
+  name: '${privateOpenAIDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
   }
 }
 
 module openAIRoleAssignments 'multiple-ai-services-role-assignment.bicep' = if (deployOpenAIResource) {
-  name: guid(azureopenai.id, additionalRoleAssignmentIdsGuid, 'AiServicesRoleAssignments')
+  name: guid(azureopenai.id, additionalRoleAssignmentIdsStr, 'AiServicesRoleAssignments')
   params: {
     aiServiceName: azureopenai.name
     principalIds: roleAssignmentIdentityIds
@@ -434,7 +1440,7 @@ resource whisperdeployment 'Microsoft.CognitiveServices/accounts/deployments@202
   }
 }
 
-// Key Vault for storing API keys
+// Key Vault for storing the Functiona app's API key - the web app will get the function app's key from here when deployed
 resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
   name: keyVaultName
   location: location
@@ -445,7 +1451,73 @@ resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
     }
     tenantId: subscription().tenantId
     accessPolicies: []
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: isStorageServicesAndKVAllowPublicAccess ? 'Enabled' : 'Disabled'
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: '${vnet.id}/subnets/${frontendSubnetName}'
+              ignoreMissingVnetServiceEndpoint: false
+            }
+          ]
+        : []
+      ipRules: (isStorageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVExternalIpsOrIpRanges))
+        ? map(storageServicesAndKVExternalIpsOrIpRanges, ip => {
+            value: ip
+          })
+        : []
+    }
+  }
+}
+
+resource privateKeyVaultDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: privateKeyVaultDnsZoneName
+  location: 'global'
+}
+
+resource privateKeyVaultDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  parent: privateKeyVaultDnsZone
+  name: '${privateKeyVaultDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
+resource keyVaultPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = if (storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
+  name: '${keyVault.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: '${vnet.id}/subnets/${storageServicesAndKVSubnetName}'
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${keyVault.name}-plsc'
+        properties: {
+          privateLinkServiceId: keyVault.id
+          groupIds: ['vault']
+        }
+      }
+    ]
+  }
+
+  resource keyVaultPrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'keyVaultPrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: privateKeyVaultDnsZone.id
+          }
+        }
+      ]
+    }
   }
 }
 
@@ -453,30 +1525,18 @@ resource keyVaultAccessPolicies 'Microsoft.KeyVault/vaults/accessPolicies@2023-0
   parent: keyVault
   name: 'add'
   properties: {
-    accessPolicies: concat(
-      [
-        {
-          tenantId: subscription().tenantId
-          objectId: functionApp.identity.principalId
-          permissions: {
-            keys: ['get', 'list']
-            secrets: ['get', 'list']
-          }
-        }
-      ],
-      deployWebApp
-        ? [
-            {
-              tenantId: subscription().tenantId
-              objectId: webApp.identity.principalId
-              permissions: {
-                keys: ['get', 'list']
-                secrets: ['get', 'list']
-              }
+    accessPolicies: deployWebApp
+      ? [
+          {
+            tenantId: subscription().tenantId
+            objectId: webApp.identity.principalId
+            permissions: {
+              keys: ['get', 'list']
+              secrets: ['get', 'list']
             }
-          ]
-        : []
-    )
+          }
+        ]
+      : []
   }
 }
 
@@ -485,14 +1545,6 @@ resource funcAppKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   parent: keyVault
   properties: {
     value: listkeys('${functionApp.id}/host/default', '2022-03-01').functionKeys.default
-  }
-}
-
-resource appInsightsInstrumentationKeyKvSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: appInsightsInstrumentationKeyKvSecretName
-  parent: keyVault
-  properties: {
-    value: appInsights.properties.ConnectionString
   }
 }
 
@@ -572,7 +1624,16 @@ var optionalDeploymentFuncAppEnvVars = union(
     : {}
 )
 
-resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
+// Create file share for function app
+var functionContentShareName = 'function-content-share'
+resource fileService 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-05-01' = {
+  name: '${storageAccountTokenName}/default/${functionContentShareName}'
+  dependsOn: [
+    storageAccount
+  ]
+}
+
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   name: functionAppTokenName
   kind: 'functionapp,linux'
   location: location
@@ -581,6 +1642,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
     type: 'SystemAssigned'
   }
   properties: {
+    publicNetworkAccess: isFunctionAppAllowPublicAccess ? 'Enabled' : 'Disabled'
     httpsOnly: true
     serverFarmId: functionAppPlan.id
     clientAffinityEnabled: true
@@ -593,6 +1655,53 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
           '*'
         ]
       }
+      ipSecurityRestrictions: functionAppNetworkingType == 'ServiceEndpoint'
+        ? concat(
+            // Allow access from the frontend subnet using vnetSubnetResourceId
+            [
+              {
+                vnetSubnetResourceId: resourceId(
+                  'Microsoft.Network/virtualNetworks/subnets',
+                  vnet.name,
+                  frontendSubnetName
+                )
+                action: 'Allow'
+                priority: 100
+                name: 'Allow frontend subnet'
+              }
+            ],
+            // IF: public network access is allowed and IPs are specified, Add IP rules and deny all other traffic
+            isFunctionAppAllowPublicAccess && !empty(functionAppExternalIpsOrIpRanges)
+              ? concat(
+                  map(range(0, length(functionAppExternalIpsOrIpRanges)), i => {
+                    ipAddress: functionAppExternalIpsOrIpRanges[i]
+                    action: 'Allow'
+                    priority: 200 + i
+                    name: 'External access ${i + 1}'
+                  }),
+                  [
+                    {
+                      ipAddress: '0.0.0.0/0'
+                      action: 'Deny'
+                      priority: 2147483647
+                      name: 'Deny all'
+                    }
+                  ]
+                )
+              : [],
+            // OR: If public network access is allowed and no IPs are specified, allow all traffic
+            isFunctionAppAllowPublicAccess && empty(functionAppExternalIpsOrIpRanges)
+              ? [
+                  {
+                    ipAddress: '0.0.0.0/0'
+                    action: 'Allow'
+                    priority: 2147483647
+                    name: 'Allow all'
+                  }
+                ]
+              : []
+          )
+        : null
     }
   }
   resource functionSettings 'config@2022-09-01' = {
@@ -604,13 +1713,80 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
       AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
       AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
       AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
-      WEBSITE_CONTENTSHARE: toLower(functionAppTokenName)
-      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString // Cannot use key vault reference here
-      APPINSIGHTS_INSTRUMENTATIONKEY: appInsights.properties.InstrumentationKey
-      APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${appInsightsInstrumentationKeyKvSecretName})'
+      WEBSITE_CONTENTSHARE: functionContentShareName
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString
+      WEBSITE_CONTENTOVERVNET: '1'
+      WEBSITE_VNET_ROUTE_ALL: '1'
+      APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
       FUNCTIONS_EXTENSION_VERSION: '~4'
       FUNCTIONS_WORKER_RUNTIME: 'python'
     })
+  }
+  dependsOn: [
+    fileService
+  ]
+}
+
+// Function App Private Endpoint resources
+resource privateFunctionAppDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (functionAppNetworkingType == 'PrivateEndpoint') {
+  name: privateFunctionAppDnsZoneName
+  location: 'global'
+}
+
+resource privateFunctionAppDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (functionAppNetworkingType == 'PrivateEndpoint') {
+  parent: privateFunctionAppDnsZone
+  name: '${privateFunctionAppDnsZoneName}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnet.id
+    }
+  }
+}
+
+resource privateEndpointFunctionApp 'Microsoft.Network/privateEndpoints@2022-05-01' = if (functionAppNetworkingType == 'PrivateEndpoint') {
+  name: '${functionApp.name}-private-endpoint'
+  location: location
+  properties: {
+    subnet: {
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, functionAppPrivateEndpointSubnetName)
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'MyFunctionAppPrivateLinkConnection'
+        properties: {
+          privateLinkServiceId: functionApp.id
+          groupIds: [
+            'sites'
+          ]
+        }
+      }
+    ]
+  }
+
+  resource FunctionAppPrivateDnsZoneGroup 'privateDnsZoneGroups@2023-05-01' = {
+    name: 'functionAppPrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: privateFunctionAppDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
+// Only create VNET integration if not using private endpoint
+resource functionAppVirtualNetwork 'Microsoft.Web/sites/networkConfig@2022-03-01' = {
+  parent: functionApp
+  name: 'virtualNetwork'
+  properties: {
+    subnetResourceId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, functionAppSubnetName)
+    swiftSupported: true
   }
 }
 
@@ -668,16 +1844,58 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = if (deployWebApp) {
   tags: union(tags, { 'azd-service-name': webAppServiceName })
   kind: 'app,linux'
   properties: {
+    publicNetworkAccess: webAppAllowPublicAccess ? 'Enabled' : 'Disabled'
     clientAffinityEnabled: true // If app plan capacity > 1, set this to True to ensure gradio works correctly.
     serverFarmId: webAppPlan.id
+    httpsOnly: true
     siteConfig: {
       alwaysOn: true
       linuxFxVersion: 'python|3.11'
       ftpsState: 'Disabled'
       appCommandLine: 'python demo_app.py'
       minTlsVersion: '1.2'
+      ipSecurityRestrictions: concat(
+        // Allow access from the frontend subnet using vnetSubnetResourceId
+        [
+          {
+            vnetSubnetResourceId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, frontendSubnetName)
+            action: 'Allow'
+            priority: 100
+            name: 'Allow frontend subnet'
+          }
+        ],
+        // IF: public network access is allowed and IPs are specified, Add IP rules and deny all other traffic
+        webAppAllowPublicAccess && !empty(webAppExternalIpsOrIpRanges)
+          ? concat(
+              map(range(0, length(webAppExternalIpsOrIpRanges)), i => {
+                ipAddress: webAppExternalIpsOrIpRanges[i]
+                action: 'Allow'
+                priority: 200 + i
+                name: 'External access ${i + 1}'
+              }),
+              [
+                {
+                  ipAddress: '0.0.0.0/0'
+                  action: 'Deny'
+                  priority: 2147483647
+                  name: 'Deny all'
+                }
+              ]
+            )
+          : [],
+        // OR: If public network access is allowed and no IPs are specified, allow all traffic
+        webAppAllowPublicAccess && empty(webAppExternalIpsOrIpRanges)
+          ? [
+              {
+                ipAddress: '0.0.0.0/0'
+                action: 'Allow'
+                priority: 2147483647
+                name: 'Allow all'
+              }
+            ]
+          : []
+      )
     }
-    httpsOnly: true
   }
   identity: {
     type: 'SystemAssigned'
@@ -693,7 +1911,17 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = if (deployWebApp) {
       WEB_APP_USE_PASSWORD_AUTH: string(webAppUsePasswordAuth)
       WEB_APP_USERNAME: webAppUsername // Demo app username, no need for key vault storage
       WEB_APP_PASSWORD: webAppPassword // Demo app password, no need for key vault storage
+      WEBSITE_VNET_ROUTE_ALL: '1' // Force all traffic through VNET
     })
+  }
+}
+
+resource webAppVirtualNetwork 'Microsoft.Web/sites/networkConfig@2022-03-01' = {
+  parent: webApp
+  name: 'virtualNetwork'
+  properties: {
+    subnetResourceId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, frontendSubnetName)
+    swiftSupported: true
   }
 }
 
