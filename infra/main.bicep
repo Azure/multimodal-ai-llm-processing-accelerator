@@ -268,45 +268,79 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
     }
     subnets: concat(
       [
-      {
-        name: backendServicesSubnetName
-        properties: {
-          addressPrefix: backendServicesSubnetPrefix
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          networkSecurityGroup: {
-            id: backendServicesNsg.id
-          }
-          serviceEndpoints: backendServicesNetworkingType == 'ServiceEndpoint'
-            ? [
-                {
-                  service: 'Microsoft.CognitiveServices'
-                  locations: ['*']
-                }
-              ]
-            : []
-        }
-      }
-      {
-        name: functionAppSubnetName
-        properties: {
-          addressPrefix: functionAppSubnetPrefix
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          delegations: [
-            {
-              name: 'Microsoft.Web.serverFarms'
-              properties: {
-                serviceName: 'Microsoft.Web/serverFarms'
-              }
+        {
+          name: backendServicesSubnetName
+          properties: {
+            addressPrefix: backendServicesSubnetPrefix
+            privateEndpointNetworkPolicies: 'Enabled'
+            privateLinkServiceNetworkPolicies: 'Enabled'
+            networkSecurityGroup: {
+              id: backendServicesNsg.id
             }
-          ]
-          networkSecurityGroup: {
-            id: functionAppNsg.id
+            // Only deploy service endpoints when using ServiceEndpoint networking type
+            serviceEndpoints: backendServicesNetworkingType == 'ServiceEndpoint'
+              ? [
+                  {
+                    service: 'Microsoft.CognitiveServices'
+                    locations: ['*']
+                  }
+                ]
+              : []
           }
-          serviceEndpoints: union(
-            // Add Storage services & Key Vault endpoints if using service endpoints
-            storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+        }
+        {
+          name: functionAppSubnetName
+          properties: {
+            addressPrefix: functionAppSubnetPrefix
+            privateEndpointNetworkPolicies: 'Enabled'
+            privateLinkServiceNetworkPolicies: 'Enabled'
+            delegations: [
+              {
+                name: 'Microsoft.Web.serverFarms'
+                properties: {
+                  serviceName: 'Microsoft.Web/serverFarms'
+                }
+              }
+            ]
+            networkSecurityGroup: {
+              id: functionAppNsg.id
+            }
+            // Only deploy relevant service endpoints based on networking type
+            serviceEndpoints: union(
+              storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+                ? [
+                    {
+                      service: 'Microsoft.Storage'
+                      locations: ['*']
+                    }
+                    {
+                      service: 'Microsoft.AzureCosmosDB'
+                      locations: ['*']
+                    }
+                  ]
+                : [],
+              backendServicesNetworkingType == 'ServiceEndpoint'
+                ? [
+                    {
+                      service: 'Microsoft.CognitiveServices'
+                      locations: ['*']
+                    }
+                  ]
+                : []
+            )
+          }
+        }
+        {
+          name: storageServicesAndKVSubnetName
+          properties: {
+            addressPrefix: storageServicesAndKVSubnetPrefix
+            privateEndpointNetworkPolicies: 'Enabled'
+            privateLinkServiceNetworkPolicies: 'Enabled'
+            networkSecurityGroup: {
+              id: storageServicesAndKVNsg.id
+            }
+            // Only deploy service endpoints when using ServiceEndpoint networking type
+            serviceEndpoints: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
               ? [
                   {
                     service: 'Microsoft.Storage'
@@ -317,107 +351,70 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
                     locations: ['*']
                   }
                 ]
-              : [],
-            // Always add Cognitive services endpoints
-            // This is needed for the network ACLs to work properly
-            [
+              : []
+          }
+        }
+        {
+          name: frontendSubnetName
+          properties: {
+            addressPrefix: frontendSubnetPrefix
+            delegations: [
               {
-                service: 'Microsoft.CognitiveServices'
-                locations: ['*']
+                name: 'Microsoft.Web.serverFarms'
+                properties: {
+                  serviceName: 'Microsoft.Web/serverFarms'
+                }
               }
             ]
-          )
-        }
-      }
-      {
-        name: storageServicesAndKVSubnetName
-        properties: {
-          addressPrefix: storageServicesAndKVSubnetPrefix
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          networkSecurityGroup: {
-            id: storageServicesAndKVNsg.id
-          }
-          serviceEndpoints: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
-            ? [
-                {
-                  service: 'Microsoft.Storage'
-                  locations: ['*']
-                }
-                {
-                  service: 'Microsoft.AzureCosmosDB'
-                  locations: ['*']
-                }
-              ]
-            : []
-        }
-      }
-      {
-        name: frontendSubnetName
-        properties: {
-          addressPrefix: frontendSubnetPrefix
-          delegations: [
-            {
-              name: 'Microsoft.Web.serverFarms'
-              properties: {
-                serviceName: 'Microsoft.Web/serverFarms'
-              }
+            privateEndpointNetworkPolicies: 'Enabled'
+            privateLinkServiceNetworkPolicies: 'Enabled'
+            networkSecurityGroup: {
+              id: frontendNsg.id
             }
-          ]
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          networkSecurityGroup: {
-            id: frontendNsg.id
+            // Only deploy relevant service endpoints based on networking type
+            serviceEndpoints: union(
+              functionAppNetworkingType == 'ServiceEndpoint'
+                ? [
+                    {
+                      service: 'Microsoft.Web'
+                      locations: ['*']
+                    }
+                  ]
+                : [],
+              storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+                ? [
+                    {
+                      service: 'Microsoft.KeyVault'
+                      locations: ['*']
+                    }
+                    {
+                      service: 'Microsoft.Storage'
+                      locations: ['*']
+                    }
+                    {
+                      service: 'Microsoft.AzureCosmosDB'
+                      locations: ['*']
+                    }
+                  ]
+                : []
+            )
           }
-          serviceEndpoints: union(
-            // Add Function app service endpoint if required
-            functionAppNetworkingType == 'ServiceEndpoint'
-              ? [
-                  {
-                    service: 'Microsoft.Web'
-                    locations: ['*']
-                  }
-                ]
-              : [],
-            // Add Key Vault service endpoint if required
-            storageServicesAndKVNetworkingType == 'ServiceEndpoint'
-              ? [
-                  {
-                    service: 'Microsoft.KeyVault'
-                    locations: ['*']
-                  }
-                ]
-              : [],
-            // Always add Storage endpoints
-            // This is needed for the network ACLs to work properly
-            [
-              {
-                service: 'Microsoft.Storage'
-                locations: ['*']
-              }
-              {
-                service: 'Microsoft.AzureCosmosDB'
-                locations: ['*']
-              }
-            ]
-          )
         }
-      }
       ],
       functionAppNetworkingType == 'PrivateEndpoint'
         ? [
-      {
-        name: functionAppPrivateEndpointSubnetName
-        properties: {
-          addressPrefix: functionAppPrivateEndpointSubnetPrefix
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          networkSecurityGroup: {
-            id: functionAppPrivateEndpointNsg.id
-          }
-        }
-      }
-    ]
+            {
+              name: functionAppPrivateEndpointSubnetName
+              properties: {
+                addressPrefix: functionAppPrivateEndpointSubnetPrefix
+                privateEndpointNetworkPolicies: 'Enabled'
+                privateLinkServiceNetworkPolicies: 'Enabled'
+                networkSecurityGroup: {
+                  id: functionAppPrivateEndpointNsg.id
+                }
+              }
+            }
+          ]
         : []
     )
   }
@@ -607,16 +604,20 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     networkAcls: {
       bypass: 'None'
       defaultAction: 'Deny'
-      virtualNetworkRules: [
-        {
-          id: '${vnet.id}/subnets/${functionAppSubnetName}'
-          action: 'Allow'
-        }
-        {
-          id: '${vnet.id}/subnets/${frontendSubnetName}'
-          action: 'Allow'
-        }
-      ]
+      // Only include VNET rules when using service endpoints
+      virtualNetworkRules: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: '${vnet.id}/subnets/${functionAppSubnetName}'
+              action: 'Allow'
+            }
+            {
+              id: '${vnet.id}/subnets/${frontendSubnetName}'
+              action: 'Allow'
+            }
+          ]
+        : []
+      // Only include IP rules when using service endpoints and public access rules are enabled
       ipRules: (isStorageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVExternalIpsOrIpRanges))
         ? map(storageServicesAndKVExternalIpsOrIpRanges, ip => {
             value: ip
@@ -879,19 +880,22 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = if
       }
     ]
     networkAclBypass: 'AzureServices' // Allow Azure services to bypass network rules
-    isVirtualNetworkFilterEnabled: true // Enable VNET filtering
-    virtualNetworkRules: [
-      // Allow access from the frontend subnet (web app)
-      {
-        id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, frontendSubnetName)
-        ignoreMissingVNetServiceEndpoint: false
-      }
-      // Allow access from the function app subnet
-      {
-        id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, functionAppSubnetName)
-        ignoreMissingVNetServiceEndpoint: false
-      }
-    ]
+    // Only enable VNET filtering when using service endpoints
+    isVirtualNetworkFilterEnabled: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+    // Only include VNET rules when using service endpoints
+    virtualNetworkRules: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+      ? [
+          {
+            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, frontendSubnetName)
+            ignoreMissingVNetServiceEndpoint: false
+          }
+          {
+            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, functionAppSubnetName)
+            ignoreMissingVNetServiceEndpoint: false
+          }
+        ]
+      : []
+    // Only include IP rules when using service endpoints and public access rules are enabled
     ipRules: (isStorageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVExternalIpsOrIpRanges))
       ? map(storageServicesAndKVExternalIpsOrIpRanges, ip => {
           ipAddressOrRange: ip
@@ -1008,6 +1012,7 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' 
     disableLocalAuth: true
     networkAcls: {
       defaultAction: 'Deny'
+      // Only add virtual network rules if using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
             {
@@ -1016,6 +1021,7 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-05-01' 
             }
           ]
         : []
+      // Only add IP rules if using service endpoints and public access rules are enabled
       ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
         ? map(backendServicesExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1188,6 +1194,7 @@ resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploySp
     disableLocalAuth: true
     networkAcls: {
       defaultAction: 'Deny'
+      // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
             {
@@ -1196,6 +1203,7 @@ resource speech 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploySp
             }
           ]
         : []
+      // Only include IP rules when using service endpoints and public access rules are enabled
       ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
         ? map(backendServicesExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1261,6 +1269,7 @@ resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploy
     disableLocalAuth: true
     networkAcls: {
       defaultAction: 'Deny'
+      // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
             {
@@ -1269,6 +1278,7 @@ resource language 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (deploy
             }
           ]
         : []
+      // Only include IP rules when using service endpoints and public access rules are enabled
       ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
         ? map(backendServicesExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1337,6 +1347,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (dep
     disableLocalAuth: true
     networkAcls: {
       defaultAction: 'Deny'
+      // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
             {
@@ -1345,6 +1356,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (dep
             }
           ]
         : []
+      // Only include IP rules when using service endpoints and public access rules are enabled
       ipRules: (isBackendServicesAllowPublicAccess && !empty(backendServicesExternalIpsOrIpRanges))
         ? map(backendServicesExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1460,6 +1472,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
     publicNetworkAccess: isStorageServicesAndKVAllowPublicAccess ? 'Enabled' : 'Disabled'
     networkAcls: {
       defaultAction: 'Deny'
+      // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
             {
@@ -1468,6 +1481,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
             }
           ]
         : []
+      // Only include IP rules when using service endpoints and public access rules are enabled
       ipRules: (isStorageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVExternalIpsOrIpRanges))
         ? map(storageServicesAndKVExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1663,7 +1677,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       }
       ipSecurityRestrictions: functionAppNetworkingType == 'ServiceEndpoint'
         ? concat(
-            // Allow access from the frontend subnet using vnetSubnetResourceId
+            // Allow access from the frontend subnet when using service endpoints
             [
               {
                 vnetSubnetResourceId: resourceId(
@@ -1676,7 +1690,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
                 name: 'Allow frontend subnet'
               }
             ],
-            // IF: public network access is allowed and IPs are specified, Add IP rules and deny all other traffic
+            // If: public network access is allowed and IPs are specified, Add IP rules and deny all other traffic
             isFunctionAppAllowPublicAccess && !empty(functionAppExternalIpsOrIpRanges)
               ? concat(
                   map(range(0, length(functionAppExternalIpsOrIpRanges)), i => {
@@ -1861,7 +1875,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = if (deployWebApp) {
       appCommandLine: 'python demo_app.py'
       minTlsVersion: '1.2'
       ipSecurityRestrictions: concat(
-        // Allow access from the frontend subnet using vnetSubnetResourceId
+        // Allow access from the frontend subnet when using service endpoints
         [
           {
             vnetSubnetResourceId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, frontendSubnetName)
@@ -1870,7 +1884,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = if (deployWebApp) {
             name: 'Allow frontend subnet'
           }
         ],
-        // IF: public network access is allowed and IPs are specified, Add IP rules and deny all other traffic
+        // If: public network access is allowed and IPs are specified, Add IP rules and deny all other traffic
         webAppAllowPublicAccess && !empty(webAppExternalIpsOrIpRanges)
           ? concat(
               map(range(0, length(webAppExternalIpsOrIpRanges)), i => {
