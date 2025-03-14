@@ -1,7 +1,22 @@
+# This file defines the requirements for both the function app and the gradio app.
+
+
+# Shared dependencies
+python-dotenv==1.0.1
+azure-identity==1.17.1
+PyMuPDF==1.24.4
+pillow==10.3.0
+azure-storage-blob>=12.19.1
+opencv-python-headless==4.10.0.84
+
+# Demo app only
+gradio==4.43.0
+azure-cosmos>=4.7.0
+
+# Function app only
 # Do not include azure-functions-worker in this file
 # The Python Worker is managed by the Azure Functions platform
 # Manually managing azure-functions-worker may cause unexpected issues
-
 httpx==0.27.0
 pydantic==2.8.2
 pandas==2.2.2
@@ -9,22 +24,16 @@ numpy==1.26.4
 jsonschema==4.23.0
 jellyfish==1.0.3
 pypdf==4.2.0
-PyMuPDF==1.24.4
-pillow==10.3.0
-opencv-python-headless==4.10.0.84
 webvtt-py==0.5.1
 openai==1.30.3
 tabulate==0.9.0
 pylatexenc==2.10
-python-dotenv==1.0.1
-azure-identity==1.17.1
 azure-functions==1.20.0
 azurefunctions-extensions-bindings-blob==1.0.0b1
 azure-ai-documentintelligence==1.0.0b2
 azure-ai-formrecognizer==3.3
 azure.ai.textanalytics==5.3.0
 azure-cognitiveservices-speech==1.38.0
-azure-storage-blob>=12.19.1
 # Install haystack-ai fork with multimodal support - see https://github.com/deepset-ai/haystack/pull/7943/files
 https://github.com/CarlosFerLo/haystack/archive/3c2a913688e94001339d5dc3461da2862a28dac9.tar.gz
 pytest==8.3.2

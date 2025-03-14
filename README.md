@@ -144,10 +144,10 @@ Since the release of this accelerator, Microsoft has released the [Content Under
 
 | | Azure Content Understanding Service  | Custom Pipelines |
 |---------|---------|---------|
-|Pros| - Simpler setup, deployment and development<br>- Unified API for all data modalities<br>- Low maintenance & receive ongoing improvements & updates (managed service)| - Support in most Azure regions<br>- Full support for advanced & complicated workflows<br>- Ability to use custom system instructions & context data (e.g. RAG data or instructional/technical documentation)<br>- Full control over pre/post-processing steps & LLM models<br>- Support for more complex workflows (e.g. multistep summarization or [MapReduce](https://js.langchain.com/v0.1/docs/modules/chains/document/map_reduce/) patterns)<br>- Lower cost|
-|Cons| - Preview service with limited regional availability (3 regions as of Jan 2024)<br>- No support for LLM system prompts or additional context (beyond field-level definitions & examples)<br>- Less flexibility & control for advanced use cases<br>- Confidence scores only available for documents<br>- No summarization support for documents (only field extraction)<br>- Higher cost | - Requires higher technical capability<br>- More complex infrastructure & deployment<br>- Requires ongoing maintainance<br>- No support (yet) for video files|
+|**Pros**| - Simpler setup, deployment and development<br>- Unified API for all data modalities<br>- Low maintenance & receive ongoing improvements & updates (managed service)| - Support in most Azure regions<br>- Full support for advanced & complicated workflows<br>- Ability to use custom system instructions & context data (e.g. RAG data or instructional/technical documentation)<br>- Full control over pre/post-processing steps & LLM models<br>- Support for more complex workflows (e.g. multistep summarization or [MapReduce](https://js.langchain.com/v0.1/docs/modules/chains/document/map_reduce/) patterns)<br>- Lower cost|
+|**Cons**| - Preview service with limited regional availability [(3 regions as of March 2025)](https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/language-region-support?tabs=document)<br>- No support for LLM system prompts or additional context (beyond field-level definitions & examples)<br>- Less flexibility & control for advanced use cases<br>- Confidence scores only available for documents<br>- No summarization support for documents (only field extraction)<br>- Higher cost | - Requires higher technical capability<br>- More complex infrastructure & deployment<br>- Requires ongoing maintainance<br>- No support (yet) for video files|
 
-In general, the Azure Content Understanding service is a great fit for use cases where simplicity and ease of use is important, and where the improved accuracy, customization and cost efficiency of a custom solution is not necessary. It serves as the simpler starting point for most dev teams, while still having the option to switch to the custom processing pipelines if the need arises.
+In general, the Azure Content Understanding service is a great fit for use cases where simplicity and ease of use is important, and where the improved accuracy, customization and cost efficiency of a custom solution is not necessary. It serves as the simpler starting point for most dev teams, while still having the option to switch to the custom processing pipelines if the need arises. It is recommended to start with Azure Content Understanding and then move to custom pipelines when required.
 
 **How can I get started with a solution for my own use case?**
 
@@ -159,6 +159,7 @@ The demo pipelines are examples and require customization in order to have them 
     - For example, if you want to build a document extraction pipeline, start with the pipelines that use Azure Document Intelligence.
     - If you want to then combine this with AI Speech or with a different kind of trigger, look through the other pipelines for examples of those.
     - Once familiar with the example pipelines, you should be able to see how you can plug different pipeline components together by into an end-to-end solution.
+    - If you are deploying a use case that only requires certain functionality, you may want to disable any of the pipelines that are not required for your use case. To do this, you can simply comment or delete the import statements and route registration code within the [function_app.py](function_app/function_app.py). This will ensure that those pipelines are not loaded when the function app starts.
 1. Clone the python blueprint file (e.g. `function_app/bp_<pipeline_name>.py`) that is most similar to your ideal use case, renaming it and using it as a base to start with.
 1. Review and modify the different parts of the pipeline. The common things are:
     1. The AI/LLM components that are used and their configurations.
@@ -294,42 +295,55 @@ When using private endpoints:
 
 ### Deploying to Azure with `azd`
 
-All instructions are written for unix-based systems (Linux/MacOS). While Windows instructions are coming soon, you can use [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) to execute the following commands from the Linux command line.
+#### Prerequisites
 
-### Prerequisites
-
-- To use this solution accelerator, you will need access to an Azure subscription with permission to create resource groups and resources. You can [create an Azure account here for free](https://azure.microsoft.com/free/).
+- Deployment of this accelerator tends to work more reliably when deploying from a unix-based system (e.g. MacOS or Linux). It is recommended that Windows users deploy using [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) to execute the following commands from the Linux command line.
+  - If WSL is not available and you must run commands from the Windows command line, you will need to make sure that `Powershell (Core) 7` is installed (so that `pwsh` commands can be run). This is a different to `Windows Powershell` which comes pre-installed on all Windows systems.
+  - To verify whether Powershell (Core) is installed, you can run `pwsh --version`. If the command is not found, run `winget install --id Microsoft.PowerShell --source winget` to install it.
+  - Once installed, make sure to run all commands below from the Windows Powershell command line (otherwise the `az` and `azd` commands may not work correctly).
+- To use and deploy this solution accelerator, you will need access to an Azure subscription with permission to create resource groups and resources. You can [create an Azure account here for free](https://azure.microsoft.com/free/).
 
 To customize and develop the app locally, you will need to install the following:
 
-- A base Python 3.11 environment. You can use a package manager like `conda`, `venv` or `virtualenv` to create the environment. Once installed, make sure to have the environment activated when you start running the steps below, as it will be used as the base for isolated environments for the demo and function app.
+- Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`) and login using `az login`.
+- Install the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) (`azd`) and login using `azd auth login`.
+- Create a new Python 3.11 environment for your project. You can use a package manager like `conda`, `venv` or `virtualenv` to create the environment. Below are some example commands:
+  - Anaconda: `conda create -n mm_ai_llm_processing_accelerator python=3.11 --no-default-packages`, then `conda activate mm_ai_llm_processing_accelerator` to activate
+  - venv: `python -m venv .venv`, then `source .venv/bin/activate` to activate
+- Once the new environment is created and activated, install the python requirements file: `pip install -r requirements.txt`. This contains the dependencies for both the function and web apps.
 - Clone this repository: `git clone https://github.com/azure/multimodal-ai-llm-processing-accelerator.git`
-- [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Cmacos%2Ccsharp%2Cportal%2Cbash#install-the-azure-functions-core-tools)
 
 #### Deploying for the first time
 
 Execute the following command, if you don't have any pre-existing Azure services and want to start from a fresh deployment.
 
+1. Ensure your virtual environment is activated
 1. Run `azd auth login`
-1. Review the default parameters in `infra/main.bicepparam` and update as required.
-1. Run `azd up` - This will provision the Azure resources and deploy the services.
-    - Note: When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. If this error occurs, simple rerun `azd deploy` after 1-2 minutes.
+1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID (see the file for instructions).
+1. Run `azd up` to start the deployment. Follow the prompts to create or select the resource group, location and other parameters. This will provision the Azure resources and deploy the services.
+    - Note: When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. This is due to a known bug when retrieving the function key for a newly deployed Azure Function. If this error occurs, simply wait 1-2 minutes and then rerun `azd deploy`. The deployment should then complete successfully.
 1. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
 It will look like the following:
 
 ![Deployed endpoints](/docs/azd-deployed-endpoints.png)
 
-Note that the Function app is deployed on a consumption plan under the default infrastructure configuration. This means the first request after deployment or periods of inactivity will take 20-30 seconds longer while the function warms up. All requests made once the function is warm should complete in a normal timeframe.
-
 #### Deploying again
 
-If you've only changed the function or web app code, then you don't need to re-provision the Azure resources. You can just run:
+Whenever you rerun any deployment commands, make sure you have activated your Python 3.11 virtual environment.
 
-```azd deploy --all``` or ```azd deploy api``` or ```azd deploy webapp```
+If you've only changed the infrastructure files (`infra` folder or `azure.yaml`) or the [Content Understanding schema definitions](function_app/config/content_understanding_schemas.json), then you'll only need to run the provisioning step to update the Azure resources. You can do that by running:
 
-If you've changed the infrastructure files (`infra` folder or `azure.yaml`), then you'll need to re-provision the Azure resources and redeploy the services. You can do that by running:
+- ```azd provision```
 
-```azd up```
+If you've only changed the function or web app code, then you don't need to re-provision the Azure resources. You can redeploy the application code using one of the following commands:
+
+- ```azd deploy --all``` to deploy both the api and web app code
+- ```azd deploy api``` to deploy the function app code only
+- ```azd deploy webapp``` to deploy the web app code only
+
+If you've changed both the infrastructure files, schemas or the function or web app code, then you'll need to re-provision the Azure resources and redeploy the services. You can do that by running:
+
+- ```azd up```
 
 #### Clean up
 
@@ -340,20 +354,30 @@ To clean up all the resources created by this sample:
 
 ### Running the solution locally
 
-#### Prerequisite - Deploy Azure Resources
+#### Prerequisites
 
-To run the solution locally, you will need to create the necessary resources for all Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). Set these up within Azure before you start the next steps. If using the Azure Content Understanding service, ensure any changes to the analyzer schemas are updated within the Azure resource. You can push any updates to the schema definitions using the [create_content_understanding_analyzers.py](function_app/create_content_understanding_analyzers.py) script.
+- For local development, install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Cmacos%2Ccsharp%2Cportal%2Cbash#install-the-azure-functions-core-tools) so that you can run the function app server locally.
+- Deploy the backend Azure resources
+  - To run the solution locally, you will need to create the necessary resources for all Storage, CosmosDB and Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). To do this, it is recommended to first deploy the solution to Azure using `azd up` and with Service Endpoints enabled for the backend services, along with public network access from your local computer. This will provision the necessary backend resources that can now be called by the locally running function app.
+  - If using the Azure Content Understanding service in your pipelines, ensure that any changes to the analyzer schemas are updated within the Azure resource before you test your pipelines locally. Whenever you update any of the [Content Understanding schema definitions](/function_app/config/content_understanding_schemas.json), you can push the new definitions to the Azure resource using the [create_content_understanding_analyzers.py](function_app/create_content_understanding_analyzers.py) script or by simply running `azd provision` again (the schemas are automatically updated within the Azure resource using a [postprovision script](/azure.yaml) whenever the infrastructure is re-deployed to Azure).
+- If using the Azure Storage bindings in your pipelines (e.g. for Azure Blob Storage input trigger), you can either connect directly to an existing Azure Storage account or you can test with a locally-running Storage Account emulator.
+  - To use the locally-running Storage Account emulator, you will need to install and run the Azurite emulator before you start the function server.
+    - The easiest way to run the Azurite emulator is using the [Azurite VS Code extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
+    - Once installed, click on the buttons in the bottom right-hand corner of the VS Code window to start or stop the server (see below). Once clicked, the emulator will start running and you will be able to connect to it using the default connection string in the `local.settings.json` file.
+    ![Azurite VS Code Extension](/docs/vscode-azurite-buttons.png)
+  - To connect to a live Azure Storage account, you can update the `AzureWebJobsStorage` and `AzureWebJobsFeatureFlags` settings in the `local.settings.json` file to use the live storage account settings.
+    - If you've already deployed the solution, the connection strings will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating the `local.settings.json` file with the corresponding values.
 
 #### Function app local instructions
 
 The `function_app` folder contains the backend Azure Functions App. By default, it includes a number of Azure Function Python Blueprints that showcase different types of processing pipelines.
 
-- Open a new terminal window with a Python 3.11 environment active
+- Open a new terminal/Windows Powershell window and activate your Python 3.11 environment.
 - Navigate to the function app directory: `cd function_app`
 - Make a local settings file to populate the necessary app settings and environment variables. You can automatically import the same app settings as the Azure deployment by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local#synchronize-settings), and then compare the values to the the sample file: `sample_local.settings.json`. More info on local function development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
-- Open the newly created `local.settings.json` file and populate the values for all environment variables (these are usually capitalized, e.g. `DOC_INTEL_API_KEY` or `AOAI_ENDPOINT`). You may need to go setup new resources within Azure.
-- Run the environment setup script to setup a new virtual Python environment with all required dependencies for running the example: `sh setup_env.sh`.
-- Activate the new environment: `source .venv/bin/activate`
+- Open the newly created `local.settings.json` file and populate the values for all environment variables (these are usually capitalized, e.g. `DOC_INTEL_ENDPOINT` or `AOAI_ENDPOINT`).
+  - By default, the local settings file uses parameters to connect to a local Azurite storage account emulator for Azure Blob Storage bindings. To use this service, make sure the Azurite emulator is installed on your system (e.g. using the [Azurite VS Code extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite)) and that the local blob, file and queue servers are running locally on 127.0.0.1:10000 etc.
+  - If you would like to use a live storage account within deployed in Azure, you can update the `AzureWebJobsStorage` and `AzureWebJobsFeatureFlags` settings in the `local.settings.json` file to use the live storage account settings.
 - Start the function server: `func start`
 
 Once the local web server is up and running, you can either run the demo app, or open a new terminal window and send a test request:
@@ -361,15 +385,16 @@ Once the local web server is up and running, you can either run the demo app, or
 
 #### Demo app local instructions
 
-the `demo_app` folder contains the code for the demo web application. This application is built with the `gradio` Python web framework, and is meant for demos and testing (not production usage). The application connects to the Azure Functions server for all processing, automatically selecting the correct endpoint based on environment variables (which are set during deployment). If the server is run locally without any environment variables set, it will connect to the Function Server on `http://localhost:7071/`, otherwise it will use the `FUNCTION_HOST` and `FUNCTION_KEY` environment variables to connect to the Azure Function deployed within Azure.
+The `demo_app` folder contains the code for the demo web application. This application is built with the `gradio` Python web framework, and is meant for demos and testing (not production usage). The application connects to the Azure Functions server for all processing, automatically selecting the correct endpoint based on the `FUNCTION_HOST` and `FUNCTION_KEY` environment variables (which are set during deployment). If the web server is run locally without any environment variables set, it will attempt to automatically connect to a locally Function Server on `http://localhost:7071/`.
 
-- Open a new terminal window with a Python 3.11 environment active.
+To run the demo app locally, follow these steps:
+
+- Open a new terminal/Windows Powershell window and activate your Python 3.11 environment
 - Navigate to the demo app directory: `cd demo_app`
-- Create a new Python 3.11 environment. To do this you can run:
-  - `conda create -n mm_ai_llm_processing_demo_app python=3.11 --no-default-packages && conda activate mm_ai_llm_processing_demo_app`
-  - `python -m venv .venv && source .venv/bin/activate`
-- Install the python dependencies for the demo app: `pip install -r requirements.txt`
-- Make a copy of the sample environment variables file, and review the values: `cp .env.sample .env`
+- Make a copy of the sample environment variables file: `cp .env.sample .env`
+- Review the values in the `.env` file and update as required.
+  - Many of the values will need to be copied from the bicep deploylment outputs so that the local demo app can connect to the deployed services.
+  - If you have already deployed the solution, these variables will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating your `.env` file with the corresponding values.
 - Start the gradio server: `gradio demo_app.py`. By default, the application will launch in auto-reload mode, automatically reloading whenever `demo_app.py` is changed.
 - Open the web app in the browser: `https://localhost:8000`
 
