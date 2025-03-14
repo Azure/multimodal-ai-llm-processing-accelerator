@@ -266,7 +266,8 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         vnetAddressPrefix
       ]
     }
-    subnets: [
+    subnets: concat(
+      [
       {
         name: backendServicesSubnetName
         properties: {
@@ -402,6 +403,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
           )
         }
       }
+      ],
+      functionAppNetworkingType == 'PrivateEndpoint'
+        ? [
       {
         name: functionAppPrivateEndpointSubnetName
         properties: {
@@ -414,6 +418,8 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         }
       }
     ]
+        : []
+    )
   }
 }
 
