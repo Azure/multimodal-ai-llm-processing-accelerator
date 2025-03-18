@@ -17,7 +17,7 @@ hooks:
         else
           echo "Skipping Content Understanding analyzer creation - the resource has not been deployed and/or no endpoint URL is available in the Bicep outputs"
         fi
-      interactive: false
+      interactive: true
       continueOnError: false
       
     windows:
@@ -28,7 +28,7 @@ hooks:
         } else {
           Write-Host "Skipping Content Understanding analyzer creation - the resource has not been deployed and/or no endpoint URL is available in the Bicep outputs"
         }
-      interactive: false
+      interactive: true
       continueOnError: false
 services:
   api:
@@ -63,17 +63,5 @@ services:
         windows:
           shell: pwsh
           run: del ./content_understanding_schemas.json && mv ../.demo_app.env.bak ./.env
-          interactive: false
-          continueOnError: false
-      postdeploy:
-        # Install the required Python packages
-        windows:
-          shell: pwsh
-          run: python3 -m pip install --upgrade pip; python3 -m pip install -r requirements.txt
-          interactive: false
-          continueOnError: false
-        posix:
-          shell: sh
-          run: python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt
           interactive: false
           continueOnError: false

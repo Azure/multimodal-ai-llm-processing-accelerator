@@ -77,3 +77,35 @@ param openAIWhisperDeploymentCapacity = 1 // Set to 0 to skip deployment
 param openAIWhisperModel = 'whisper'
 param openAIWhisperModelVersion = '001'
 param openAIWhisperDeploymentSku = 'Standard'
+
+// Networking configuration
+
+// By default, all of the resources deployed in this accelerator are networked together using either Service Endpoints or Private Endpoints.
+// The configuration options below allow you to select which of these options are used and to optionally allow additional access from public networks.
+
+// 1. Private Endpoints - This deploys a private endpoint for the group of resources and ensures all traffic to the resources stays within the VNET (no data traverses the public internet).
+// 2. Service Endpoints - This uses Service Endpoints & NACL/IP rules to control internal VNET traffic, while ensuring the traffic stays within the Azure backbone network.
+// Note: All access rules between the deployed resources are already configured, but you can also allow public network access using the `*AllowPublicAccess` & `*ExternalIpsOrIpRanges` parameters.
+
+// Additionally, you can optionally allow public network access to the resources using the `*AllowPublicAccess` & `*AllowedExternalIpsOrIpRanges` parameters.
+// If deploying the accelerator from a local machine over the public internet, make sure to enable public network access and add your local IP address to the `*AllowedExternalIpsOrIpRanges` parameters.
+// * To disable all public network access and restrict it to only those which have a route from within the VNET, set the `*AllowPublicAccess` parameter to false. 
+//    - Note that this will prevent the setup of the Content Understanding schemas and the deployment of the application code unless the deployment is done from within the VNET.
+// * To enable public network access from any IP address on the internet, set the `*AllowPublicAccess` parameter to true and leave the `*AllowedExternalIpsOrIpRanges` parameter empty
+// * To enable public network access but restrict it to only selected IP addresses, set the '*AllowPublicAccess' to true and included the allowed IP address in the the '*AllowedExternalIpsOrIpRanges' parameters
+
+param webAppUsePrivateEndpoint = false
+param webAppAllowPublicAccess = true
+param webAppAllowedExternalIpRanges = [] // Use CIDR blocks for all entries
+
+param functionAppNetworkingType = 'ServiceEndpoint'
+param functionAppAllowPublicAccess = true
+param functionAppAllowedExternalIpRanges = [] // Use CIDR blocks for all entries
+
+param backendServicesNetworkingType = 'ServiceEndpoint'
+param backendServicesAllowPublicAccess = true
+param backendServicesAllowedExternalIpsOrIpRanges = [] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
+
+param storageServicesAndKVNetworkingType = 'ServiceEndpoint'
+param storageServicesAndKVAllowPublicAccess = true
+param storageServicesAndKVAllowedExternalIpsOrIpRanges = [] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
