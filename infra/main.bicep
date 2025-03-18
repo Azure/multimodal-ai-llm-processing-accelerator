@@ -1112,7 +1112,6 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploy
     customSubDomainName: docIntelTokenName
     disableLocalAuth: true
     networkAcls: {
-      bypass: 'None'
       defaultAction: 'Deny'
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
@@ -1203,7 +1202,6 @@ resource speech 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploySp
     customSubDomainName: speechTokenName
     disableLocalAuth: true
     networkAcls: {
-      bypass: 'None'
       defaultAction: 'Deny'
       // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
