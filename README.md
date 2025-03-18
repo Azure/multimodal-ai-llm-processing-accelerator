@@ -293,25 +293,24 @@ When using private endpoints:
         - Redeploy the infrastructure by running `azd provision`. This will disable public network access to the resources and ensure that only other resources within the VNET can access them.
         - Next time you need to update the schemas or application code, you can temporarily re-enable public network access to the required resources, rerun `azd up` to reprovision the infrastructure and deploy the updated schemas and application code, and then disable public network access and run `azd provision` once more.
 
-### Deploying to Azure with `azd`
-
-#### Prerequisites
+### Prerequisites for deployment and local development
 
 - Deployment of this accelerator tends to work more reliably when deploying from a unix-based system (e.g. MacOS or Linux). It is recommended that Windows users deploy using [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) to execute the following commands from the Linux command line.
   - If WSL is not available and you must run commands from the Windows command line, you will need to make sure that `Powershell (Core) 7` is installed (so that `pwsh` commands can be run). This is a different to `Windows Powershell` which comes pre-installed on all Windows systems.
   - To verify whether Powershell (Core) is installed, you can run `pwsh --version`. If the command is not found, run `winget install --id Microsoft.PowerShell --source winget` to install it.
   - Once installed, make sure to run all commands below from the Windows Powershell command line (otherwise the `az` and `azd` commands may not work correctly).
 - To use and deploy this solution accelerator, you will need access to an Azure subscription with permission to create resource groups and resources. You can [create an Azure account here for free](https://azure.microsoft.com/free/).
-
-To customize and develop the app locally, you will need to install the following:
-
+- Clone this repository: `git clone https://github.com/azure/multimodal-ai-llm-processing-accelerator.git`
+- Create a new Python 3.11 environment for your project.
+  - To do this, open a terminal window and navigate to the root directory of the repository. You can then use a package manager like `conda`, `venv` or `virtualenv` to create the environment - below are some example commands:
+    - Anaconda: `conda create -n mm_ai_llm_processing_accelerator python=3.11 --no-default-packages`, then activate the environment with `conda activate mm_ai_llm_processing_accelerator` each time you want run or deploy the solution.
+    - venv: `python -m venv .venv`, then activate the environment with `source .venv/bin/activate` each time you want run or deploy the solution.
+  - Once the new environment is created and activated, install the python requirements file: `pip install -r requirements.txt`. This contains the dependencies for both the function and web apps.
+  - Make sure you have activated the environment each time you need to deploy the solution or run it locally.
 - Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`) and login using `az login`.
 - Install the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) (`azd`) and login using `azd auth login`.
-- Create a new Python 3.11 environment for your project. You can use a package manager like `conda`, `venv` or `virtualenv` to create the environment. Below are some example commands:
-  - Anaconda: `conda create -n mm_ai_llm_processing_accelerator python=3.11 --no-default-packages`, then `conda activate mm_ai_llm_processing_accelerator` to activate
-  - venv: `python -m venv .venv`, then `source .venv/bin/activate` to activate
-- Once the new environment is created and activated, install the python requirements file: `pip install -r requirements.txt`. This contains the dependencies for both the function and web apps.
-- Clone this repository: `git clone https://github.com/azure/multimodal-ai-llm-processing-accelerator.git`
+
+### Deploying to Azure with `azd`
 
 #### Deploying for the first time
 
@@ -319,7 +318,7 @@ Execute the following command, if you don't have any pre-existing Azure services
 
 1. Ensure your virtual environment is activated
 1. Run `azd auth login`
-1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID (see the file for instructions).
+1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID and review the networking configuration (see the file for instructions).
 1. Run `azd up` to start the deployment. Follow the prompts to create or select the resource group, location and other parameters. This will provision the Azure resources and deploy the services.
     - Note: When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. This is due to a known bug when retrieving the function key for a newly deployed Azure Function. If this error occurs, simply wait 1-2 minutes and then rerun `azd deploy`. The deployment should then complete successfully.
 1. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
@@ -356,6 +355,7 @@ To clean up all the resources created by this sample:
 
 #### Prerequisites
 
+- Make sure to complete the prerequisites in the [Prerequisites for deployment and local development](#prerequisites-for-deployment-and-local-development) section.
 - For local development, install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Cmacos%2Ccsharp%2Cportal%2Cbash#install-the-azure-functions-core-tools) so that you can run the function app server locally.
 - Deploy the backend Azure resources
   - To run the solution locally, you will need to create the necessary resources for all Storage, CosmosDB and Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). To do this, it is recommended to first deploy the solution to Azure using `azd up` and with Service Endpoints enabled for the backend services, along with public network access from your local computer. This will provision the necessary backend resources that can now be called by the locally running function app.
