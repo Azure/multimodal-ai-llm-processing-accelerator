@@ -37,18 +37,18 @@ if IS_AOAI_DEPLOYED:
 
     app.register_blueprint(bp_summarize_text)
 if IS_DOC_INTEL_DEPLOYED and IS_AOAI_DEPLOYED:
+    from bp_doc_intel_extract_city_names import bp_doc_intel_extract_city_names
     from bp_form_extraction_with_confidence import bp_form_extraction_with_confidence
 
+    app.register_blueprint(bp_doc_intel_extract_city_names)
     app.register_blueprint(bp_form_extraction_with_confidence)
 if IS_SPEECH_DEPLOYED and IS_AOAI_DEPLOYED:
     from bp_call_center_audio_analysis import bp_call_center_audio_analysis
 
     app.register_blueprint(bp_call_center_audio_analysis)
 if IS_DOC_INTEL_DEPLOYED:
-    from bp_doc_intel_extract_city_names import bp_doc_intel_extract_city_names
     from bp_multimodal_doc_intel_processing import bp_multimodal_doc_intel_processing
 
-    app.register_blueprint(bp_doc_intel_extract_city_names)
     app.register_blueprint(bp_multimodal_doc_intel_processing)
 if IS_CONTENT_UNDERSTANDING_DEPLOYED:
     from bp_content_understanding_audio import bp_content_understanding_audio
