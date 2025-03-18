@@ -243,18 +243,17 @@ The infrastructure deploys a Virtual Network (VNET) with the following subnets:
 **Network endpoint types**:
 By default, all of the resources deployed in this accelerator communicate with each other using either Service Endpoints or Private Endpoints.
 
-1. Private Endpoints - This restricts all traffic to the backend resources to within the VNET and ensures no data traverses the public internet.
-2. Service Endpoints - This allows traffic to reach the resources via the public internet, but controls access to the resources using NACLs and IP rules.
+1. Private Endpoints - This deploys a private endpoint for the group of resources and ensures all traffic from other resources in the VNET stays within the VNET (no data traverses the public internet).
+2. Service Endpoints - This uses Service Endpoints & NACL/IP rules to control internal VNET traffic, while ensuring the traffic stays within the Azure backbone network.
 
 The choice between Service Endpoints and Private Endpoints can be made independently for each group of resources.
 
-- `backendServicesNetworkingType`: Controls how the backend AI services can be accessed (ServiceEndpoint or PrivateEndpoint)
-- `storageServicesAndKVNetworkingType`: Controls how shared storage services & Key Vault can be accessed (ServiceEndpoint or PrivateEndpoint)
-- `functionAppNetworkingType`: Controls how the Function App can be accessed (ServiceEndpoint or PrivateEndpoint)
+- `backendServicesNetworkingType`: Controls how the backend AI services are accessed by the web & function apps (ServiceEndpoint or PrivateEndpoint)
+- `storageServicesAndKVNetworkingType`: Controls how shared storage services & Key Vault are accessed by the web and function apps (ServiceEndpoint or PrivateEndpoint)
+- `functionAppNetworkingType`: Controls how the Function App can be accessed by the web app (ServiceEndpoint or PrivateEndpoint)
+- `webAppUsePrivateEndpoint`: Controls whether a private endpoint is deployed for the web app (provided that the web app is deployed)
 
-When using Service Endpoints, the resources will can access other resources within the VNET via pre-defined network security groups (NSGs), but additional options are available to set the access rules for connecting to the resources from public networks. Each group of resources can have public network access enabled or disabled independently, along with the ability to restrict public network access to a specific set of IP addresses or CIDR blocks.
-
-These IP access control parameters only apply when the corresponding networking type is set to `ServiceEndpoint`. When a group of services are deployed using the `PrivateEndpoint` deployment option, public access to the resources in that group is disabled completely and will only be accessible by resources within the VNET that have access to the subnet containing the private endpoint(s).
+Additionally, you can optionally allow public network access to the resources using the `*AllowPublicAccess` & `*AllowedExternalIpsOrIpRanges` parameters. This is useful for when you need to deploy the solution from outside of the VNET but want to ensure that the resources communicate with each other via private endpoints. More information on this scenario is available in the [Private endpoint considerations](#private-endpoint-considerations) section below.
 
 For more information, check out the configuration options within the `infra/main.bicepparam` file.
 
@@ -272,8 +271,7 @@ For more information, check out the configuration options within the `infra/main
 
 - Best for enterprise security requirements, providing the highest level of security
 - Recommended for production environments with strict security requirements
-- Completely isolates services from the public internet - all traffic must originate from within the VNET and stay within the VNET
-- Prevents public access to the Function App and backend services, including when deploying Content Understanding schemas or application code (see the next section for more details and workarounds)
+- Can completely isolates services from the public internet - all traffic that originates from within the VNET will stay within the VNET
 - Adds a small cost overhead (approximately $7.50 per month per private endpoint, which can total $60-75/month when using private endpoints for all services)
 - Typical scenarios: Production environments, and applications where private networking is required.
 
@@ -281,17 +279,18 @@ For more information, check out the configuration options within the `infra/main
 
 When using private endpoints:
 
-1. **Local development challenges**: Services with private endpoints are not directly accessible from your local development environment. Options to address this include:
+1. **Local development challenges**: Services with private endpoints are not directly accessible from your local development environment unless public network access is enabled temporarily for deployment. If public network access must be disabled at all times, you will need to run the deployment from an internal network address (within the VNET). Options to address this include:
    - Using a jumpbox or Azure Bastion service to access the VNET
    - Setting up a VPN connection to the VNET
    - Using Azure Dev Tunnels or similar services
 
-2. **Deployment of Content Undertstanding Schemas & Application Code**: After the provisioning of the cloud resources, a postprovision script is run from the deployment runner (or your local machine) to create or update the Content Understanding analyzer schemas in the resource dedicated to Azure Content Understanding, along with deployment of the function app code. If either the Content Understanding resource or the function app resources are deployed behind private endpoints, these steps will fail unless they are being run from a machine that is connected to the VNET. There are a couple ways to resolve this:
-    - The recommended long-term solution is to run the deployment from a machine that is located within or connected to the VNET (e.g. via a VPN or Azure Bastion, or from a VM/runner that is deployed within the VNET).
-    - The alternative short-term solution is to deploy the solution as follows:
-        - For the first deployment, run `azd up` with `NetworkingType = 'ServiceEndpoint'` for the function app and backend services (this will create the schemas in the resource and deploy the application code while public access is possible)
-        - With the resources deployed and publicly accessible, set `NetworkingType = 'PrivateEndpoint'` for the function app and/or backend services and re-run `azd up` with the new networking configuration. This will switch the backend resource(s) to private networking and now prevent all public access - including the postprovision hook and code deployment. Note that the deployment will fail once the private endpoints are enabled and the postprovision hook and/or code deployments are attempted since the resources are no longer publicly accessible.
-        - Next time you need to update the schemas or application code, you can switch the networking configuration back to `ServiceEndpoint` and rerun `azd up` to re-enable public access to the backend resources. For the Function app, you will also need to manually remove the private endpoint (e.g. through the portal) so that the function app can be accessed again via the standard networking configuration. Once this is done, you can deploy the new function app code (either with `azd up` or `azd deploy api`), and then switch the configuration back to `PrivateEndpoint` and run `azd up` again to switch the resources back to private endpoints.
+2. **Deployment of Content Undertstanding Schemas & Application Code**: After the provisioning of the cloud resources, a postprovision script is run from the deployment runner (or your local machine) to create or update the Content Understanding analyzer schemas in the resource dedicated to Azure Content Understanding, along with deployment of the function app code. If either the Content Understanding resource or the function app resources are deployed behind without public network access and from a deployment host that is not located within the VNET, these steps will fail. There are a couple ways to resolve this:
+    - The recommended long-term solution is to run the deployment from a host that is located within or connected to the VNET (e.g. via a VPN or Azure Bastion, or from a VM/runner that is deployed within the VNET).
+    - Alternatively, you can temporarily deploy the solution with public network access enabled and then reprovision the infrastructure with all public network access disabled. In practice, you would do as follows:
+        - For the first deployment, enable public network access for the resources (within `main.bicepparam`), then run `azd up`. This will create the schemas in the Content Understanding resource and deploy the application code while public access is possible.
+        - Now that the schemas and code are deployed and up-to-date, set the `webAppAllowPublicAccess`, `functionAppAllowPublicAccess`, `backendServicesAllowPublicAccess` parameters to false.
+        - Redeploy the infrastructure by running `azd provision`. This will disable public network access to the resources and ensure that only other resources within the VNET can access them.
+        - Next time you need to update the schemas or application code, you can temporarily re-enable public network access to the required resources, rerun `azd up` to reprovision the infrastructure and deploy the updated schemas and application code, and then disable public network access and run `azd provision` once more.
 
 ### Deploying to Azure with `azd`
 
