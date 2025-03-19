@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 from base64 import b64encode
 from copy import deepcopy
@@ -531,16 +532,22 @@ def redact_pii_pdf(req: func.HttpRequest) -> func.HttpResponse:
                 len(doc) + len(split_delimiter) + sum(split_documents_offsets)
             )
 
-        # Process the documents
-        pii_result = text_analytics_client.recognize_pii_entities(
-            documents=split_documents,
-        )
-        output_model.pii_raw_response = [str(doc_result) for doc_result in pii_result]
-        if any(doc_result.is_error for doc_result in pii_result):
+        # Process the documents in sets of 5
+        all_pii_results = list()
+        num_requests = math.ceil(len(split_documents) / 5)
+        for request_num in range(num_requests):
+            pii_result = text_analytics_client.recognize_pii_entities(
+                documents=split_documents[request_num * 5 : (request_num + 1) * 5],
+            )
+            all_pii_results.extend(pii_result)
+        if any(doc_result.is_error for doc_result in all_pii_results):
             raise Exception("An error occurred during PII recognition")
+        output_model.pii_raw_response = [
+            str(doc_result) for doc_result in all_pii_results
+        ]
         # Combine the separated documents back together, adjusting the index of the PII recognition results to match the original document
         merged_pii_entities: list[PiiEntity] = []
-        for doc_idx, doc_result in enumerate(pii_result):
+        for doc_idx, doc_result in enumerate(all_pii_results):
             for entity in doc_result.entities:
                 entity.offset = entity.offset + split_documents_offsets[doc_idx]
                 merged_pii_entities.append(entity)
