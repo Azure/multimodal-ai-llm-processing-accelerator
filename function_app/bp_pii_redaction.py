@@ -8,8 +8,8 @@ from typing import Optional
 import azure.functions as func
 import fitz
 from azure.ai.documentintelligence import DocumentIntelligenceClient
-from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
-from azure.ai.textanalytics import TextAnalyticsClient
+from azure.ai.documentintelligence.models import AnalyzeDocumentRequest, AnalyzeResult
+from azure.ai.textanalytics import PiiEntity, TextAnalyticsClient
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 from fitz import Document, get_text_length
@@ -162,7 +162,7 @@ def redact_pii_text(req: func.HttpRequest) -> func.HttpResponse:
         pii_result_doc = pii_result[0]
         if pii_result_doc.is_error:
             raise RuntimeError(
-                "An error occurred during PII recognition",
+                f"An error occurred during PII recognition: {pii_result_doc.error.message}",
             )
 
         ### 4. Replace the PII entities with '<<CATEGORY>>' text.
@@ -231,6 +231,9 @@ class PDFFunctionReponseModel(BaseModel):
     pii_raw_response: Optional[dict] = Field(
         None, description="The raw API response from PII recognition."
     )
+    merged_pii_entities: Optional[list[str]] = Field(
+        None, description="The merged PII entities from the split documents."
+    )
 
 
 def replace_text_in_pdf(
@@ -260,20 +263,16 @@ def replace_text_in_pdf(
     if not inplace:
         doc = deepcopy(doc)
 
-    for page_num, page in enumerate(doc, start=1):
-        for find_text, replace_text in replacements.items():
+    for find_text, replace_text in replacements.items():
+        occurence_found = False
+        for page_num, page in enumerate(doc, start=1):
             # Search for occurrences of find_text
             instances = page.search_for(find_text)
 
             if not instances:
-                logging.info(
-                    (
-                        f"No occurrences of '{find_text}' found on page {page_num}. "
-                        "This text could be embedded in an image which is not yet supported by this function."
-                    )
-                )
                 continue
 
+            occurence_found = True
             for rect in instances:
                 # First, redact (remove) the original text
                 page.add_redact_annot(rect)
@@ -320,6 +319,127 @@ def replace_text_in_pdf(
                     fontname=font,
                     color=normalized_color,
                 )
+
+        if not occurence_found:
+            logging.warning(
+                (
+                    f"No occurrences of '{find_text}' found in PyMuPDF document. "
+                    "This text could be embedded in an image which is not yet supported by this function."
+                )
+            )
+
+    return doc
+
+
+def match_pii_entities_to_di_bounding_boxes(
+    pii_entities: list[PiiEntity],
+    di_response: AnalyzeResult,
+) -> list[PiiEntity]:
+    """
+    Match the identified PII entities to their associated bounding boxes by
+    comparing the text of the PII entity to the words and lines in the Document
+    Intelligence response.
+    """
+    # Match PII entities to Document Intelligence words and lines
+    for entity in pii_entities:
+        for page in di_response.pages:
+            for line in page.lines:
+                if entity.text in line.content:
+                    entity.bounding_boxes = line.bounding_regions
+    return pii_entities
+
+
+def replace_text_in_pdf_with_bounding_boxes(
+    doc: Document, replacements: dict, inplace: bool = True
+) -> Document:
+    """
+    Replace all occurrences of text in a PDF with replacement text. This function
+    will only work for text that is embedded in the PDF in the data layer. Text
+    embedded in images is not supported at this stage and would require the
+    Azure Document Intelligence response (with page numbers and bounding boxes)
+    to be used to redact the text based on it's location in the PDF.
+
+    :param doc:
+        The PDF to be redacted.
+    :param replacements:
+        A dictionary of text to replace and the text to replace it with.
+    :param inplace:
+        If True, the PDF will be redacted in-place and returned. If False, a new
+            PDF will be returned.
+    :returns:
+        The redacted PDF.
+    """
+
+    # The code in this function has been copied and modified from
+    # https://dev.to/abbazs/replace-text-in-pdfs-using-python-42k6
+
+    if not inplace:
+        doc = deepcopy(doc)
+
+    for find_text, replace_text in replacements.items():
+        occurence_found = False
+        for page_num, page in enumerate(doc, start=1):
+            # Search for occurrences of find_text
+            instances = page.search_for(find_text)
+
+            if not instances:
+                continue
+
+            occurence_found = True
+            for rect in instances:
+                # First, redact (remove) the original text
+                page.add_redact_annot(rect)
+                page.apply_redactions()
+
+                # Default values for text properties
+                font = "helv"  # Default to Helvetica
+                font_size = 10.0  # Default size
+                color = (255, 0, 0)  # Default to black
+
+                # Calculate the max width of the text to be replaced
+                max_width = rect.x1 - rect.x0
+
+                # Calculate the baseline position for text insertion
+                baseline = fitz.Point(
+                    rect.x0, rect.y1 - 2.2
+                )  # Adjust the -2 offset as needed
+
+                candidate_text_length = get_text_length(
+                    replace_text, fontname=font, fontsize=font_size
+                )
+                if candidate_text_length > max_width:
+                    # If the replacement text is too wide to fit in the original location, reduce the font size
+                    font_size = font_size * (max_width / candidate_text_length)
+                elif candidate_text_length < max_width:
+                    # if the text is too short, change the baseline position to center the text
+                    offset = (max_width - candidate_text_length) / 2
+                    baseline = fitz.Point(
+                        rect.x0 + offset, rect.y1 - 2.2
+                    )  # Adjust the -2 offset as needed
+
+                # Normalize the color values to range 0 to 1
+                normalized_color = (
+                    tuple(c / 255 for c in color)
+                    if isinstance(color, tuple)
+                    else (0, 0, 0)
+                )
+
+                # Insert the new text at the adjusted position
+                page.insert_text(
+                    baseline,
+                    replace_text,
+                    fontsize=font_size,
+                    fontname=font,
+                    color=normalized_color,
+                )
+
+        if not occurence_found:
+            logging.warning(
+                (
+                    f"No occurrences of '{find_text}' found in PyMuPDF document. "
+                    "This text could be embedded in an image which is not yet supported by this function."
+                )
+            )
 
     return doc
 
@@ -389,19 +509,50 @@ def redact_pii_pdf(req: func.HttpRequest) -> func.HttpResponse:
 
         ### 3. Redact PII from the text using Azure AI Language service
         error_text = "An error occurred during PII recognition."
-        documents = [raw_text]
+
+        # Split the document into chunks of 5120 characters or less (the max length for the PII recognition API)
+        split_delimiter = "\n"
+        paragraphs = raw_text.split(split_delimiter)
+        split_documents = [""]
+        for paragraph in paragraphs:
+            para_length = len(paragraph)
+            if para_length > 5120:
+                raise ValueError("A paragraph is longer than 5120 characters")
+            elif para_length + len(split_delimiter) + len(split_documents[-1]) < 5120:
+                split_documents[-1] = (
+                    f"{split_documents[-1]}{split_delimiter}{paragraph}"
+                )
+            else:
+                split_documents.append(paragraph)
+        # Record the correct starting offset (based on Document Intelligence) for each document chunk
+        split_documents_offsets = [0]
+        for doc in split_documents[:-1]:
+            split_documents_offsets.append(
+                len(doc) + len(split_delimiter) + sum(split_documents_offsets)
+            )
+
+        # Process the documents
         pii_result = text_analytics_client.recognize_pii_entities(
-            documents=documents,
+            documents=split_documents,
         )
         output_model.pii_raw_response = [str(doc_result) for doc_result in pii_result]
-        pii_result_doc = pii_result[0]
-        if pii_result_doc.is_error:
+        if any(doc_result.is_error for doc_result in pii_result):
             raise Exception("An error occurred during PII recognition")
+        # Combine the separated documents back together, adjusting the index of the PII recognition results to match the original document
+        merged_pii_entities: list[PiiEntity] = []
+        for doc_idx, doc_result in enumerate(pii_result):
+            for entity in doc_result.entities:
+                entity.offset = entity.offset + split_documents_offsets[doc_idx]
+                merged_pii_entities.append(entity)
+
+        output_model.merged_pii_entities = [
+            str(entity) for entity in merged_pii_entities
+        ]
 
         ### 3. Replace the PII entities with '<<CATEGORY>>' text.
         # This gives us a more readable output than the redacted text from the raw API response (which simply replaces PII with asterixes).
         replacements = {
-            entity.text: f"<<{entity.category}>>" for entity in pii_result_doc.entities
+            entity.text: f"<<{entity.category}>>" for entity in merged_pii_entities
         }
         output_model.redacted_text = replace_text(raw_text, replacements)
         redacted_pdf = replace_text_in_pdf(pdf, replacements)
