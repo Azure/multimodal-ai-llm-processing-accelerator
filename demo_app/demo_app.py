@@ -1567,8 +1567,8 @@ with gr.Blocks(analytics_enabled=False) as pii_redaction_block:
     def pii_redaction_pdf_send_request(file: Optional[str]):
         processing_start_time = time.time()
         redacted_text_output = ""
-        redacted_pdf_page_imgs = None
-        input_doc_pdf_page_imgs = None
+        redacted_pdf_page_imgs = []
+        input_doc_pdf_page_imgs = []
 
         try:
             if file is None:
