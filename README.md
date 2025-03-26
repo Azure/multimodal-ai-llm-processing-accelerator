@@ -320,8 +320,11 @@ Execute the following command, if you don't have any pre-existing Azure services
 1. Run `azd auth login`
 1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID and review the networking configuration (see the file for instructions).
 1. Run `azd up` to start the deployment. Follow the prompts to create or select the resource group, location and other parameters. This will provision the Azure resources and deploy the services.
-    - Note: When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. This is due to a known bug when retrieving the function key for a newly deployed Azure Function. If this error occurs, simply wait 1-2 minutes and then rerun `azd deploy`. The deployment should then complete successfully.
-1. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
+
+> [!WARNING]
+> When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. This is due to a known bug when retrieving the function key for a newly deployed Azure Function. If this error occurs, simply wait 1-2 minutes and then rerun `azd deploy`. The deployment should then complete successfully.
+
+5. After the application has been successfully deployed you will see the Function App and Web App URLs printed to the console. Open the Web App URL to interact with the demo pipelines from your browser.
 It will look like the following:
 
 ![Deployed endpoints](/docs/azd-deployed-endpoints.png)
@@ -360,13 +363,24 @@ To clean up all the resources created by this sample:
 - Deploy the backend Azure resources
   - To run the solution locally, you will need to create the necessary resources for all Storage, CosmosDB and Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). To do this, it is recommended to first deploy the solution to Azure using `azd up` and with Service Endpoints enabled for the backend services, along with public network access from your local computer. This will provision the necessary backend resources that can now be called by the locally running function app.
   - If using the Azure Content Understanding service in your pipelines, ensure that any changes to the analyzer schemas are updated within the Azure resource before you test your pipelines locally. Whenever you update any of the [Content Understanding schema definitions](/function_app/config/content_understanding_schemas.json), you can push the new definitions to the Azure resource using the [create_content_understanding_analyzers.py](function_app/create_content_understanding_analyzers.py) script or by simply running `azd provision` again (the schemas are automatically updated within the Azure resource using a [postprovision script](/azure.yaml) whenever the infrastructure is re-deployed to Azure).
-- If using the Azure Storage bindings in your pipelines (e.g. for Azure Blob Storage input trigger), you can either connect directly to an existing Azure Storage account or you can test with a locally-running Storage Account emulator.
+- If using the Azure Storage bindings in your pipelines (e.g. for Azure Blob Storage input triggers), you can either connect directly to an Azure Storage account or you can test with a locally-running Storage Account emulator.
   - To use the locally-running Storage Account emulator, you will need to install and run the Azurite emulator before you start the function server.
     - The easiest way to run the Azurite emulator is using the [Azurite VS Code extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
-    - Once installed, click on the buttons in the bottom right-hand corner of the VS Code window to start or stop the server (see below). Once clicked, the emulator will start running and you will be able to connect to it using the default connection string in the `local.settings.json` file.
+    - Once installed, click on the buttons in the bottom right-hand corner of the VS Code window to start or stop the server (see below). Once clicked, the emulator will start running:
     ![Azurite VS Code Extension](/docs/vscode-azurite-buttons.png)
-  - To connect to a live Azure Storage account, you can update the `AzureWebJobsStorage` and `AzureWebJobsFeatureFlags` settings in the `local.settings.json` file to use the live storage account settings.
-    - If you've already deployed the solution, the connection strings will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating the `local.settings.json` file with the corresponding values.
+    - Finally, you'll need to update the parameters for the function and web apps so that they upload and read from the emulated storage account.
+      - Function App: Make sure the `AzureWebJobsStorage` parameter is set to `UseDevelopmentStorage=true` in the `function_app/local.settings.json` file.
+      - Web App: Set the `USE_LOCAL_STORAGE_EMULATOR` parameter to `"true"` in the `demo_app/.env` file. When set to true, this will instruct the demo app to connect using the pre-set `LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING` parameter (more info [here](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage#https-connection-strings)).
+  - To connect to a Azure Storage account that is deployed in Azure, you can use the following settings:
+    - Function app - Ensure that `AzureWebJobsStorage` is **not** set within `function_app/local.settings.json`, and then set the following parameters based on the outputs in the azd .env file:
+      - `AzureWebJobsStorage__accountName` (azd output field: `storageAccountName`)
+      - `AzureWebJobsStorage__blobServiceUri` (azd output field: `storageAccountBlobUri`)
+      - `AzureWebJobsStorage__queueServiceUri` (azd output field: `storageAccountQueueUri`)
+      - `AzureWebJobsStorage__tableServiceUri` (azd output field: `storageAccountTableUri`)
+    - Web app - In your .env file, use the following parameters:
+      - Set the `USE_LOCAL_STORAGE_EMULATOR` parameter to `"false"`
+      - Set the `STORAGE_ACCOUNT_ENDPOINT` parameter to the storage account endpoint (e.g. `"https://llmprocstorageXXXXX.blob.core.windows.net/"` )
+  - If you've already deployed the solution, the parameters required for all of the instructions above will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating `function_app/local.settings.json` and `demo_app/.env` files with the corresponding values.
 
 #### Function app local instructions
 
@@ -374,29 +388,45 @@ The `function_app` folder contains the backend Azure Functions App. By default, 
 
 - Open a new terminal/Windows Powershell window and activate your Python 3.11 environment.
 - Navigate to the function app directory: `cd function_app`
-- Make a local settings file to populate the necessary app settings and environment variables. You can automatically import the same app settings as the Azure deployment by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local#synchronize-settings), and then compare the values to the the sample file: `sample_local.settings.json`. More info on local function development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
-- Open the newly created `local.settings.json` file and populate the values for all environment variables (these are usually capitalized, e.g. `DOC_INTEL_ENDPOINT` or `AOAI_ENDPOINT`).
-  - By default, the local settings file uses parameters to connect to a local Azurite storage account emulator for Azure Blob Storage bindings. To use this service, make sure the Azurite emulator is installed on your system (e.g. using the [Azurite VS Code extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite)) and that the local blob, file and queue servers are running locally on 127.0.0.1:10000 etc.
-  - If you would like to use a live storage account within deployed in Azure, you can update the `AzureWebJobsStorage` and `AzureWebJobsFeatureFlags` settings in the `local.settings.json` file to use the live storage account settings.
+- When starting the function server, a number of environment variables are loaded from a configuration file in the `function_app` folder, called `local.settings.json`. To get started quickly, you can clone the sample file (`cp function_app/sample_local.settings.json function_app/local.settings.json`). More info on local function development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
+- Now review the newly created `local.settings.json` file. The file includes many placeholder values that should be updated to the correct values based on your azd deployment (these are usually capitalized, e.g. `DOC_INTEL_ENDPOINT` or `AOAI_ENDPOINT`).
+  - By default, the local settings file uses parameters to connect to a local Azurite storage account emulator for Azure Blob Storage bindings. To use this option, ensure the `AzureWebJobsStorage` parameter is set to `UseDevelopmentStorage=true` in the `local.settings.json` file, and then ensure that the Azurite emulator is installed on your system (e.g. using the [Azurite VS Code extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite)) and that the local blob, file and queue servers are running locally on `127.0.0.1:10000`, `127.0.0.1:10001` and `127.0.0.1:10002`.
+  - If you would like to instead connect to a storage account deployed in Azure, ensure that `AzureWebJobsStorage` is **not** set, and then set the following parameters based on the outputs in the azd .env file:
+    - `AzureWebJobsStorage__accountName` (update it to the azd output field: `storageAccountName`)
+    - `AzureWebJobsStorage__blobServiceUri` (update it to the azd output field: `storageAccountBlobUri`)
+    - `AzureWebJobsStorage__queueServiceUri` (update it to the azd output field: `storageAccountQueueUri`)
+    - `AzureWebJobsStorage__tableServiceUri` (update it to the azd output field: `storageAccountTableUri`)
 - Start the function server: `func start`
-
-Once the local web server is up and running, you can either run the demo app, or open a new terminal window and send a test request:
+- Once the local web server is up and running, you can either run the demo app, or open a new terminal window and send a test request:
 `sh send_req_summarize_text.sh`
+
+After running the function server (either in your terminal window or in Azure), the logs should show the function server starting and each of the function routes loaded like so:
+
+![Function server loaded functions](docs/loaded-functions.png)
+
+If you see an error, or that some or all of the functions are missing, it could mean a couple things:
+
+1. The server started, but some or all of the functions are missing when the server was started: This can occur when the `local.settings.json` file does not have any of the required environment variables defining the endpoints for Azure services are not set correctly, causing the function app to skip the registration of any pipelines that depend on those services. Make sure you have updated all of the placeholder values in `local.settings.json` to the correct values, so that the function app registers the pipelines that depend on them.
+1. The server started with 0 function routes: This can occur due to an exception that occured when loading any of the pipelines. In general, if an exception occurs when importing and setting up any of the pipelines and their dependencies, it can cause all functions to fail. In this situation you will need to check for any code changes that may have caused issues and fix them (it is easiest to do this locally).
+
+If this same error occurs when deploying to Azure, it could mean that the required resources were not deployed (make sure you deployed all of the necessary resources in `infra/main.bicepparam`) or because of a code error. In this situation, redeploy all required services and then attempt to debug the system locally.
 
 #### Demo app local instructions
 
-The `demo_app` folder contains the code for the demo web application. This application is built with the `gradio` Python web framework, and is meant for demos and testing (not production usage). The application connects to the Azure Functions server for all processing, automatically selecting the correct endpoint based on the `FUNCTION_HOST` and `FUNCTION_KEY` environment variables (which are set during deployment). If the web server is run locally without any environment variables set, it will attempt to automatically connect to a locally Function Server on `http://localhost:7071/`.
+The `demo_app` folder contains the code for the demo web application. This application is built with the `gradio` Python web framework, and is meant for demos and testing (not production usage). The application connects to a Azure Functions server for all processing, automatically selecting the correct endpoint based on the `FUNCTION_HOST` and `FUNCTION_KEY` environment variables (which are set during deployment). If the web server is run locally without any environment variables set, it will attempt to automatically connect to a locally Function Server on `http://localhost:7071/`.
 
 To run the demo app locally, follow these steps:
 
 - Open a new terminal/Windows Powershell window and activate your Python 3.11 environment
 - Navigate to the demo app directory: `cd demo_app`
-- Make a copy of the sample environment variables file: `cp .env.sample .env`
-- Review the values in the `.env` file and update as required.
-  - Many of the values will need to be copied from the bicep deploylment outputs so that the local demo app can connect to the deployed services.
-  - If you have already deployed the solution, these variables will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating your `.env` file with the corresponding values.
+- When the demo app web server starts, it uses environment variables to connect to the correct function server and backend services. To get started , make a copy of the sample environment variables file: `cp .env.sample .env`
+- Review the placeholder values in the `.env` file and update as required.
+  - Many of the values will need to be updated to the bicep deploylment outputs so that the local demo app can connect to the deployed services.
+  - If you have already deployed the solution to Azure, these variables will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating your `.env` file with the corresponding values.
 - Start the gradio server: `gradio demo_app.py`. By default, the application will launch in auto-reload mode, automatically reloading whenever `demo_app.py` is changed.
 - Open the web app in the browser: `https://localhost:8000`
+
+When using the demo web app, all requests will be sent to the function app (set by `FUNCTION_HOST`) for all processing. If any of these requests fail and you receive a 403 error, it could be because the function host is not running or unavailable, or that the specific pipeline is not loaded/running on that function server. Review the previous function app section for more details on why this might occur and how to troubleshoot it.
 
 # Credits
 

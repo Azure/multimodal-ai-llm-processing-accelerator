@@ -636,6 +636,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+var storageAccountBlobUri = 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
+var storageAccountQueueUri = 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
+var storageAccountTableUri = 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
+
 // Optional blob container for storing files
 resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: storageAccount
@@ -1736,9 +1740,9 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage__credential: 'managedIdentity'
-      AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
-      AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
-      AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
+      AzureWebJobsStorage__serviceUri: storageAccountBlobUri
+      AzureWebJobsStorage__queueServiceUri: storageAccountQueueUri
+      AzureWebJobsStorage__tableServiceUri: storageAccountTableUri
       WEBSITE_CONTENTSHARE: functionContentShareName
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString
       WEBSITE_CONTENTOVERVNET: '1'
@@ -2046,7 +2050,11 @@ module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignmen
 // Add Language endpoint to outputs
 output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = deployWebApp ? webApp.properties.defaultHostName : ''
-output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountEndpolint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountName string = storageAccount.name
+output storageAccountBlobUri string = storageAccountBlobUri
+output storageAccountQueueUri string = storageAccountQueueUri
+output storageAccountTableUri string = storageAccountTableUri
 output cosmosDbAccountEndpoint string = deployCosmosDB ? cosmosDbAccount.properties.documentEndpoint : ''
 output cosmosDbAccountName string = deployCosmosDB ? cosmosDbAccount.name : ''
 output cosmosDbDatabaseName string = deployCosmosDB ? cosmosDbDatabaseName : ''
