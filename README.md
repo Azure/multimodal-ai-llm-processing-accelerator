@@ -320,6 +320,7 @@ When using private endpoints:
   - Make sure you have activated the environment each time you need to deploy the solution or run it locally.
 - Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`) and login using `az login`.
 - Install the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) (`azd`) and login using `azd auth login`.
+  - Note: Make sure both the Azure CLI and Developer CLI are logged into the same tenant.
 
 ### Deploying to Azure with `azd`
 
