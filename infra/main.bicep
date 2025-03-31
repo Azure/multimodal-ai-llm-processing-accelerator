@@ -222,6 +222,7 @@ var keyVaultName = toLower('${resourcePrefix}-kv-${resourceToken}')
 var languageTokenName = toLower('${resourcePrefix}-language-${languageLocation}-${resourceToken}')
 
 // Define role definition IDs for Azure AI Services & Storage
+// See Azure list here: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 var roleDefinitions = {
   openAiUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
   speechUser: 'f2dc8367-1007-4938-bd23-fe263f013447'
@@ -231,6 +232,7 @@ var roleDefinitions = {
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageBlobDataOwner: 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
   storageQueueDataContributor: '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+  storageTableDataContributor: '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 }
 
 // Create a unique string for the list of additional identity assign to assign roles - this ensures any changes to the list will trigger a redeploy of the role assignments module
@@ -592,6 +594,7 @@ var storageRoleDefinitionIds = [
   roleDefinitions.storageBlobDataContributor
   roleDefinitions.storageBlobDataOwner
   roleDefinitions.storageQueueDataContributor
+  roleDefinitions.storageTableDataContributor
 ]
 
 //
@@ -611,7 +614,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     publicNetworkAccess: storageServicesAndKVAllowPublicAccess ? 'Enabled' : 'Disabled'
     networkAcls: {
       bypass: 'Logging,Metrics' // Allow logging and metrics to bypass network rules
-      defaultAction: 'Deny'
+      // Set defaultAction to Allow when public access is enabled and no IP ranges are specified
+      defaultAction: (storageServicesAndKVAllowPublicAccess && empty(storageServicesAndKVAllowedExternalIpsOrIpRanges))
+        ? 'Allow'
+        : 'Deny'
       // Only include VNET rules when using service endpoints
       virtualNetworkRules: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
         ? [
@@ -635,6 +641,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     }
   }
 }
+
+var storageAccountBlobUri = 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
+var storageAccountQueueUri = 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
+var storageAccountTableUri = 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
 
 // Optional blob container for storing files
 resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
@@ -870,46 +880,55 @@ var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName
 // CosmosDB with flexible networking
 //
 
+var cosmosDbNetworkingProperties = (storageServicesAndKVAllowPublicAccess && empty(storageServicesAndKVAllowedExternalIpsOrIpRanges))
+  // If public access is enabled and no IP ranges are specified, don't configure networking properties. This leaves access open to the internet.
+  ? {}
+  // Otherwise, configure networking properties to restrict access to the VNET and specific IP ranges.
+  : {
+      // Enable VNET filtering and rules when using service endpoints
+      isVirtualNetworkFilterEnabled: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+      virtualNetworkRules: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
+        ? [
+            {
+              id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, webAppSubnetName)
+              ignoreMissingVNetServiceEndpoint: false
+            }
+            {
+              id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, functionAppSubnetName)
+              ignoreMissingVNetServiceEndpoint: false
+            }
+          ]
+        : []
+      // Only include IP rules when public access rules are enabled
+      ipRules: (storageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVAllowedExternalIpsOrIpRanges))
+        ? map(storageServicesAndKVAllowedExternalIpsOrIpRanges, ip => {
+            ipAddressOrRange: ip
+          })
+        : []
+    }
+
 // Default configuration is based on: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-bicep#free-tier
 resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = if (deployCosmosDB) {
   name: cosmosDbAccountTokenName
   location: location
-  properties: {
-    enableFreeTier: false
-    databaseAccountOfferType: 'Standard'
-    disableLocalAuth: true
-    publicNetworkAccess: storageServicesAndKVAllowPublicAccess ? 'Enabled' : 'Disabled'
-    consistencyPolicy: {
-      defaultConsistencyLevel: 'Session'
-    }
-    locations: [
-      {
-        locationName: location
+  properties: union(
+    {
+      enableFreeTier: false
+      databaseAccountOfferType: 'Standard'
+      disableLocalAuth: true
+      publicNetworkAccess: storageServicesAndKVAllowPublicAccess ? 'Enabled' : 'Disabled'
+      consistencyPolicy: {
+        defaultConsistencyLevel: 'Session'
       }
-    ]
-    networkAclBypass: 'None'
-    // Only enable VNET filtering when using service endpoints
-    isVirtualNetworkFilterEnabled: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
-    // Only include VNET rules when using service endpoints
-    virtualNetworkRules: storageServicesAndKVNetworkingType == 'ServiceEndpoint'
-      ? [
-          {
-            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, webAppSubnetName)
-            ignoreMissingVNetServiceEndpoint: false
-          }
-          {
-            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, functionAppSubnetName)
-            ignoreMissingVNetServiceEndpoint: false
-          }
-        ]
-      : []
-    // Only include IP rules when using service endpoints and public access rules are enabled
-    ipRules: (storageServicesAndKVAllowPublicAccess && !empty(storageServicesAndKVAllowedExternalIpsOrIpRanges))
-      ? map(storageServicesAndKVAllowedExternalIpsOrIpRanges, ip => {
-          ipAddressOrRange: ip
-        })
-      : []
-  }
+      locations: [
+        {
+          locationName: location
+        }
+      ]
+      networkAclBypass: 'None'
+    },
+    cosmosDbNetworkingProperties
+  )
 }
 
 resource cosmosDbPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = if (deployCosmosDB && storageServicesAndKVNetworkingType == 'PrivateEndpoint') {
@@ -1020,7 +1039,10 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2024-10-01' 
     disableLocalAuth: true
     networkAcls: {
       bypass: 'None'
-      defaultAction: 'Deny'
+      // Set defaultAction to Allow when public access is enabled and no IP ranges are specified
+      defaultAction: (backendServicesAllowPublicAccess && empty(backendServicesAllowedExternalIpsOrIpRanges))
+        ? 'Allow'
+        : 'Deny'
       // Only add virtual network rules if using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
@@ -1030,7 +1052,7 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2024-10-01' 
             }
           ]
         : []
-      // Only add IP rules if using service endpoints and public access rules are enabled
+      // Only add IP rules if public access is enabled and specific IPs are provided
       ipRules: (backendServicesAllowPublicAccess && !empty(backendServicesAllowedExternalIpsOrIpRanges))
         ? map(backendServicesAllowedExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1112,7 +1134,10 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploy
     customSubDomainName: docIntelTokenName
     disableLocalAuth: true
     networkAcls: {
-      defaultAction: 'Deny'
+      // Set defaultAction to Allow when public access is enabled and no IP ranges are specified
+      defaultAction: (backendServicesAllowPublicAccess && empty(backendServicesAllowedExternalIpsOrIpRanges))
+        ? 'Allow'
+        : 'Deny'
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
             {
@@ -1121,6 +1146,7 @@ resource docIntel 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploy
             }
           ]
         : []
+      // Only add IP rules if public access is enabled and specific IPs are provided
       ipRules: (backendServicesAllowPublicAccess && !empty(backendServicesAllowedExternalIpsOrIpRanges))
         ? map(backendServicesAllowedExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1202,7 +1228,10 @@ resource speech 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploySp
     customSubDomainName: speechTokenName
     disableLocalAuth: true
     networkAcls: {
-      defaultAction: 'Deny'
+      // Set defaultAction to Allow when public access is enabled and no IP ranges are specified
+      defaultAction: (backendServicesAllowPublicAccess && empty(backendServicesAllowedExternalIpsOrIpRanges))
+        ? 'Allow'
+        : 'Deny'
       // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
@@ -1212,7 +1241,7 @@ resource speech 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploySp
             }
           ]
         : []
-      // Only include IP rules when using service endpoints and public access rules are enabled
+      // Only add IP rules if public access is enabled and specific IPs are provided
       ipRules: (backendServicesAllowPublicAccess && !empty(backendServicesAllowedExternalIpsOrIpRanges))
         ? map(backendServicesAllowedExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1277,7 +1306,10 @@ resource language 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploy
     customSubDomainName: languageTokenName
     disableLocalAuth: true
     networkAcls: {
-      defaultAction: 'Deny'
+      // Set defaultAction to Allow when public access is enabled and no IP ranges are specified
+      defaultAction: (backendServicesAllowPublicAccess && empty(backendServicesAllowedExternalIpsOrIpRanges))
+        ? 'Allow'
+        : 'Deny'
       // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
@@ -1287,7 +1319,7 @@ resource language 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (deploy
             }
           ]
         : []
-      // Only include IP rules when using service endpoints and public access rules are enabled
+      // Only add IP rules if public access is enabled and specific IPs are provided
       ipRules: (backendServicesAllowPublicAccess && !empty(backendServicesAllowedExternalIpsOrIpRanges))
         ? map(backendServicesAllowedExternalIpsOrIpRanges, ip => {
             value: ip
@@ -1356,7 +1388,10 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2024-10-01' = if (dep
     disableLocalAuth: true
     networkAcls: {
       bypass: 'None'
-      defaultAction: 'Deny'
+      // Set defaultAction to Allow when public access is enabled and no IP ranges are specified
+      defaultAction: (backendServicesAllowPublicAccess && empty(backendServicesAllowedExternalIpsOrIpRanges))
+        ? 'Allow'
+        : 'Deny'
       // Only include VNET rules when using service endpoints
       virtualNetworkRules: backendServicesNetworkingType == 'ServiceEndpoint'
         ? [
@@ -1736,9 +1771,9 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage__credential: 'managedIdentity'
-      AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
-      AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
-      AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
+      AzureWebJobsStorage__serviceUri: storageAccountBlobUri
+      AzureWebJobsStorage__queueServiceUri: storageAccountQueueUri
+      AzureWebJobsStorage__tableServiceUri: storageAccountTableUri
       WEBSITE_CONTENTSHARE: functionContentShareName
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString
       WEBSITE_CONTENTOVERVNET: '1'
@@ -2046,7 +2081,8 @@ module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignmen
 // Add Language endpoint to outputs
 output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = deployWebApp ? webApp.properties.defaultHostName : ''
-output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountEndpolint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountName string = storageAccount.name
 output cosmosDbAccountEndpoint string = deployCosmosDB ? cosmosDbAccount.properties.documentEndpoint : ''
 output cosmosDbAccountName string = deployCosmosDB ? cosmosDbAccount.name : ''
 output cosmosDbDatabaseName string = deployCosmosDB ? cosmosDbDatabaseName : ''

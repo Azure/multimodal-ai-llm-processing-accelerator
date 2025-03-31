@@ -4,7 +4,6 @@
         "FUNCTIONS_WORKER_RUNTIME": "python",
         "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
         "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "AZURE_STORAGE_HOST": "127.0.0.1:10000",
         "CosmosDbConnectionSetting__accountEndpoint": "Copy `cosmosDbAccountEndpoint` from `.azure/<env>/.env` - E.g: 'https://<cosmosdb_endpoint>.documents.azure.com:443/'",
         "COSMOSDB_ACCOUNT": "Copy `cosmosDbAccountName` from `.azure/<env>/.env` - E.g: 'llm-proc-cosmosdb-xxxxx'",
         "COSMOSDB_DATABASE_NAME": "Copy `cosmosDbDatabaseName` from `.azure/<env>/.env` - E.g: 'default'",
@@ -13,7 +12,8 @@
         "AOAI_WHISPER_DEPLOYMENT": "Copy `AOAI_WHISPER_DEPLOYMENT` from `.azure/<env>/.env` - E.g: 'whisper-001-standard'",
         "CONTENT_UNDERSTANDING_ENDPOINT": "Copy `CONTENT_UNDERSTANDING_ENDPOINT` from `.azure/<env>/.env` - E.g: 'https://<content-understanding-resource-name>.services.ai.azure.com/'",
         "DOC_INTEL_ENDPOINT": "Copy `DOC_INTEL_ENDPOINT` from `.azure/<env>/.env` - E.g: 'https://<doc-intel-resource-name>.cognitiveservices.azure.com/'",
-        "SPEECH_ENDPOINT": "Copy `SPEECH_ENDPOINT` from `.azure/<env>/.env` - E.g: 'https://<speech-resource-name>.cognitiveservices.azure.com/'"
+        "SPEECH_ENDPOINT": "Copy `SPEECH_ENDPOINT` from `.azure/<env>/.env` - E.g: 'https://<speech-resource-name>.cognitiveservices.azure.com/'",
+        "LANGUAGE_ENDPOINT": "Copy `LANGUAGE_ENDPOINT` from `.azure/<env>/.env` - E.g: 'https://<language-resource-name>.cognitiveservices.azure.com/'"
     },
     "Host": {
         "LocalHttpPort": 7071,

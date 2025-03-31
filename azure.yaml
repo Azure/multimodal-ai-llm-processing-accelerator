@@ -35,33 +35,58 @@ services:
     project: ./function_app/
     language: python
     host: function
+    hooks:
+      prepackage: 
+        # Temporarily copy the requirements.txt to the function app directory so that it is packaged with the function app
+        posix:
+          shell: sh
+          run: cp ../requirements.txt requirements.txt
+          interactive: false
+          continueOnError: false
+        windows:
+          shell: pwsh
+          run: copy ../requirements.txt requirements.txt
+          interactive: false
+          continueOnError: false
+      postpackage: 
+        # Remove the requirements.txt file from the function app directory
+        posix:
+          shell: sh
+          run: rm ./requirements.txt
+          interactive: false
+          continueOnError: false
+        windows:
+          shell: pwsh
+          run: del ./requirements.txt
+          interactive: false
+          continueOnError: false
   webapp:
     project: ./demo_app/
     language: py
     host: appservice
     hooks:
       prepackage: 
-        # Copy the content_understanding_schemas.json file to the demo_app directory to give it knowledge of the deployed content understanding schemas,
-        # and move the .env file since .webappignore (https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/service-packaging-ignore-files) does not seem to work.
+        # Copy the requirements.txt and content_understanding_schemas.json files to the demo_app directory to give it knowledge of the deployed content understanding schemas,
+        # and temporarily move the .env file since .webappignore (https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/service-packaging-ignore-files) does not seem to work.
         posix:
           shell: sh
-          run: cp ../function_app/config/content_understanding_schemas.json ./ && mv ./.env ../.demo_app.env.bak
+          run: cp ../requirements.txt requirements.txt && cp ../function_app/config/content_understanding_schemas.json ./ && if [ -f "./.env" ]; then mv ./.env ../.demo_app.env.bak; fi
           interactive: false
           continueOnError: false
         windows:
           shell: pwsh
-          run: copy ../function_app/config/content_understanding_schemas.json ./ && mv ./.env ../.demo_app.env.bak
+          run: copy ../requirements.txt requirements.txt; copy ../function_app/config/content_understanding_schemas.json ./; if (Test-Path -Path "./.env") { Move-Item -Path "./.env" -Destination "../.demo_app.env.bak" }
           interactive: false
           continueOnError: false
       postpackage: 
-        # Remove the content_understanding_schemas.json file from the demo_app directory and restore the .env file
+        # Remove the requirements.txt and content_understanding_schemas.json files from the demo_app directory and restore the .env file
         posix:
           shell: sh
-          run: rm ./content_understanding_schemas.json && mv ../.demo_app.env.bak ./.env
+          run: rm ./requirements.txt && rm ./content_understanding_schemas.json && if [ -f "../.demo_app.env.bak" ]; then mv ../.demo_app.env.bak ./.env; fi
           interactive: false
           continueOnError: false
         windows:
           shell: pwsh
-          run: del ./content_understanding_schemas.json && mv ../.demo_app.env.bak ./.env
+          run: del ./requirements.txt; del ./content_understanding_schemas.json; if (Test-Path -Path "../.demo_app.env.bak") { Move-Item -Path "../.demo_app.env.bak" -Destination "./.env" }
           interactive: false
           continueOnError: false
