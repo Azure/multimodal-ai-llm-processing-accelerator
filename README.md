@@ -138,6 +138,15 @@ To help prioritise these features or request new ones, please head to the Issues
 
 ### FAQ
 
+**I had an error during deployment or local development, how can I fix it?**
+
+Most of the errors occur when steps in the instructions have been skipped. In general, most errors can be avoided by making sure you **always** do the following:
+
+1. Always activate your virtual python environment before deploying or running the solution locally. This will prevent errors when running python scripts.
+1. Make sure you have configured the networking in a way that enables you to connect to all of the required Azure resources for both deployment and local development (e.g. making sure you have public access enabled and/or your IP address whitelisted). This will prevent firewall errors when you try to deploy the solution or conenct to cloud resources from your local development machine.
+1. Make sure you have correctly set the environment variables for both the function app (`function_app/local.settings.json`) and web app (`demo_app/.env`). Use the sample files in each directory as a starting point and follow the instructions in the local development sections to replace all placeholder values with their correct values.
+1. If using the Azurite storage emulator, make sure that it is already running when you start the function and web app servers locally.
+
 **What is the difference between Azure Content Understanding and the custom pipeline approach?**
 
 Since the release of this accelerator, Microsoft has released the [Content Understanding Service](https://azure.microsoft.com/en-au/pricing/details/content-understanding/). The Content Understanding Service and how it works under the hood is 80-90% the same as what happens in the custom pipelines that are available within this accelerator, however there are a few reasons why you might want to choose one or the other.
@@ -301,10 +310,12 @@ When using private endpoints:
   - Once installed, make sure to run all commands below from the Windows Powershell command line (otherwise the `az` and `azd` commands may not work correctly).
 - To use and deploy this solution accelerator, you will need access to an Azure subscription with permission to create resource groups and resources. You can [create an Azure account here for free](https://azure.microsoft.com/free/).
 - Clone this repository: `git clone https://github.com/azure/multimodal-ai-llm-processing-accelerator.git`
+- Change into the repository directory: `cd multimodal-ai-llm-processing-accelerator`
 - Create a new Python 3.11 environment for your project.
+  - A new python environment is essential, and ensures the correct python version and dependencies are installed for the accelerator.
   - To do this, open a terminal window and navigate to the root directory of the repository. You can then use a package manager like `conda`, `venv` or `virtualenv` to create the environment - below are some example commands:
-    - Anaconda: `conda create -n mm_ai_llm_processing_accelerator python=3.11 --no-default-packages`, then activate the environment with `conda activate mm_ai_llm_processing_accelerator` each time you want run or deploy the solution.
-    - venv: `python -m venv .venv`, then activate the environment with `source .venv/bin/activate` each time you want run or deploy the solution.
+    - Anaconda: `conda create -n mm_ai_llm_processing_accelerator python=3.11 --no-default-packages` to create the environment, then activate the environment with `conda activate mm_ai_llm_processing_accelerator` each time you want run or deploy the solution.
+    - venv: `python -m venv .venv` to create the environment, then activate the environment with `source .venv/bin/activate` (linux/MacOS) or `.venv\Scripts\Activate.ps1` (Windows Powershell) each time you want run or deploy the solution. More info [here](https://python.land/virtual-environments/virtualenv#Python_venv_activation).
   - Once the new environment is created and activated, install the python requirements file: `pip install -r requirements.txt`. This contains the dependencies for both the function and web apps.
   - Make sure you have activated the environment each time you need to deploy the solution or run it locally.
 - Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`) and login using `az login`.
@@ -318,8 +329,9 @@ Execute the following command, if you don't have any pre-existing Azure services
 
 1. Ensure your virtual environment is activated
 1. Run `azd auth login`
-1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID and review the networking configuration (see the file for instructions).
-1. Run `azd up` to start the deployment. Follow the prompts to create or select the resource group, location and other parameters. This will provision the Azure resources and deploy the services.
+1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID, review the AI resource deployment locations, and review the networking configuration (see the file for instructions).
+    - Note that most resources are deployed to the region that the resource group is created in, but certain AI service resources can be deployed to a different independent location. This enables you to deploy those resources in a different region to the app & databases (so that you have access to a different set of features or models).
+1. Run `azd up` to start the deployment. Follow the prompts to create or select the resource group, base location and other parameters. This will then provision the Azure resources and deploy the services.
 
 > [!WARNING]
 > When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. This is due to a known bug when retrieving the function key for a newly deployed Azure Function. If this error occurs, simply wait 1-2 minutes and then rerun `azd deploy`. The deployment should then complete successfully.
@@ -370,7 +382,7 @@ When running the apps locally, you can opt to use an emulator for Azure Storage 
 
 If using the Azure Storage bindings in your pipelines (e.g. for Azure Blob Storage input triggers), you can either connect directly to an Azure Storage account or you can test with a locally-running Storage Account emulator. The steps below outline the correct configuration for each of these options.
 
-1. To use a locally-running Storage Account emulator, you will need to install and run the Azurite emulator before you start the function server.
+1. **Use a locally-running Storage Account emulator**: You will need to install and run the Azurite emulator before you start the function server.
 
 - The easiest way to run the Azurite emulator is using the [Azurite VS Code extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
 - Once installed, click on the buttons in the bottom right-hand corner of the VS Code window to start or stop the server (see below). Once clicked, the emulator will start running:
@@ -379,17 +391,14 @@ If using the Azure Storage bindings in your pipelines (e.g. for Azure Blob Stora
   - Function App: Make sure the `AzureWebJobsStorage` parameter is set to `UseDevelopmentStorage=true` in the `function_app/local.settings.json` file.
   - Web App: Set the `USE_LOCAL_STORAGE_EMULATOR` parameter to `"true"` in the `demo_app/.env` file. When set to true, this will instruct the demo app to connect using the pre-set `LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING` parameter (more info [here](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage#https-connection-strings)).
 
-2. To connect to a Azure Storage account that is deployed in Azure, you can use the following environment variables for each of the apps:
+2. **Connect to an Azure Storage account that is deployed in Azure**: You will need to set the following environment variables for each of the apps. If you've already deployed the solution, the parameters required for all of the instructions above will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating `function_app/local.settings.json` and `demo_app/.env` files with the corresponding values.
 
-- Function app - Ensure that `AzureWebJobsStorage` is **not** set within `function_app/local.settings.json`, and then set the following parameters based on the outputs in the azd .env file:
-  - `AzureWebJobsStorage__accountName` (azd output field: `storageAccountName`)
-  - `AzureWebJobsStorage__blobServiceUri` (azd output field: `storageAccountBlobUri`)
-  - `AzureWebJobsStorage__queueServiceUri` (azd output field: `storageAccountQueueUri`)
-  - `AzureWebJobsStorage__tableServiceUri` (azd output field: `storageAccountTableUri`)
-- Web app - In your .env file, use the following parameters:
+- Function app - Within your `function_app/local.settings.json` file:
+  - Ensure that `AzureWebJobsStorage` is **not** set (delete the line from the file)
+  - Set the `AzureWebJobsStorage__accountName` field (Copy your storage account name from the azd output field: `storageAccountName`. E.g. `llmprocstorageXXXXX`)
+- Web app - In your `demo_app/.env` file, use the following parameters:
   - Set the `USE_LOCAL_STORAGE_EMULATOR` parameter to `"false"`
-  - Set the `STORAGE_ACCOUNT_ENDPOINT` parameter to the storage account endpoint (e.g. `"https://llmprocstorageXXXXX.blob.core.windows.net/"` )
-- If you've already deployed the solution, the parameters required for all of the instructions above will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating `function_app/local.settings.json` and `demo_app/.env` files with the corresponding values.
+  - Set the `STORAGE_ACCOUNT_ENDPOINT` parameter to the storage account endpoint (e.g. `https://llmprocstorageXXXXX.blob.core.windows.net/` )
 
 #### Function app local instructions
 
@@ -397,7 +406,7 @@ The `function_app` folder contains the backend Azure Functions App. By default, 
 
 - Open a new terminal/Windows Powershell window and activate your project's Python 3.11 environment (see [Prerequisites for deployment and local development](#prerequisites-for-deployment-and-local-development))
 - Navigate to the function app directory: `cd function_app`
-- When starting the function server, a number of environment variables are loaded from a configuration file in the `function_app` folder, called `local.settings.json`. To get started quickly, you can clone the sample file (`cp function_app/sample_local.settings.json function_app/local.settings.json`). More info on local Azure Functions development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
+- When starting the function server, a number of environment variables are loaded from a configuration file in the `function_app` folder, called `local.settings.json`. To get started quickly, you can clone the sample file and then modify the placeholder values (using the command: `cp function_app/sample_local.settings.json function_app/local.settings.json`). More info on local Azure Functions development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
 - Now review the newly created `local.settings.json` file. The file includes many placeholder values that should be updated to the correct values based on your azd deployment (these are usually capitalized, e.g. `DOC_INTEL_ENDPOINT` or `AOAI_ENDPOINT`).
   - The `sample_local.settings.json` file is configured by default to connect to a local Azurite storage account emulator for Azure Blob Storage bindings. Review the [Azurite Azure Storage Emulator](#azurite-azure-storage-emulator) section for more info on how to configure or change the environment variables correctly.
 - Start the function server: `func start`
