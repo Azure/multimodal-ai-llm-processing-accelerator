@@ -37,6 +37,8 @@ urlFragment: multimodal-ai-llm-processing-accelerator
     - [FAQ](#faq)
   - [Deployment](#deployment)
     - [Pricing Considerations](#pricing-considerations)
+    - [Networking Configuration](#networking-configuration)
+    - [Prerequisites for deployment and local development](#prerequisites-for-deployment-and-local-development)
     - [Deploying to Azure with azd](#deploying-to-azure-with-azd)
     - [Running the solution locally](#running-the-solution-locally)
   - [Credits](#credits)
