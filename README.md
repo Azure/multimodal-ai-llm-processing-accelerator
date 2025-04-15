@@ -271,21 +271,30 @@ For more information, check out the configuration options within the `infra/main
 
 #### When to use each networking option
 
-**Service Endpoints**:
+**Service Endpoints (Public Networking with restrictions)**:
 
+![Public Networking Architecture Diagram](docs/public-networking-diagram.png)
+
+- Typical scenarios: Local development, dev/sandbox environments, or applications where private networking of backend services is not required.
 - Best for development scenarios or when public access is required
 - Allows controlled public access from specified IP addresses
 - Simpler to set up and use when deveoping locally
 - No cost overhead
-- Typical scenarios: Local development, dev/sandbox environments, or applications where private networking of backend services is not required.
 
 **Private Endpoints**:
 
+![Private Networking Architecture Diagram](docs/private-networking-diagram.png)
+
+- Typical scenarios: Production environments, and applications where private networking is required.
 - Best for enterprise security requirements, providing the highest level of security
 - Recommended for production environments with strict security requirements
 - Can completely isolates services from the public internet - all traffic that originates from within the VNET will stay within the VNET
 - Adds a small cost overhead (approximately $7.50 per month per private endpoint, which can total $60-75/month when using private endpoints for all services)
-- Typical scenarios: Production environments, and applications where private networking is required.
+- **Note: This option requires modifications in order to fully deploy the solution (see the [Private endpoint considerations section](#private-endpoint-considerations)) and to integrate the solution with other source or destination systems. This would require either peering this accelerator's VNET to another VNET, deploying additional services into the accelerator's VNET, or using a hybrid networking approach (detailed below).**
+
+**Hybrid Networking**:
+
+- With a hybrid option, it is possible to use public networking and ingress for the web and/or function apps, while ensuring all requests from those apps to the backend & storage services are via private endpoints. To do this, you would configure public networking for the web & function apps (while restricting access to given IP addresses or ranges) while deploying the backend and storage services with private endpoints. This keeps all internal traffic within the VNET while allowing public access to the web and function apps.
 
 #### Private endpoint considerations
 
