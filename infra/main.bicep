@@ -735,7 +735,7 @@ resource privateEndpointStorageFile 'Microsoft.Network/privateEndpoints@2024-05-
   location: location
   properties: {
     subnet: {
-      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, storageServicesAndKVSubnetName)
     }
     privateLinkServiceConnections: [
       {
@@ -756,7 +756,7 @@ resource privateEndpointStorageBlob 'Microsoft.Network/privateEndpoints@2024-05-
   location: location
   properties: {
     subnet: {
-      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, storageServicesAndKVSubnetName)
     }
     privateLinkServiceConnections: [
       {
@@ -777,7 +777,7 @@ resource privateEndpointStorageTable 'Microsoft.Network/privateEndpoints@2024-05
   location: location
   properties: {
     subnet: {
-      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, storageServicesAndKVSubnetName)
     }
     privateLinkServiceConnections: [
       {
@@ -798,7 +798,7 @@ resource privateEndpointStorageQueue 'Microsoft.Network/privateEndpoints@2024-05
   location: location
   properties: {
     subnet: {
-      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, backendServicesSubnetName)
+      id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, storageServicesAndKVSubnetName)
     }
     privateLinkServiceConnections: [
       {
